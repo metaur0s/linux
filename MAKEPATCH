@@ -1,0 +1,39 @@
+#!/bin/bash
+
+set -u
+
+REMOVED_DIRS=(
+    $(
+        (
+            (cd linux-ORIG   && find . -type d)
+            (cd linux-master && find . -type d)
+        ) | sort --reverse | uniq -u
+    )
+)
+
+( cd linux-ORIG && rm -fR -- ${REMOVED_DIRS[*]})
+
+REMOVED_FILES=(
+    $(
+        (
+            (cd linux-ORIG   && find . ! -type d)
+            (cd linux-master && find . ! -type d)
+        ) | sort | uniq -u
+    )
+)
+
+( cd linux-ORIG && rm -fR -- ${REMOVED_FILES[*]})
+
+echo '#!/bin/sh'
+echo 'set -u'
+echo 'set -e'
+echo 'rm -fR --' ${REMOVED_DIRS[*]}
+echo 'rm -f  --' ${REMOVED_FILES[*]}
+echo 'patch -p1 < "${0}"'
+echo 'rm -f -- $(find . -type f -iname "*.orig")'
+echo '### PATCH REJECTS'
+echo 'find . -type f -iname "*.rej"'
+echo '###'
+echo 'exit'
+
+diff -Naur linux-ORIG linux-master

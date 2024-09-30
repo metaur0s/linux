@@ -115,6 +115,34 @@ config WIREGUARD_DEBUG
 
 	  Say N here unless you know what you're doing.
 
+if WIREGUARD
+
+config       WIREGUARD_KEEPALIVE_TIMEOUT
+	int "WIREGUARD_KEEPALIVE_TIMEOUT"
+	default 10
+
+config 	     WIREGUARD_REKEY_TIMEOUT
+	int "WIREGUARD_REKEY_TIMEOUT"
+	default 5
+
+config 	     WIREGUARD_REJECT_AFTER_TIME
+	int "WIREGUARD_REJECT_AFTER_TIME"
+	default 180
+
+config 	     WIREGUARD_REKEY_AFTER_TIME
+	int "WIREGUARD_REKEY_AFTER_TIME"
+	default 120
+
+config 	     WIREGUARD_MAX_TIMER_HANDSHAKES
+	int "WIREGUARD_MAX_TIMER_HANDSHAKES"
+	default 90
+
+config 	     WIREGUARD_MAX_PEERS_PER_DEVICE_SHIFT
+	int "WIREGUARD_MAX_PEERS_PER_DEVICE_SHIFT"
+	default 20
+
+endif
+
 config EQUALIZER
 	tristate "EQL (serial line load balancing) support"
 	help

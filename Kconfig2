@@ -1,0 +1,24 @@
+
+config    NO_SNMP
+    bool "NO_SNMP"
+    default y
+
+config    VLAN
+    bool "VLAN"
+    default n
+
+menuconfig NET_SOCKMARKS
+    bool  "NET_SOCKMARKS"
+    default n
+
+if NET_SOCKMARKS
+
+config   NET_SOCKMARKS_0
+    int "NET_SOCKMARKS_0"
+    default 10
+
+config   NET_SOCKMARKS_N
+    int "NET_SOCKMARKS_N"
+    default 3
+
+endif

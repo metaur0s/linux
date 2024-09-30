@@ -40,8 +40,8 @@ enum {
 	UDP_FLAGS_ACCEPT_FRAGLIST,
 	UDP_FLAGS_ACCEPT_L4,
 	UDP_FLAGS_ENCAP_ENABLED, /* This socket enabled encap */
-	UDP_FLAGS_UDPLITE_SEND_CC, /* set via udplite setsockopt */
-	UDP_FLAGS_UDPLITE_RECV_CC, /* set via udplite setsockopt */
+	UDP_FLAGS_XXXX,
+	UDP_FLAGS_ZZZZ,
 };
 
 struct udp_sock {
@@ -63,10 +63,10 @@ struct udp_sock {
 	__u16		 len;		/* total length of pending frames */
 	__u16		 gso_size;
 	/*
-	 * Fields specific to UDP-Lite.
+	 * Fields specific to XXXZZZ.
 	 */
-	__u16		 pcslen;
-	__u16		 pcrlen;
+	__u16		 XXXXXX;
+	__u16		 ZZZZZZ;
 	/*
 	 * For encapsulation sockets.
 	 */
@@ -205,7 +205,5 @@ static inline void udp_allow_gso(struct sock *sk)
 
 #define udp_portaddr_for_each_entry_rcu(__sk, list) \
 	hlist_for_each_entry_rcu(__sk, list, __sk_common.skc_portaddr_node)
-
-#define IS_UDPLITE(__sk) (__sk->sk_protocol == IPPROTO_UDPLITE)
 
 #endif	/* _LINUX_UDP_H */

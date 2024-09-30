@@ -74,7 +74,6 @@
 #include <net/ip6_checksum.h>
 #include <net/xfrm.h>
 #include <net/mpls.h>
-#include <net/mptcp.h>
 #include <net/mctp.h>
 #include <net/page_pool/helpers.h>
 #include <net/dropreason.h>
@@ -5053,9 +5052,6 @@ static const u8 skb_ext_type_len[] = {
 #if IS_ENABLED(CONFIG_NET_TC_SKB_EXT)
 	[TC_SKB_EXT] = SKB_EXT_CHUNKSIZEOF(struct tc_skb_ext),
 #endif
-#if IS_ENABLED(CONFIG_MPTCP)
-	[SKB_EXT_MPTCP] = SKB_EXT_CHUNKSIZEOF(struct mptcp_ext),
-#endif
 #if IS_ENABLED(CONFIG_MCTP_FLOWS)
 	[SKB_EXT_MCTP] = SKB_EXT_CHUNKSIZEOF(struct mctp_flow),
 #endif
@@ -6133,6 +6129,7 @@ void skb_scrub_packet(struct sk_buff *skb, bool xnet)
 }
 EXPORT_SYMBOL_GPL(skb_scrub_packet);
 
+#ifdef CONFIG_VLAN
 static struct sk_buff *skb_reorder_vlan_header(struct sk_buff *skb)
 {
 	int mac_len, meta_len;
@@ -6199,6 +6196,7 @@ err_free:
 	return NULL;
 }
 EXPORT_SYMBOL(skb_vlan_untag);
+#endif
 
 int skb_ensure_writable(struct sk_buff *skb, unsigned int write_len)
 {

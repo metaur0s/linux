@@ -13,7 +13,7 @@
 #include <linux/netfilter_ipv4/ip_tables.h>
 #include <linux/netfilter_ipv6/ip6_tables.h>
 
-MODULE_DESCRIPTION("Xtables: TCP, UDP and UDP-Lite match");
+MODULE_DESCRIPTION("Xtables: TCP, and UDP");
 MODULE_LICENSE("GPL");
 MODULE_ALIAS("xt_tcp");
 MODULE_ALIAS("xt_udp");
@@ -288,24 +288,6 @@ static struct xt_match tcpudp_mt_reg[] __read_mostly = {
 		.match		= udp_mt,
 		.matchsize	= sizeof(struct xt_udp),
 		.proto		= IPPROTO_UDP,
-		.me		= THIS_MODULE,
-	},
-	{
-		.name		= "udplite",
-		.family		= NFPROTO_IPV4,
-		.checkentry	= udp_mt_check,
-		.match		= udp_mt,
-		.matchsize	= sizeof(struct xt_udp),
-		.proto		= IPPROTO_UDPLITE,
-		.me		= THIS_MODULE,
-	},
-	{
-		.name		= "udplite",
-		.family		= NFPROTO_IPV6,
-		.checkentry	= udp_mt_check,
-		.match		= udp_mt,
-		.matchsize	= sizeof(struct xt_udp),
-		.proto		= IPPROTO_UDPLITE,
 		.me		= THIS_MODULE,
 	},
 	{

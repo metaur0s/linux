@@ -360,15 +360,14 @@ int wg_socket_init(struct wg_device *wg, u16 port)
 		.family = AF_INET,
 		.local_ip.s_addr = htonl(INADDR_ANY),
 		.local_udp_port = htons(port),
-		.use_udp_checksums = true
 	};
 #if IS_ENABLED(CONFIG_IPV6)
 	int retries = 0;
 	struct udp_port_cfg port6 = {
 		.family = AF_INET6,
 		.local_ip6 = IN6ADDR_ANY_INIT,
-		.use_udp6_tx_checksums = true,
-		.use_udp6_rx_checksums = true,
+		.use_udp6_tx_checksums = false,
+		.use_udp6_rx_checksums = false,
 		.ipv6_v6only = true
 	};
 #endif

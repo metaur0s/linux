@@ -81,18 +81,6 @@ static inline unsigned int tcp_optlen(const struct sk_buff *skb)
 	return (tcp_hdr(skb)->doff - 5) * 4;
 }
 
-/* TCP Fast Open */
-#define TCP_FASTOPEN_COOKIE_MIN	4	/* Min Fast Open Cookie size in bytes */
-#define TCP_FASTOPEN_COOKIE_MAX	16	/* Max Fast Open Cookie size in bytes */
-#define TCP_FASTOPEN_COOKIE_SIZE 8	/* the size employed by this impl. */
-
-/* TCP Fast Open Cookie as stored in memory */
-struct tcp_fastopen_cookie {
-	__le64	val[DIV_ROUND_UP(TCP_FASTOPEN_COOKIE_MAX, sizeof(u64))];
-	s8	len;
-	bool	exp;	/* In RFC6994 experimental option format */
-};
-
 /* This defines a selective acknowledgement block. */
 struct tcp_sack_block_wire {
 	__be32	start_seq;
@@ -150,12 +138,8 @@ struct tcp_request_sock {
 	struct inet_request_sock 	req;
 	const struct tcp_request_sock_ops *af_specific;
 	u64				snt_synack; /* first SYNACK sent time */
-	bool				tfo_listener;
-	bool				is_mptcp;
+	bool				_is_m_t_tcp;
 	bool				req_usec_ts;
-#if IS_ENABLED(CONFIG_MPTCP)
-	bool				drop_req;
-#endif
 	u32				txhash;
 	u32				rcv_isn;
 	u32				snt_isn;
@@ -371,17 +355,17 @@ struct tcp_sock {
 		tlp_retrans:1,	/* TLP is a retransmission */
 		unused:5;
 	u8	thin_lto    : 1,/* Use linear timeouts for thin streams */
-		fastopen_connect:1, /* FASTOPEN_CONNECT sockopt */
-		fastopen_no_cookie:1, /* Allow send/recv SYN+data without a cookie */
-		fastopen_client_fail:2, /* reason why fastopen failed */
+		XXXXXXXXXXXXXXXX:1, /* FASTOPEN_CONNECT sockopt */
+		ZZZZZZZZZZZZZZZZZZ:1, /* Allow send/recv SYN+data without a cookie */
+		YYYYYYYYYYYYYYYYYYYY:2, /* reason why fastopen failed */
 		frto        : 1;/* F-RTO (RFC5682) activated in CA_Loss */
 	u8	repair_queue;
 	u8	save_syn:2,	/* Save headers of SYN packet */
-		syn_data:1,	/* SYN includes data */
-		syn_fastopen:1,	/* SYN includes Fast Open option */
-		syn_fastopen_exp:1,/* SYN includes Fast Open exp. option */
-		syn_fastopen_ch:1, /* Active TFO re-enabling probe */
-		syn_data_acked:1;/* data in SYN is acked by SYN-ACK */
+		XXXXXXXX:1,	/* SYN includes data */
+		XXXXXXXXXXXX:1,	/* SYN includes Fast Open option */
+		ZZZZZZZZZZZZZZZZ:1,/* SYN includes Fast Open exp. option */
+		ZZZZZZZZZZZZZZZ:1, /* Active TFO re-enabling probe */
+		YYYYYYYYYYYYYY:1;/* data in SYN is acked by SYN-ACK */
 
 	u8	keepalive_probes; /* num of allowed keep alive probes	*/
 	u32	tcp_tx_delay;	/* delay (in usec) added to TX packets */
@@ -473,9 +457,6 @@ struct tcp_sock {
 	u32	mtu_info; /* We received an ICMP_FRAG_NEEDED / ICMPV6_PKT_TOOBIG
 			   * while socket was owned by user.
 			   */
-#if IS_ENABLED(CONFIG_MPTCP)
-	bool	is_mptcp;
-#endif
 #if IS_ENABLED(CONFIG_SMC)
 	bool	syn_smc;	/* SYN includes SMC */
 	bool	(*smc_hs_congested)(const struct sock *sk);
@@ -494,12 +475,6 @@ struct tcp_sock {
 #endif
 #endif
 
-/* TCP fastopen related information */
-	struct tcp_fastopen_request *fastopen_req;
-	/* fastopen_rsk points to request_sock that resulted in this big
-	 * socket. Used to retransmit SYNACKs etc.
-	 */
-	struct request_sock __rcu *fastopen_rsk;
 	struct saved_syn *saved_syn;
 };
 
@@ -556,20 +531,6 @@ struct tcp_timewait_sock {
 static inline struct tcp_timewait_sock *tcp_twsk(const struct sock *sk)
 {
 	return (struct tcp_timewait_sock *)sk;
-}
-
-static inline bool tcp_passive_fastopen(const struct sock *sk)
-{
-	return sk->sk_state == TCP_SYN_RECV &&
-	       rcu_access_pointer(tcp_sk(sk)->fastopen_rsk) != NULL;
-}
-
-static inline void fastopen_queue_tune(struct sock *sk, int backlog)
-{
-	struct request_sock_queue *queue = &inet_csk(sk)->icsk_accept_queue;
-	int somaxconn = READ_ONCE(sock_net(sk)->core.sysctl_somaxconn);
-
-	WRITE_ONCE(queue->fastopenq.max_qlen, min_t(unsigned int, backlog, somaxconn));
 }
 
 static inline void tcp_move_syn(struct tcp_sock *tp,
