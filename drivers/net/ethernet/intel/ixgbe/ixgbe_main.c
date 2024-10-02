@@ -8770,7 +8770,7 @@ netdev_tx_t ixgbe_xmit_frame_ring(struct sk_buff *skb,
 	first->bytecount = skb->len;
 	first->gso_segs = 1;
 
-#ifdef CONFIG_VLAN
+#ifdef CONFIG_VLAN_IXGBE
 	/* if we have a HW VLAN tag being added default to the HW one */
 	if (skb_vlan_tag_present(skb)) {
 		tx_flags |= skb_vlan_tag_get(skb) << IXGBE_TX_FLAGS_VLAN_SHIFT;

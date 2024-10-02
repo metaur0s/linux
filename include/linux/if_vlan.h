@@ -84,7 +84,7 @@ static inline bool is_vlan_dev(const struct net_device *dev)
         return dev->priv_flags & IFF_802_1Q_VLAN;
 }
 
-#ifdef CONFIG_VLAN
+#ifdef CONFIG_VLAN_CORE
 #define skb_vlan_tag_present(__skb)	(!!(__skb)->vlan_all)
 #else
 #define skb_vlan_tag_present(__skb) 0

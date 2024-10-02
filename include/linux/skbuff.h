@@ -4105,7 +4105,7 @@ void skb_scrub_packet(struct sk_buff *skb, bool xnet);
 struct sk_buff *skb_segment(struct sk_buff *skb, netdev_features_t features);
 struct sk_buff *skb_segment_list(struct sk_buff *skb, netdev_features_t features,
 				 unsigned int offset);
-#ifdef CONFIG_VLAN
+#ifdef CONFIG_VLAN_CORE
 struct sk_buff *skb_vlan_untag(struct sk_buff *skb);
 #endif
 int skb_ensure_writable(struct sk_buff *skb, unsigned int write_len);
