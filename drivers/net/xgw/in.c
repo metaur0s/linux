@@ -382,17 +382,32 @@ int in (skb_s* const skb) {
     if ((ptr += proto) > end)
         ret_dev(DSTATS_I_INCOMPLETE);
 
-    switch (BE8(*(u8*)hdr)) {
-        case IPPROTO_UDP:
+    proto = *(u8*)hdr;
+    
+    switch (proto) {
+        case BE8(IPPROTO_UDP):
             proto = sizeof(hdr_udp_s);
             break;
-        case IPPROTO_TCP:
+        case BE8(IPPROTO_TCP):
             proto = sizeof(hdr_tcp_s);
             break;
-        case IPPROTO_XGW:
+        case BE8(IPPROTO_XGW):
             goto _is_xgw;
-        default:
+        case BE8(IPPROTO_ICMP):
+        case BE8(IPPROTO_ICMPV6):
+        case BE8(IPPROTO_IPIP):
+        case BE8(IPPROTO_IPV6):
             goto _not_xgw;
+        case BE8(IPPROTO_IGMP):
+        case BE8(IPPROTO_SCTP):
+        case BE8(IPPROTO_DCCP):
+        case BE8(IPPROTO_UDPLITE):
+            ret_dev(DSTATS_I_FILTERED);
+        default:
+#if 1
+            printk("XGW: UNKNOWN IP PROTOCOL: 0x%08X\n", BE8(proto));
+#endif
+            ret_dev(DSTATS_I_UNKNOWN);
     }
 
     // PTR POINTS TO TRANSPORT
