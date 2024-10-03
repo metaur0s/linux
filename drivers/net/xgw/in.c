@@ -1,6 +1,16 @@
 #define PPP_PROTO_IP4 0x0021
 #define PPP_PROTO_IP6 0x0057
 
+BUILD_ASSERT(IPPROTO_UDP != PPP_PROTO_IP4);
+BUILD_ASSERT(IPPROTO_UDP != PPP_PROTO_IP6);
+BUILD_ASSERT(IPPROTO_UDP != ETH_P_IP);
+BUILD_ASSERT(IPPROTO_UDP != ETH_P_IPV6);
+
+BUILD_ASSERT(IPPROTO_TCP != PPP_PROTO_IP4);
+BUILD_ASSERT(IPPROTO_TCP != PPP_PROTO_IP6);
+BUILD_ASSERT(IPPROTO_TCP != ETH_P_IP);
+BUILD_ASSERT(IPPROTO_TCP != ETH_P_IPV6);
+
 static noinline void __optimize_size in_discover (const path_s* const path, const skb_s* const skb, pkt_s* const skel) {
 
     const void* orig = SKB_NETWORK(skb);
@@ -41,8 +51,6 @@ static noinline void __optimize_size in_discover (const path_s* const path, cons
             proto = ((hdr_ip6_s*)orig)->proto;
             orig += sizeof(hdr_ip6_s);
             break;
-        default:
-            proto = 0;
     }
 
     switch (proto) {
