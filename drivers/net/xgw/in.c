@@ -11,9 +11,13 @@ static noinline void __optimize_size in_discover (const path_s* const path, cons
 
     uint proto = skb->protocol;
 
-    if (proto == BE16(ETH_P_8021Q) ||
-        proto == BE16(ETH_P_8021AD)) { // NOTE: PODE ACABAR VIRANDO __VLAN SEM __ETH
-        T |= __VLAN; proto = ((hdr_vlan_s*)orig)->proto; orig += sizeof(hdr_vlan_s);
+    switch (proto) {
+        case BE16(ETH_P_8021Q):
+        case BE16(ETH_P_8021AD): // NOTE: PODE ACABAR VIRANDO __VLAN SEM __ETH
+            T |= __VLAN;
+            proto = ((hdr_vlan_s*)orig)->proto;
+            orig += sizeof(hdr_vlan_s);
+            break;
     }
 
     switch (proto) {
@@ -21,6 +25,7 @@ static noinline void __optimize_size in_discover (const path_s* const path, cons
             T |= __PPP;
             proto = ((hdr_ppp_s*)orig)->proto;
             orig += sizeof(hdr_ppp_s);
+            break;
     }
     
     switch (proto) {
@@ -48,6 +53,7 @@ static noinline void __optimize_size in_discover (const path_s* const path, cons
         case BE8(IPPROTO_TCP):
             T |= __TCP;
             orig += sizeof(hdr_tcp_s);
+            break;
     }
 
     //
