@@ -362,8 +362,16 @@ int in (skb_s* const skb) {
         case BE16(ETH_P_ARP):
             // TODO:
             goto _not_xgw;
-        default:
+        case BE16(ETH_P_PPP_DISC):
             goto _not_xgw;
+        case BE16(0xfffA): // This.is.loop.detect.frame.se
+        case BE16(0x893A): // ..ALCL
+            ret_dev(DSTATS_I_FILTERED);
+        default:
+#if 1
+            printk("XGW: UNKNOWN SKB PROTOCOL: 0x%04X\n", BE16(proto));
+#endif
+            ret_dev(DSTATS_I_UNKNOWN);
     }
 
     // PTR POINTS TO IP
