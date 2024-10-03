@@ -13,7 +13,7 @@ BUILD_ASSERT(IPPROTO_TCP != ETH_P_IPV6);
 
 static noinline void __optimize_size in_discover (const path_s* const path, const skb_s* const skb, pkt_s* const skel) {
 
-    ASSERT(path->info & S_SERVER);
+    ASSERT(path->info & P_SERVER);
 
     const void* orig = SKB_NETWORK(skb);
 
