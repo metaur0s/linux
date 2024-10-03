@@ -1,5 +1,6 @@
 #define PPP_PROTO_IP4 0x0021
 #define PPP_PROTO_IP6 0x0057
+#define PPP_PROTO_XGW 0x2562
 
 BUILD_ASSERT(IPPROTO_UDP != PPP_PROTO_IP4);
 BUILD_ASSERT(IPPROTO_UDP != PPP_PROTO_IP6);
@@ -342,9 +343,12 @@ int in (skb_s* const skb) {
     switch (proto) {
 
         case BE16(ETH_P_PPP_SES): {
+
             const hdr_ppp_s* const ppp = ptr;
+            
             if ((ptr += sizeof(*ppp)) > end)
                 ret_dev(DSTATS_I_INCOMPLETE);
+
             switch (ppp->proto) {
                 case BE16(PPP_PROTO_IP4):
                     hdr = ptr + offsetof(hdr_ip4_s, proto);
@@ -354,6 +358,8 @@ int in (skb_s* const skb) {
                     hdr = ptr + offsetof(hdr_ip6_s, proto);
                     proto = sizeof(hdr_ip6_s);
                     break;
+                case BE16(PPP_PROTO_XGW):
+                    goto _is_xgw;
                 case BE16(0xC021): // Protocol: Link Control Protocol (0xc021)
                 case BE16(0xC023): // Protocol: Password Authentication Protocol (0xc023)
                 case BE16(0x8021): // Protocol: Internet Protocol Control Protocol (0x8021)
@@ -362,6 +368,7 @@ int in (skb_s* const skb) {
                 default:
                     ret_dev(DSTATS_I_UNKNOWN);
             }
+            
         } break;
 
         case BE16(ETH_P_IP):
