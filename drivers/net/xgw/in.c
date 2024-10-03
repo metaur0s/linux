@@ -346,28 +346,22 @@ int in (skb_s* const skb) {
         proto = ppp->proto;
     }
 
-    switch (BE16(proto)) {
-
-        case PPP_PROTO_IP4:
-        case ETH_P_IP:
+    switch (proto) {
+        case BE16(PPP_PROTO_IP4):
+        case BE16(ETH_P_IP):
             hdr = ptr + offsetof(hdr_ip4_s, proto);
             proto = sizeof(hdr_ip4_s);
             break;
-
-        case PPP_PROTO_IP6:
-        case ETH_P_IPV6:
+        case BE16(PPP_PROTO_IP6):
+        case BE16(ETH_P_IPV6):
             hdr = ptr + offsetof(hdr_ip6_s, proto);
             proto = sizeof(hdr_ip6_s);
             break;
-
-        case ETH_P_XGW:
+        case BE16(ETH_P_XGW):
             goto _is_xgw;
-
-#if 0
-        case ETH_P_ARP:
+        case BE16(ETH_P_ARP):
             // TODO:
             goto _not_xgw;
-#endif
         default:
             goto _not_xgw;
     }
