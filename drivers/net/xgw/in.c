@@ -16,25 +16,38 @@ static noinline void __optimize_size in_discover (const path_s* const path, cons
         T |= __VLAN; proto = ((hdr_vlan_s*)orig)->proto; orig += sizeof(hdr_vlan_s);
     }
 
-    if (proto == BE16(ETH_P_PPP_SES)) {
-        proto = ((hdr_ppp_s*)orig)->proto; orig += sizeof(hdr_ppp_s);
-        switch (proto) {
-            case BE16(PPP_PROTO_IP4): T |= __PPP | __IP4; proto = ((hdr_ip4_s*)orig)->proto; orig += sizeof(hdr_ip4_s); break;
-            case BE16(PPP_PROTO_IP6): T |= __PPP | __IP6; proto = ((hdr_ip6_s*)orig)->proto; orig += sizeof(hdr_ip6_s); break;
-            default:                  T |= __PPP;         proto = 0;
-        }
-    } elif (proto == BE16(ETH_P_IP)) {
-        T |= __IP4; proto = ((hdr_ip4_s*)orig)->proto; orig += sizeof(hdr_ip4_s);
-    } elif (proto == BE16(ETH_P_IPV6)) {
-        T |= __IP6; proto = ((hdr_ip6_s*)orig)->proto; orig += sizeof(hdr_ip6_s);
-    } else {
-        proto = 0;
+    switch (proto) {
+        case BE16(ETH_P_PPP_SES):
+            T |= __PPP;
+            proto = ((hdr_ppp_s*)orig)->proto;
+            orig += sizeof(hdr_ppp_s);
+    }
+    
+    switch (proto) {
+        case BE16(PPP_PROTO_IP4):
+        case BE16(ETH_P_IP):
+            T |= __IP4;
+            proto = ((hdr_ip4_s*)orig)->proto;
+            orig += sizeof(hdr_ip4_s);
+            break;
+        case BE16(PPP_PROTO_IP6):
+        case BE16(ETH_P_IPV6):
+            T |= __IP6;
+            proto = ((hdr_ip6_s*)orig)->proto;
+            orig += sizeof(hdr_ip6_s);
+            break;
+        default:
+            proto = 0;
     }
 
-    if (proto == BE8(IPPROTO_UDP)) {
-        T |= __UDP; orig += sizeof(hdr_udp_s);
-    } elif (proto == BE8(IPPROTO_TCP)) {
-        T |= __TCP; orig += sizeof(hdr_tcp_s);
+    switch (proto) {
+        case BE8(IPPROTO_UDP):
+            T |= __UDP;
+            orig += sizeof(hdr_udp_s);
+            break;
+        case BE8(IPPROTO_TCP):
+            T |= __TCP;
+            orig += sizeof(hdr_tcp_s);
     }
 
     //
