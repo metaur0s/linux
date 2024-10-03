@@ -401,7 +401,7 @@ int in (skb_s* const skb) {
         case BE8(IPPROTO_IGMP):
         case BE8(IPPROTO_SCTP):
         case BE8(IPPROTO_DCCP):
-        case BE8(IPPROTO_UDPLITE):
+        case BE8(136): // IPPROTO_UDPLITE
             ret_dev(DSTATS_I_FILTERED);
         default:
 #if 1
