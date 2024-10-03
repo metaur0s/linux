@@ -364,6 +364,7 @@ int in (skb_s* const skb) {
             goto _not_xgw;
         case BE16(ETH_P_PPP_DISC):
             goto _not_xgw;
+        case BE16(ETH_P_LLDP):
         case BE16(0xfffA): // This.is.loop.detect.frame.se
         case BE16(0x893A): // ..ALCL
             ret_dev(DSTATS_I_FILTERED);
