@@ -458,8 +458,8 @@ static ssize_t __cold_as_ice __optimize_size cmd (struct file *file, const char 
 
             rtnl_lock();
 
-            if (!(phys->flags & IFF_XGW)) {
-                phys->flags |= IFF_XGW;
+            if (!phys->xgw) {
+                phys->xgw = true;
                 // KEEP HOLDING IT
                 phys = NULL;
             }
@@ -472,8 +472,8 @@ static ssize_t __cold_as_ice __optimize_size cmd (struct file *file, const char 
 
             rtnl_lock();
 
-            if (phys->flags & IFF_XGW) {
-                phys->flags ^= IFF_XGW;
+            if (phys->xgw) {
+                phys->xgw = false;
                 // RELEASE AGAIN THE DEVICE
                 dev_put(phys);
             }
