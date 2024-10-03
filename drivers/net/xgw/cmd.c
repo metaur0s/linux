@@ -1040,7 +1040,7 @@ static ssize_t __cold_as_ice __optimize_size cmd (struct file *file, const char 
             // TODO: UNREFCOUNT OUR HOOK USAGE VAI SER UM PROBLEMAO POIS OS LISTENINGS PODEM ACABAR DESCOBRINDO ELA :S - basta reverificar se esta hookado ao dar o accept e/ou SUSPEND
             // TODO: HUMMM O ACCEPT NAO DEVE SETAR O P_PHYS
 
-            if (!(phys->flags & IFF_XGW))
+            if (!phys->xgw)
                 CMD_ERR(PHYS_NOT_HOOKED);
 
             path->skel.phys = phys;
