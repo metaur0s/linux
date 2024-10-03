@@ -6,6 +6,7 @@ static const struct {
 } statsStrs = {  // TODO: MARCAR SE ESTIVER ENVIANDO UM PING ATRASADO
     {
         [DSTATS_I_NOT_XGW               ] = "In.NotXGW",
+        [DSTATS_I_UNKNOWN               ] = "In.Unknown",
         [DSTATS_I_DOWN                  ] = "In.Down",
         [DSTATS_I_NON_LINEAR            ] = "In.NonLinear",
         [DSTATS_I_INCOMPLETE            ] = "In.Incomplete",
