@@ -339,20 +339,35 @@ int in (skb_s* const skb) {
         proto = vlan->proto;
     }
 
-    if (proto == BE16(ETH_P_PPP_SES)) {
-        const hdr_ppp_s* const ppp = ptr;
-        if ((ptr += sizeof(*ppp)) > end)
-            ret_dev(DSTATS_I_INCOMPLETE);
-        proto = ppp->proto;
-    }
-
     switch (proto) {
-        case BE16(PPP_PROTO_IP4):
+
+        case BE16(ETH_P_PPP_SES): {
+            const hdr_ppp_s* const ppp = ptr;
+            if ((ptr += sizeof(*ppp)) > end)
+                ret_dev(DSTATS_I_INCOMPLETE);
+            switch (ppp->proto) {
+                case BE16(PPP_PROTO_IP4):
+                    hdr = ptr + offsetof(hdr_ip4_s, proto);
+                    proto = sizeof(hdr_ip4_s);
+                    break;
+                case BE16(PPP_PROTO_IP6):
+                    hdr = ptr + offsetof(hdr_ip6_s, proto);
+                    proto = sizeof(hdr_ip6_s);
+                    break;
+                case BE16(0xC021): // Protocol: Link Control Protocol (0xc021)
+                case BE16(0xC023): // Protocol: Password Authentication Protocol (0xc023)
+                case BE16(0x8021): // Protocol: Internet Protocol Control Protocol (0x8021)
+                case BE16(0x8057): // Protocol: IPv6 Control Protocol (0x8057)
+                    goto _not_xgw;
+                default:
+                    ret_dev(DSTATS_I_UNKNOWN);
+            }
+        } break;
+
         case BE16(ETH_P_IP):
             hdr = ptr + offsetof(hdr_ip4_s, proto);
             proto = sizeof(hdr_ip4_s);
             break;
-        case BE16(PPP_PROTO_IP6):
         case BE16(ETH_P_IPV6):
             hdr = ptr + offsetof(hdr_ip6_s, proto);
             proto = sizeof(hdr_ip6_s);
@@ -370,7 +385,7 @@ int in (skb_s* const skb) {
             ret_dev(DSTATS_I_FILTERED);
         default:
 #if 1
-            printk("XGW: UNKNOWN SKB PROTOCOL: 0x%04X\n", BE16(proto));
+            printk("XGW: UNKNOWN SKB/ETH/VLAN PROTOCOL: 0x%04X\n", BE16(proto));
 #endif
             ret_dev(DSTATS_I_UNKNOWN);
     }
