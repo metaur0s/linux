@@ -5476,7 +5476,9 @@ static int __netif_receive_skb_core(struct sk_buff **pskb, bool pfmemalloc,
 	//   (NO CASO DO DROP, CONFIRMAR QUE NAO USA O orig_dev)
 	// TODO: FIXME: DESCOBRIR O QUE CAUSA TANTOS SKBS NAO LINEARES AQUI
 #ifdef CONFIG_XGW
+#if 0
 	if (skb->dev->flags & IFF_XGW)
+#endif
 		if (xgw_dev_in(skb))
 			goto drop;
 #endif
