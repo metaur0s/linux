@@ -7,6 +7,14 @@ config    VLAN
     bool "VLAN"
     default n
 
+config    VLAN_CORE
+    bool "VLAN_CORE"
+    default y
+
+config    VLAN_IXGBE
+    bool "VLAN_IXGBE"
+    default y
+
 menuconfig NET_SOCKMARKS
     bool  "NET_SOCKMARKS"
     default n
