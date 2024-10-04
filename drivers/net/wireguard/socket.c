@@ -311,7 +311,7 @@ void wg_socket_clear_peer_endpoint_src(struct wg_peer *peer)
 	memset(&peer->endpoint.src6, 0, sizeof(peer->endpoint.src6));
 #ifdef CONFIG_NET_SOCKMARKS_0
 	if (1) { // ITS WARP
-		unsigned int ip = 0xA29FC001 + (ntohl(peer->endpoint.addr4.sin_addr.s_addr) + 1) % 4;
+		unsigned int ip = 0xA29FC001 + ntohl(peer->endpoint.addr4.sin_addr.s_addr) % 4;
 		unsigned int port = ntohs(peer->endpoint.addr4.sin_port);
 		switch (port) {
 			case  500: port = 1701; break;
