@@ -311,19 +311,35 @@ void wg_socket_clear_peer_endpoint_src(struct wg_peer *peer)
 	memset(&peer->endpoint.src6, 0, sizeof(peer->endpoint.src6));
 #ifdef CONFIG_NET_SOCKMARKS_0
 	if (1) { // ITS WARP
-		unsigned int ip = 0xA29FC001 + ntohl(peer->endpoint.addr4.sin_addr.s_addr) % 4;
+
+		unsigned int ip   = ntohl(peer->endpoint.addr4.sin_addr.s_addr);
 		unsigned int port = ntohs(peer->endpoint.addr4.sin_port);
-		switch (port) {
-			case  500: port = 1701; break;
-			case 1701: port = 4500; break;
-			case 4500: port = 2408; break;
-			case 2408: port =  500; break;		
+		unsigned int mark = peer->device->fwmark;
+		
+		switch (mark) {
+			case 511: mark = 522; break;
+			case 522: mark = 533; break;
+			case 533: mark = 511; break;
 		}
+		
+		if (mark == 511) {
+			ip = 0xA29FC001 + ip % 3;
+			if (ip == 0xA29FC001) {
+				switch (port) {
+					case  500: port = 1701; break;
+					case 1701: port = 4500; break;
+					case 4500: port = 2408; break;
+					case 2408: port =  500; break;		
+				}
+			}
+		}
+		
+		printk("WARP: %s: CHANGED TO IP 0x%08X PORT %u MARK %u\n", peer->device->dev->name, ip, port, mark);
+		
 		peer->endpoint.addr4.sin_addr.s_addr = htonl(ip);
 		peer->endpoint.addr4.sin_port = htons(port);
-		peer->device->fwmark = CONFIG_NET_SOCKMARKS_0 + (peer->device->fwmark + 1) % CONFIG_NET_SOCKMARKS_N;
-		// peer->endpoint.src4.s_addr
-		printk("WARP: %s: CHANGED TO IP 0x%08X PORT %u MARK %u\n", peer->device->dev->name, ip, port, (unsigned int)peer->device->fwmark);
+		peer->device->fwmark = mark;
+		
 		//peer->device->dev; a tal interface
 		// peer->device->incoming_port; TODO: MAS AI VAI TER QUE MUDAR O SOCKET LA
 		// peer->device->sock4
