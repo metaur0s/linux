@@ -310,36 +310,52 @@ void wg_socket_clear_peer_endpoint_src(struct wg_peer *peer)
 	write_lock_bh(&peer->endpoint_lock);
 	memset(&peer->endpoint.src6, 0, sizeof(peer->endpoint.src6));
 #ifdef CONFIG_NET_SOCKMARKS_0
+
+#define ISP_TABLE_0 511
+#define ISP_TABLE_1 522
+#define ISP_TABLE_2 533
+		
+#define WARP_PORT_0 2408
+#define WARP_PORT_1 4500
+#define WARP_PORT_2 1701
+#define WARP_PORT_3  500
+
+// 162.159.192.1
+#define WARP_IP_0 0xA29FC001
+#define WARP_IPS_N 4
+
 	if (1) { // ITS WARP
 
 		unsigned int ip   = ntohl(peer->endpoint.addr4.sin_addr.s_addr);
 		unsigned int port = ntohs(peer->endpoint.addr4.sin_port);
-		unsigned int mark = peer->device->fwmark;
-		
+		unsigned int mark =       peer->device->fwmark;
+
 		switch (mark) {
-			case 511: mark = 522; break;
-			case 522: mark = 533; break;
-			case 533: mark = 511; break;
+			case ISP_TABLE_0: mark = ISP_TABLE_1; break;
+			case ISP_TABLE_1: mark = ISP_TABLE_2; break;
+			case ISP_TABLE_2: mark = ISP_TABLE_0; break;
 		}
-		
-		if (mark == 511) {
-			ip = 0xA29FC001 + ip % 3;
-			if (ip == 0xA29FC001) {
+
+		if (mark == ISP_TABLE_0) {
+			// TENTOU TODOS OS ISPS
+			ip = WARP_IP_0 + ip % WARP_IPS_N;
+			if (ip == WARP_IP_0) {
+				// TENTOU TODOS OS IPS
 				switch (port) {
-					case  500: port = 1701; break;
-					case 1701: port = 4500; break;
-					case 4500: port = 2408; break;
-					case 2408: port =  500; break;		
+					case WARP_PORT_0: port = WARP_PORT_1; break;
+					case WARP_PORT_1: port = WARP_PORT_2; break;
+					case WARP_PORT_2: port = WARP_PORT_3; break;
+					case WARP_PORT_3: port = WARP_PORT_0; break;		
 				}
 			}
 		}
-		
+
 		printk("WARP: %s: CHANGED TO IP 0x%08X PORT %u MARK %u\n", peer->device->dev->name, ip, port, mark);
-		
+
 		peer->endpoint.addr4.sin_addr.s_addr = htonl(ip);
 		peer->endpoint.addr4.sin_port = htons(port);
 		peer->device->fwmark = mark;
-		
+
 		//peer->device->dev; a tal interface
 		// peer->device->incoming_port; TODO: MAS AI VAI TER QUE MUDAR O SOCKET LA
 		// peer->device->sock4
