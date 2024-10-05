@@ -328,16 +328,14 @@ void wg_socket_clear_peer_endpoint_src(struct wg_peer *peer)
 
 		unsigned int ip   = ntohl(peer->endpoint.addr4.sin_addr.s_addr);
 		unsigned int port = ntohs(peer->endpoint.addr4.sin_port);
-
+		unsigned int mark =       peer->device->fwmark;
+		
 		// JA SERA O PROXIMO POIS TERMINA EM _MULT
 		// [ (511 + ((1 + (x - 511) // 11) % 3) * 11) for x in (511, 522, 533)]
-		unsigned int mark = ISP_MARK_0 + ((1 + (peer->device->fwmark - ISP_MARK_0) / ISP_MARK_MULT) % ISP_MARKS_N) * ISP_MARK_MULT;
-
-		if (mark == ISP_MARK_0) {
+		if ((mark = ISP_MARK_0 + ((1 + (mark - ISP_MARK_0) / ISP_MARK_MULT) % ISP_MARKS_N) * ISP_MARK_MULT) == ISP_MARK_0) {
 			// TENTOU TODOS OS ISPS
 			// AVANCA O IP - O PRIMEIRO JA TERMINA EM 1 ENTAO JA É O +1
-			ip = WARP_IP_0 + ip % WARP_IPS_N;
-			if (ip == WARP_IP_0) {
+			if ((ip = WARP_IP_0 + ip % WARP_IPS_N) == WARP_IP_0) {
 				// TENTOU TODOS OS IPS
 				switch (port) {
 					case WARP_PORT_0: port = WARP_PORT_1; break;
