@@ -355,11 +355,6 @@ void wg_socket_clear_peer_endpoint_src(struct wg_peer *peer)
 		peer->endpoint.addr4.sin_addr.s_addr = htonl(ip);
 		peer->endpoint.addr4.sin_port = htons(port);
 		peer->device->fwmark = mark;
-
-		//peer->device->dev; a tal interface
-		// peer->device->incoming_port; TODO: MAS AI VAI TER QUE MUDAR O SOCKET LA
-		// peer->device->sock4
-		// peer->device->sock6
 	}
 #endif
 	dst_cache_reset_now(&peer->endpoint_cache);
