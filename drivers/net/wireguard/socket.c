@@ -311,9 +311,9 @@ void wg_socket_clear_peer_endpoint_src(struct wg_peer *peer)
 	memset(&peer->endpoint.src6, 0, sizeof(peer->endpoint.src6));
 #ifdef CONFIG_NET_SOCKMARKS_0
 
-#define ISP_TABLE_0 511
-#define ISP_TABLE_1 522
-#define ISP_TABLE_2 533
+#define ISP_MARK_0 511
+#define ISP_MARK_MULT 11
+#define ISP_MARKS_N 3
 		
 #define WARP_PORT_0 2408
 #define WARP_PORT_1 4500
@@ -328,16 +328,13 @@ void wg_socket_clear_peer_endpoint_src(struct wg_peer *peer)
 
 		unsigned int ip   = ntohl(peer->endpoint.addr4.sin_addr.s_addr);
 		unsigned int port = ntohs(peer->endpoint.addr4.sin_port);
-		unsigned int mark =       peer->device->fwmark;
 
-		switch (mark) {
-			case ISP_TABLE_0: mark = ISP_TABLE_1; break;
-			case ISP_TABLE_1: mark = ISP_TABLE_2; break;
-			case ISP_TABLE_2: mark = ISP_TABLE_0; break;
-		}
+		// JA SERA O PROXIMO POIS TERMINA EM _MULT
+		unsigned int mark = ISP_MARK_0 + (peer->device->fwmark % ISP_MARKS_N) * ISP_MARK_MULT;
 
-		if (mark == ISP_TABLE_0) {
+		if (mark == ISP_MARK_0) {
 			// TENTOU TODOS OS ISPS
+			// AVANCA O IP - O PRIMEIRO JA TERMINA EM 1 ENTAO JA É O +1
 			ip = WARP_IP_0 + ip % WARP_IPS_N;
 			if (ip == WARP_IP_0) {
 				// TENTOU TODOS OS IPS
@@ -350,7 +347,7 @@ void wg_socket_clear_peer_endpoint_src(struct wg_peer *peer)
 			}
 		}
 
-		printk("WARP: %s: CHANGED TO IP 0x%08X PORT %u MARK %u\n", peer->device->dev->name, ip, port, mark);
+		printk("WARP: %s: CHANGED TO MARK %u IP 0x%08X PORT %u\n", peer->device->dev->name, mark, ip, port);
 
 		peer->endpoint.addr4.sin_addr.s_addr = htonl(ip);
 		peer->endpoint.addr4.sin_port = htons(port);
