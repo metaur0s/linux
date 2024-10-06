@@ -351,64 +351,38 @@ int in (skb_s* const skb) {
             if ((ptr += sizeof(*vlan)) > end)
                 ret_dev(DSTATS_I_INCOMPLETE);
             proto = vlan->proto;
-        }
+        } break;
     }
 
     switch (proto) {
-
         case BE16(ETH_P_PPP_SES): {
-
             const hdr_ppp_s* const ppp = ptr;
-            
             if ((ptr += sizeof(*ppp)) > end)
                 ret_dev(DSTATS_I_INCOMPLETE);
-
-            switch (ppp->proto) {
-                case BE16(PPP_PROTO_IP4):
-                    hdr = ptr + offsetof(hdr_ip4_s, proto);
-                    proto = sizeof(hdr_ip4_s);
-                    break;
-                case BE16(PPP_PROTO_IP6):
-                    hdr = ptr + offsetof(hdr_ip6_s, proto);
-                    proto = sizeof(hdr_ip6_s);
-                    break;
-                case BE16(PPP_PROTO_XGW):
-                    goto _is_xgw;
-                case BE16(PPP_PROTO_LCP):
-                case BE16(PPP_PROTO_PAP):
-                case BE16(PPP_PROTO_IPCP4):
-                case BE16(PPP_PROTO_IPCP6): 
-                    goto _not_xgw;
-                default:
-                    ret_dev(DSTATS_I_UNKNOWN);
-            }
-            
+            proto = ppp->proto;            
         } break;
+    }
 
+    // CUIDADO POIS ELE PODE ESTAR ACEITANDO COISAS ESTRANHAS: [ ETH PROTO "PPP_PROTO_IP4" | IPV4 ]
+    switch (proto) {
+        case BE16(PPP_PROTO_IP4):
         case BE16(ETH_P_IP):
             hdr = ptr + offsetof(hdr_ip4_s, proto);
             proto = sizeof(hdr_ip4_s);
             break;
+        case BE16(PPP_PROTO_IP6):
         case BE16(ETH_P_IPV6):
             hdr = ptr + offsetof(hdr_ip6_s, proto);
             proto = sizeof(hdr_ip6_s);
             break;
+        case BE16(PPP_PROTO_XGW):
         case BE16(ETH_P_XGW):
             goto _is_xgw;
-        case BE16(ETH_P_ARP):
-            // TODO:
-            goto _not_xgw;
-        case BE16(ETH_P_PPP_DISC):
-            goto _not_xgw;
-        case BE16(ETH_P_LLDP):
-        case BE16(0xfffA): // This.is.loop.detect.frame.se
-        case BE16(0x893A): // ..ALCL
-            ret_dev(DSTATS_I_FILTERED);
+        //case BE16(ETH_P_ARP): // TODO:
+        //case BE16(0xfffA): // This.is.loop.detect.frame.se
+        //case BE16(0x893A): // ..ALCL
         default:
-#if 1
-            printk("XGW: UNKNOWN SKB/ETH/VLAN PROTOCOL: 0x%04X\n", BE16(proto));
-#endif
-            ret_dev(DSTATS_I_UNKNOWN);
+            goto _not_xgw;
     }
 
     // PTR POINTS TO IP
