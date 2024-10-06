@@ -9,20 +9,15 @@ enum PPP_PROTO {
     PPP_PROTO_XGW   = 0x2562,
 };
 
-BUILD_ASSERT(ETH_P_XGW == PPP_PROTO_XGW);
-// BUILD_ASSERT(ETH_P_XGW == IPPROTO_XGW); TODO:
-
 BUILD_ASSERT(IPPROTO_UDP != PPP_PROTO_IP4);
 BUILD_ASSERT(IPPROTO_UDP != PPP_PROTO_IP6);
 BUILD_ASSERT(IPPROTO_UDP != ETH_P_IP);
 BUILD_ASSERT(IPPROTO_UDP != ETH_P_IPV6);
-BUILD_ASSERT(IPPROTO_UDP != ETH_P_PPP_SES);
 
 BUILD_ASSERT(IPPROTO_TCP != PPP_PROTO_IP4);
 BUILD_ASSERT(IPPROTO_TCP != PPP_PROTO_IP6);
 BUILD_ASSERT(IPPROTO_TCP != ETH_P_IP);
 BUILD_ASSERT(IPPROTO_TCP != ETH_P_IPV6);
-BUILD_ASSERT(IPPROTO_TCP != ETH_P_PPP_SES);
 
 static noinline void __optimize_size in_discover (const path_s* const path, const skb_s* const skb, pkt_s* const skel) {
 
@@ -355,32 +350,37 @@ int in (skb_s* const skb) {
     }
 
     switch (proto) {
+
         case BE16(ETH_P_PPP_SES): {
             const hdr_ppp_s* const ppp = ptr;
             if ((ptr += sizeof(*ppp)) > end)
                 ret_dev(DSTATS_I_INCOMPLETE);
-            proto = ppp->proto;            
+            switch (ppp->proto) {
+                case BE16(PPP_PROTO_IP4):
+                    hdr = ptr + offsetof(hdr_ip4_s, proto);
+                    proto = sizeof(hdr_ip4_s);
+                    break;
+                case BE16(PPP_PROTO_IP6):
+                    hdr = ptr + offsetof(hdr_ip6_s, proto);
+                    proto = sizeof(hdr_ip6_s);
+                    break;
+                case BE16(PPP_PROTO_XGW):
+                    goto _is_xgw;
+                default:
+                    goto _not_xgw;
+            }
         } break;
-    }
 
-    // CUIDADO POIS ELE PODE ESTAR ACEITANDO COISAS ESTRANHAS: [ ETH PROTO "PPP_PROTO_IP4" | IPV4 ]
-    switch (proto) {
-        case BE16(PPP_PROTO_IP4):
         case BE16(ETH_P_IP):
             hdr = ptr + offsetof(hdr_ip4_s, proto);
             proto = sizeof(hdr_ip4_s);
             break;
-        case BE16(PPP_PROTO_IP6):
         case BE16(ETH_P_IPV6):
             hdr = ptr + offsetof(hdr_ip6_s, proto);
             proto = sizeof(hdr_ip6_s);
             break;
-        case BE16(PPP_PROTO_XGW):
         case BE16(ETH_P_XGW):
             goto _is_xgw;
-        //case BE16(ETH_P_ARP): // TODO:
-        //case BE16(0xfffA): // This.is.loop.detect.frame.se
-        //case BE16(0x893A): // ..ALCL
         default:
             goto _not_xgw;
     }
@@ -403,21 +403,8 @@ int in (skb_s* const skb) {
             break;
         case BE8(IPPROTO_XGW):
             goto _is_xgw;
-        case BE8(IPPROTO_ICMP):
-        case BE8(IPPROTO_ICMPV6):
-        case BE8(IPPROTO_IPIP):
-        case BE8(IPPROTO_IPV6):
-            goto _not_xgw;
-        case BE8(IPPROTO_IGMP):
-        case BE8(IPPROTO_SCTP):
-        case BE8(IPPROTO_DCCP):
-        case BE8(136): // IPPROTO_UDPLITE
-            ret_dev(DSTATS_I_FILTERED);
         default:
-#if 1
-            printk("XGW: UNKNOWN IP PROTOCOL: 0x%08X\n", BE8(proto));
-#endif
-            ret_dev(DSTATS_I_UNKNOWN);
+            goto _not_xgw;
     }
 
     // PTR POINTS TO TRANSPORT
