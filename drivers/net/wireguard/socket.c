@@ -314,42 +314,13 @@ void wg_socket_clear_peer_endpoint_src(struct wg_peer *peer)
 #define ISP_MARK_0 511
 #define ISP_MARK_MULT 11
 #define ISP_MARKS_N 3
-		
-#define WARP_PORT_0 2408
-#define WARP_PORT_1 4500
-#define WARP_PORT_2 1701
-#define WARP_PORT_3  500
 
-// 162.159.192.1
-#define WARP_IP_0 0xA29FC001
-#define WARP_IPS_N 4
-
-	if (1) { // ITS WARP
-
-		unsigned int ip   = ntohl(peer->endpoint.addr4.sin_addr.s_addr);
-		unsigned int port = ntohs(peer->endpoint.addr4.sin_port);
-		unsigned int mark =       peer->device->fwmark;
-		
+	// 162.159.192.1
+	if (peer->endpoint.addr4.sin_addr.s_addr == htonl(0xA29FC001)) { // ITS WARP
 		// JA SERA O PROXIMO POIS TERMINA EM _MULT
 		// [ (511 + ((1 + (x - 511) // 11) % 3) * 11) for x in (511, 522, 533)]
-		if ((mark = ISP_MARK_0 + ((1 + (mark - ISP_MARK_0) / ISP_MARK_MULT) % ISP_MARKS_N) * ISP_MARK_MULT) == ISP_MARK_0) {
-			// TENTOU TODOS OS ISPS
-			// AVANCA O IP - O PRIMEIRO JA TERMINA EM 1 ENTAO JA É O +1
-			if ((ip = WARP_IP_0 + ip % WARP_IPS_N) == WARP_IP_0) {
-				// TENTOU TODOS OS IPS
-				switch (port) {
-					case WARP_PORT_0: port = WARP_PORT_1; break;
-					case WARP_PORT_1: port = WARP_PORT_2; break;
-					case WARP_PORT_2: port = WARP_PORT_3; break;
-					case WARP_PORT_3: port = WARP_PORT_0; break;		
-				}
-			}
-		}
-
-		printk("WARP: %s: CHANGED TO MARK %u IP 0x%08X PORT %u\n", peer->device->dev->name, mark, ip, port);
-
-		peer->endpoint.addr4.sin_addr.s_addr = htonl(ip);
-		peer->endpoint.addr4.sin_port = htons(port);
+		const unsigned int mark = ISP_MARK_0 + ((1 + (peer->device->fwmark - ISP_MARK_0) / ISP_MARK_MULT) % ISP_MARKS_N) * ISP_MARK_MULT;
+		printk("WARP: %s: CHANGED TO MARK %u\n", peer->device->dev->name, mark);
 		peer->device->fwmark = mark;
 	}
 #endif
