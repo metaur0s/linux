@@ -176,6 +176,28 @@ static ssize_t __cold_as_ice __optimize_size cmd (struct file *file, const char 
             path->encap.eth_ppp.pProto = BE16(0x0021);
 
             break;
+
+        case CMD_PATH_ENCAP_ETH_VLAN_PPP_SESSION:
+
+            ASSERT(path->eType == ENCAP_TYPE_ETH_VLAN_PPP);
+
+            const uint session = cmd->encap.eth_vlan_ppp.pSession;
+                                path->encap.eth_vlan_ppp.pSession = BE16(session);
+
+            printk("CLF: PATH %u: PPP SESSION SET TO 0x%04X\n", pid, session);
+
+            break;
+
+        case CMD_PATH_ENCAP_ETH_PPP_SESSION:
+
+            ASSERT(path->eType == ENCAP_TYPE_ETH_PPP);
+
+            const uint session = cmd->encap.eth_ppp.pSession;
+                                path->encap.eth_ppp.pSession = BE16(session);
+
+            printk("CLF: PATH %u: PPP SESSION SET TO 0x%04X\n", pid, session);
+            
+            break;
     }
 
     // FORGET THE PHYSICAL DEVICE
