@@ -1,4 +1,6 @@
 
+#define PATHS_N 16
+
 struct path_s {
     u8 eType;
     u8 eSize;
