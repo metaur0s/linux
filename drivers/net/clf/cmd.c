@@ -50,11 +50,15 @@ static ssize_t __cold_as_ice __optimize_size cmd (struct file *file, const char 
 
         case CMD_PATH_ON:
 
+            printk("CLF: PATH %u: ON\n", pid);
+
             __atomic_store_n(&opaths, opaths | (0x00010001U << pid), __ATOMIC_SEQ_CST);
 
             break;
 
         case CMD_PATH_OFF:
+
+            printk("CLF: PATH %u: OFF\n", pid);
 
             __atomic_store_n(&opaths, opaths & ~(0x00010001U << pid), __ATOMIC_SEQ_CST);
 
@@ -64,6 +68,8 @@ static ssize_t __cold_as_ice __optimize_size cmd (struct file *file, const char 
 
             ASSERT(phys != NULL);
 
+            printk("CLF: PATH %u: PHYS %s\n", phys->name);
+			
             // USE IT
             phys = __atomic_exchange_n(&path->phys, phys, __ATOMIC_SEQ_CST);
 
@@ -73,6 +79,8 @@ static ssize_t __cold_as_ice __optimize_size cmd (struct file *file, const char 
             break;
 
         case CMD_PATH_PHYS_CLR:
+
+            printk("CLF: PATH %u: PHYS CLEAR\n", pid);
 
             ASSERT(phys == NULL);
 
