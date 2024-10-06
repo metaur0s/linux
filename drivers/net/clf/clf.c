@@ -1,10 +1,9 @@
 
-#include "encap.h"
+#include "pkt.h"
+#include "paths.h"
 #include "cmds.h"
 
 DEFINE_SPINLOCK(xlock);
-
-#define PATHS_N 16
 
 static uint opaths;
 static path_s paths[PATHS_N];
