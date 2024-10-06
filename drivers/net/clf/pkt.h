@@ -1,6 +1,4 @@
 
-#define ENCAP_SIZE 32
-
 enum ENCAP_TYPE {
     ENCAP_TYPE_RAW,
     ENCAP_TYPE_ETH,
@@ -8,6 +6,8 @@ enum ENCAP_TYPE {
     ENCAP_TYPE_ETH_VLAN_PPP,
     ENCAP_TYPE_ETH_PPP,
 };
+
+#define ENCAP_SIZE 32
 
 #define ENCAP_SIZE_ETH          (14)
 #define ENCAP_SIZE_ETH_VLAN     (14 + 4)
