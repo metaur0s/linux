@@ -1,6 +1,13 @@
-#define PPP_PROTO_IP4 0x0021
-#define PPP_PROTO_IP6 0x0057
-#define PPP_PROTO_XGW 0x2562
+
+enum PPP_PROTO {
+    PPP_PROTO_IP4   = 0x0021,
+    PPP_PROTO_IP6   = 0x0057,
+    PPP_PROTO_LCP   = 0xC021, // Protocol: Link Control Protocol (0xc021)
+    PPP_PROTO_PAP   = 0xC023, // Protocol: Password Authentication Protocol (0xc023)
+    PPP_PROTO_IPCP4 = 0x8021, // Protocol: Internet Protocol Control Protocol (0x8021)
+    PPP_PROTO_IPCP6 = 0x8057, // Protocol: IPv6 Control Protocol (0x8057)
+    PPP_PROTO_XGW   = 0x2562,
+};
 
 BUILD_ASSERT(IPPROTO_UDP != PPP_PROTO_IP4);
 BUILD_ASSERT(IPPROTO_UDP != PPP_PROTO_IP6);
@@ -362,10 +369,10 @@ int in (skb_s* const skb) {
                     break;
                 case BE16(PPP_PROTO_XGW):
                     goto _is_xgw;
-                case BE16(0xC021): // Protocol: Link Control Protocol (0xc021)
-                case BE16(0xC023): // Protocol: Password Authentication Protocol (0xc023)
-                case BE16(0x8021): // Protocol: Internet Protocol Control Protocol (0x8021)
-                case BE16(0x8057): // Protocol: IPv6 Control Protocol (0x8057)
+                case BE16(PPP_PROTO_LCP):
+                case BE16(PPP_PROTO_PAP):
+                case BE16(PPP_PROTO_IPCP4):
+                case BE16(PPP_PROTO_IPCP6): 
                     goto _not_xgw;
                 default:
                     ret_dev(DSTATS_I_UNKNOWN);
