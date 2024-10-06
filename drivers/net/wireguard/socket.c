@@ -316,12 +316,14 @@ void wg_socket_clear_peer_endpoint_src(struct wg_peer *peer)
 #define ISP_MARKS_N 3
 
 	// 162.159.192.1
-	if (peer->endpoint.addr4.sin_addr.s_addr == htonl(0xA29FC001)) { // ITS WARP
+	if ((ntohl(peer->endpoint.addr4.sin_addr.s_addr) & 0xFFFFFF00U) == 0xA29FC000U) { // ITS WARP
 		// JA SERA O PROXIMO POIS TERMINA EM _MULT
 		// [ (511 + ((1 + (x - 511) // 11) % 3) * 11) for x in (511, 522, 533)]
 		const unsigned int mark = ISP_MARK_0 + ((1 + (peer->device->fwmark - ISP_MARK_0) / ISP_MARK_MULT) % ISP_MARKS_N) * ISP_MARK_MULT;
 		printk("WARP: %s: CHANGED TO MARK %u\n", peer->device->dev->name, mark);
+#if 0
 		peer->device->fwmark = mark;
+#endif
 	}
 #endif
 	dst_cache_reset_now(&peer->endpoint_cache);
