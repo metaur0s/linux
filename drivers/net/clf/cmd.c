@@ -35,7 +35,7 @@ static ssize_t __cold_as_ice __optimize_size cmd (struct file *file, const char 
             if (phys == NULL)
                 return -ENODEV;
             // CANNOT BE THE VPN ITSELF
-            if (phys == xgw)
+            if (phys == clf)
                 return -EINVAL;
     }
     
