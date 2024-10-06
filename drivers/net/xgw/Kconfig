@@ -67,7 +67,7 @@ endif
 
     config XGW_CONNS_MAX
       int "XGW_CONNS_MAX"
-        default 131072
+        default 524288
 
     config XGW_RANDOM_INIT_IPAIRS
       hex "XGW_RANDOM_INIT_IPAIRS"
