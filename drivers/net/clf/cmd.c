@@ -9,21 +9,44 @@ static ssize_t __cold_as_ice __optimize_size cmd (struct file *file, const char 
     
     if (copy_from_user(&cmd, ubuf, size))
         return -EINVAL;
-    
-    const uint pid = cmd->pid;
 
+    net_device_s* phys = NULL;
+    
+    const uint code = cmd->code;
+    const uint pid  = cmd->pid;
+
+    // VALIDATE COMMAND
+    if (code >= CMDS_N)
+        return -EINVAL;
+    
+    // VALIDATE PATH
     if (pid >= PATHS_N)
         return -EINVAL;
 
+    switch (code) {
+        case CMD_PATH_PHYS_SET:
+            // MUST HAVE A VALID NAME
+            if (!cmd->phys[0] ||
+                 cmd->phys[IFNAMSIZ - 1])
+                return -EINVAL;
+            // LOOKUP IT, OWNED
+            phys = dev_get_by_name(&init_net, cmd->phys);
+            // MUST EXIST
+            if (phys == NULL)
+                return -ENODEV;
+            // CANNOT BE THE VPN ITSELF
+            if (phys == xgw)
+                return -EINVAL;
+    }
+    
+    // LOCK CLF
     unsigned long iflags;
 
     spin_lock_irqsave(&xlock, iflags);
 
     path_s* const path = &paths[pid];
 
-    net_device_s* phys = NULL;
-
-    switch (cmd->code) {
+    switch (code) {
 
         case CMD_PATH_ON:
 
@@ -155,10 +178,11 @@ static ssize_t __cold_as_ice __optimize_size cmd (struct file *file, const char 
             break;
     }
 
+    // FORGET THE PHYSICAL DEVICE
     if (phys)
         dev_put(phys);
 
-    // UNLOCK
+    // UNLOCK CLF
     spin_unlock_irqrestore(&xlock, iflags);
 
     return sizeof(cmd_s);
