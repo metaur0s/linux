@@ -184,7 +184,7 @@ static u64 random64 (const u64 seed) {
 //  ou nao vai poder setar o self comoum que ja existe
 // e nem crar um que seja o self
 
-struct proc_ops xgwProcOps = {
+static struct proc_ops xgwProcOps = {
     .proc_write = cmd,
 };
 
