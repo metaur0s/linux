@@ -1,7 +1,7 @@
 
 #include "pkt.h"
 #include "paths.h"
-#include "cmds.h"
+#include "cmd.h"
 
 DEFINE_SPINLOCK(xlock);
 
