@@ -15,6 +15,13 @@ enum CMDS {
     CMD_PATH_ENCAP_ETH_PPP_SESSION,
 };
 
-struct cmd_s {
+#define CMD_SIZE 64
 
+struct cmd_s {
+    u8 code;
+    u8 pid;
+    char phys [30];
+    encap_s encap;
 };
+
+BUILD_ASSERT(sizeof(cmd_s) == CMD_SIZE);
