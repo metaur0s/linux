@@ -1,4 +1,17 @@
 
+#include "encap.h"
+#include "cmds.h"
+
+DEFINE_SPINLOCK(xlock);
+
+#define PATHS_N 16
+
+static uint opaths;
+static path_s paths[PATHS_N];
+
+#include "io.c"
+#include "cmd.c"
+
 static struct proc_ops procOps = {
     .proc_write = cmd,
 };
