@@ -5511,6 +5511,12 @@ another_round:
 		if (unlikely(!skb))
 			goto out;
 	}
+#else
+    switch (skb->protocol) {
+        case htons(ETH_P_8021Q):
+        case htons(ETH_P_8021AD):
+			goto out;
+    }
 #endif
 
 	if (skb_skip_tc_classify(skb))
