@@ -344,12 +344,14 @@ int in (skb_s* const skb) {
     uint proto = skb->protocol;
 
     // NOTE: FICAR DE OLHO NO QUE O skb_vlan_untag() FAZ
-    if (proto == BE16(ETH_P_8021Q)
-     || proto == BE16(ETH_P_8021AD)) {
-        const hdr_vlan_s* const vlan = ptr;
-        if ((ptr += sizeof(*vlan)) > end)
-            ret_dev(DSTATS_I_INCOMPLETE);
-        proto = vlan->proto;
+    switch (proto) {
+        case BE16(ETH_P_8021Q):
+        case BE16(ETH_P_8021AD): {
+            const hdr_vlan_s* const vlan = ptr;       
+            if ((ptr += sizeof(*vlan)) > end)
+                ret_dev(DSTATS_I_INCOMPLETE);
+            proto = vlan->proto;
+        }
     }
 
     switch (proto) {
