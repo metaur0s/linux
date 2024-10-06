@@ -105,12 +105,12 @@ static void pkt_encapsulate (const node_s* const node, const uint o, const u64 r
     skb->mac_header       = (PTR(pkt) + pkt->moffset) - SKB_HEAD(skb);
     skb->network_header   = (PTR(pkt) + pkt->noffset) - SKB_HEAD(skb);
     skb->transport_header = (PTR(pkt) + pkt->toffset) - SKB_HEAD(skb);
-    skb->tail             = (PTR(pkt) + sizeof(pkt_s) + sizeof(u64) + size) - SKB_HEAD(skb);
+ // skb->tail             = (PTR(pkt) + sizeof(pkt_s) + sizeof(u64) + size) - SKB_HEAD(skb);
 #else
     skb->mac_header       =  PTR(pkt) + pkt->moffset;
     skb->network_header   =  PTR(pkt) + pkt->noffset; // TODO: TEM QUE SER O VLAN???
     skb->transport_header =  PTR(pkt) + pkt->toffset;
-    skb->tail             = (PTR(pkt) + sizeof(pkt_s) + sizeof(u64) + size);
+ // skb->tail             = (PTR(pkt) + sizeof(pkt_s) + sizeof(u64) + size);
 #endif
 
     ASSERT(SKB_DATA(skb) >= SKB_HEAD(skb));
