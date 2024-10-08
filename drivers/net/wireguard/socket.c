@@ -313,7 +313,7 @@ void wg_socket_clear_peer_endpoint_src(struct wg_peer *peer)
 
 #define ISP_MARK_0 511
 #define ISP_MARK_MULT 11
-#define ISP_MARKS_N CONFIG_NET_SOCKMARKS_N
+#define ISP_MARKS_N 3
 
 	// 162.159.192.1
 	if ((ntohl(peer->endpoint.addr4.sin_addr.s_addr) & 0xFFFFFF00U) == 0xA29FC000U) { // ITS WARP
