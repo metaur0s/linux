@@ -309,23 +309,15 @@ void wg_socket_clear_peer_endpoint_src(struct wg_peer *peer)
 {
 	write_lock_bh(&peer->endpoint_lock);
 	memset(&peer->endpoint.src6, 0, sizeof(peer->endpoint.src6));
-#ifdef CONFIG_NET_SOCKMARKS_0
-
-#define ISP_MARK_0 511
-#define ISP_MARK_MULT 11
-#define ISP_MARKS_N 3
-
-	// 162.159.192.1
-	if ((ntohl(peer->endpoint.addr4.sin_addr.s_addr) & 0xFFFFFF00U) == 0xA29FC000U) { // ITS WARP
+#ifdef CONFIG_WIREGUARD_MARKS_N
+	// 162.159.192.0/24 - ITS WARP
+	// (ntohl(peer->endpoint.addr4.sin_addr.s_addr) & 0xFFFFFF00U) == 0xA29FC000U
+	if (1) { // TODO: SOMENTE SE FOR CLIENTE
 		// JA SERA O PROXIMO POIS TERMINA EM _MULT
 		// [ (511 + ((1 + (x - 511) // 11) % 3) * 11) for x in (511, 522, 533)]
-#if 1
-		const unsigned int mark = ISP_MARK_0 + ((1 + (peer->device->fwmark - ISP_MARK_0) / ISP_MARK_MULT) % ISP_MARKS_N) * ISP_MARK_MULT;
+		const unsigned int mark = CONFIG_WIREGUARD_MARK_0 + ((1 + (peer->device->fwmark - CONFIG_WIREGUARD_MARK_0) / CONFIG_WIREGUARD_MARK_MULT) % CONFIG_WIREGUARD_MARKS_N) * CONFIG_WIREGUARD_MARK_MULT;
 		printk("WARP: %s: CHANGED TO MARK %u\n", peer->device->dev->name, mark);
 		peer->device->fwmark = mark;
-#else
-		printk("WARP: %s: CAIU!\n", peer->device->dev->name);
-#endif
 	}
 #endif
 	dst_cache_reset_now(&peer->endpoint_cache);
