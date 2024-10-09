@@ -316,7 +316,8 @@ void wg_socket_clear_peer_endpoint_src(struct wg_peer *peer)
 #ifdef CONFIG_WIREGUARD_MARKS
 	// 162.159.192.0/24 - ITS WARP
 	// (ntohl(peer->endpoint.addr4.sin_addr.s_addr) & 0xFFFFFF00U) == 0xA29FC000U
-	if (1) { // TODO: SOMENTE SE FOR CLIENTE
+	// TODO: SOMENTE SE FOR CLIENTE - MAS ISSO ALTERA TODA A INTERFACE @_@
+	if ((ntohl(peer->endpoint.addr4.sin_addr.s_addr) & 0xFFFFFF00U) == 0xA29FC000U) {
 		// JA SERA O PROXIMO POIS TERMINA EM _MULT
 		// [ (511 + ((1 + (x - 511) // 11) % 3) * 11) for x in (511, 522, 533)]
 		const unsigned int mark = CONFIG_WIREGUARD_MARK_0 + ((1 + (peer->device->fwmark - CONFIG_WIREGUARD_MARK_0) / CONFIG_WIREGUARD_MARK_MULT) % CONFIG_WIREGUARD_MARKS_N) * CONFIG_WIREGUARD_MARK_MULT;
