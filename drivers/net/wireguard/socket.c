@@ -242,13 +242,15 @@ int wg_socket_endpoint_from_skb(struct endpoint *endpoint,
 		endpoint->addr4.sin_addr.s_addr = ip_hdr(skb)->saddr;
 		endpoint->src4.s_addr = ip_hdr(skb)->daddr;
 		endpoint->src_if4 = skb->skb_iif;
-	} else if (IS_ENABLED(CONFIG_IPV6) && skb->protocol == htons(ETH_P_IPV6)) {
+#ifdef CONFIG_WIREGUARD_IP6
+	} else if (skb->protocol == htons(ETH_P_IPV6)) {
 		endpoint->addr6.sin6_family = AF_INET6;
 		endpoint->addr6.sin6_port = udp_hdr(skb)->source;
 		endpoint->addr6.sin6_addr = ipv6_hdr(skb)->saddr;
 		endpoint->addr6.sin6_scope_id = ipv6_iface_scope_id(
 			&ipv6_hdr(skb)->saddr, skb->skb_iif);
 		endpoint->src6 = ipv6_hdr(skb)->daddr;
+#endif
 	} else {
 		return -EINVAL;
 	}
@@ -285,9 +287,11 @@ void wg_socket_set_peer_endpoint(struct wg_peer *peer,
 		peer->endpoint.addr4 = endpoint->addr4;
 		peer->endpoint.src4 = endpoint->src4;
 		peer->endpoint.src_if4 = endpoint->src_if4;
-	} else if (IS_ENABLED(CONFIG_IPV6) && endpoint->addr.sa_family == AF_INET6) {
+#ifdef CONFIG_WIREGUARD_IP6
+	} else if (endpoint->addr.sa_family == AF_INET6) {
 		peer->endpoint.addr6 = endpoint->addr6;
 		peer->endpoint.src6 = endpoint->src6;
+#endif
 	} else {
 		goto out;
 	}
