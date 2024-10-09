@@ -97,7 +97,7 @@ out:
 static int send6(struct wg_device *wg, struct sk_buff *skb,
 		 struct endpoint *endpoint, u8 ds, struct dst_cache *cache)
 {
-#if IS_ENABLED(CONFIG_IPV6)
+#ifdef CONFIG_WIREGUARD_IP6
 	struct flowi6 fl = {
 		.saddr = endpoint->src6,
 		.daddr = endpoint->addr6.sin6_addr,
@@ -309,7 +309,7 @@ void wg_socket_clear_peer_endpoint_src(struct wg_peer *peer)
 {
 	write_lock_bh(&peer->endpoint_lock);
 	memset(&peer->endpoint.src6, 0, sizeof(peer->endpoint.src6));
-#ifdef CONFIG_WIREGUARD_MARKS_N
+#ifdef CONFIG_WIREGUARD_MARKS
 	// 162.159.192.0/24 - ITS WARP
 	// (ntohl(peer->endpoint.addr4.sin_addr.s_addr) & 0xFFFFFF00U) == 0xA29FC000U
 	if (1) { // TODO: SOMENTE SE FOR CLIENTE
@@ -372,7 +372,7 @@ int wg_socket_init(struct wg_device *wg, u16 port)
 		.local_ip.s_addr = htonl(INADDR_ANY),
 		.local_udp_port = htons(port),
 	};
-#if IS_ENABLED(CONFIG_IPV6)
+#ifdef CONFIG_WIREGUARD_IP6
 	int retries = 0;
 	struct udp_port_cfg port6 = {
 		.family = AF_INET6,
@@ -390,7 +390,7 @@ int wg_socket_init(struct wg_device *wg, u16 port)
 	if (unlikely(!net))
 		return -ENONET;
 
-#if IS_ENABLED(CONFIG_IPV6)
+#ifdef CONFIG_WIREGUARD_IP6
 retry:
 #endif
 
@@ -402,7 +402,7 @@ retry:
 	set_sock_opts(new4);
 	setup_udp_tunnel_sock(net, new4, &cfg);
 
-#if IS_ENABLED(CONFIG_IPV6)
+#ifdef CONFIG_WIREGUARD_IP6
 	if (ipv6_mod_enabled()) {
 		port6.local_udp_port = inet_sk(new4->sk)->inet_sport;
 		ret = udp_sock_create(net, &port6, &new6);
