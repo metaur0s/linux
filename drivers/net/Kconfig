@@ -117,6 +117,18 @@ config WIREGUARD_DEBUG
 
 if WIREGUARD
 
+config       WIREGUARD_MARKS_N
+	int "WIREGUARD_MARKS_N"
+	default 3
+
+config       WIREGUARD_MARK_0
+	int "WIREGUARD_MARK_0"
+	default 511
+
+config       WIREGUARD_MARK_MULT
+	int "WIREGUARD_MARK_MULT"
+	default 11
+
 config       WIREGUARD_KEEPALIVE_TIMEOUT
 	int "WIREGUARD_KEEPALIVE_TIMEOUT"
 	default 10
