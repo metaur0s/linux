@@ -323,6 +323,8 @@ void wg_socket_clear_peer_endpoint_src(struct wg_peer *peer)
 		printk("WARP: %s: CHANGED TO MARK %u\n", peer->device->dev->name, mark);
 		peer->device->fwmark = mark;
 	}
+#else
+	printk("WARP: %s: CLEARED ENDPOINT\n", peer->device->dev->name);
 #endif
 	dst_cache_reset_now(&peer->endpoint_cache);
 	write_unlock_bh(&peer->endpoint_lock);
