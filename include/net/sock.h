@@ -120,14 +120,14 @@ typedef __u64 __bitwise __addrpair;
  *	@skc_net_refcnt: socket is using net ref counting
  *	@skc_bound_dev_if: bound device index if != 0
  *	@skc_bind_node: bind hash linkage for various protocol lookup tables
- *	@skc_portaddr_node: second hash linkage for UDP/UDP-Lite protocol
+ *	@skc_portaddr_node: second hash linkage for UDP protocol
  *	@skc_prot: protocol handlers inside a network family
  *	@skc_net: reference to the network namespace of this socket
  *	@skc_v6_daddr: IPV6 destination address
  *	@skc_v6_rcv_saddr: IPV6 source address
  *	@skc_cookie: socket's cookie value
  *	@skc_node: main hash linkage for various protocol lookup tables
- *	@skc_nulls_node: main hash linkage for TCP/UDP/UDP-Lite protocol
+ *	@skc_nulls_node: main hash linkage for TCP/UDP protocol
  *	@skc_tx_queue_mapping: tx queue number for this connection
  *	@skc_rx_queue_mapping: rx queue number for this connection
  *	@skc_flags: place holder for sk_flags
@@ -264,8 +264,6 @@ struct sk_filter;
   *	@sk_pacing_status: Pacing status (requested, handled by sch_fq)
   *	@sk_max_pacing_rate: Maximum pacing rate (%SO_MAX_PACING_RATE)
   *	@sk_sndbuf: size of send buffer in bytes
-  *	@sk_no_check_tx: %SO_NO_CHECK setting, set checksum in TX packets
-  *	@sk_no_check_rx: allow zero checksum in RX packets
   *	@sk_route_caps: route capabilities (e.g. %NETIF_F_TSO)
   *	@sk_gso_disabled: if set, NETIF_F_GSO_MASK is forbidden.
   *	@sk_gso_type: GSO type (e.g. %SKB_GSO_TCPV4)
@@ -497,8 +495,8 @@ struct sock {
 	 */
 	u8			sk_gso_disabled : 1,
 				sk_kern_sock : 1,
-				sk_no_check_tx : 1,
-				sk_no_check_rx : 1;
+				XXXXXXXXXXXXXX : 1,
+				ZZZZZZZZZZZZZZ : 1;
 	u8			sk_shutdown;
 	u16			sk_type;
 	u16			sk_protocol;
@@ -1277,9 +1275,6 @@ struct proto {
 	unsigned int		inuse_idx;
 #endif
 
-#if IS_ENABLED(CONFIG_MPTCP)
-	int			(*forward_alloc_get)(const struct sock *sk);
-#endif
 
 	bool			(*stream_memory_free)(const struct sock *sk, int wake);
 	bool			(*sock_is_readable)(struct sock *sk);
@@ -1343,10 +1338,6 @@ INDIRECT_CALLABLE_DECLARE(bool tcp_stream_memory_free(const struct sock *sk, int
 
 static inline int sk_forward_alloc_get(const struct sock *sk)
 {
-#if IS_ENABLED(CONFIG_MPTCP)
-	if (sk->sk_prot->forward_alloc_get)
-		return sk->sk_prot->forward_alloc_get(sk);
-#endif
 	return READ_ONCE(sk->sk_forward_alloc);
 }
 

@@ -1,0 +1,30 @@
+
+menuconfig CLF
+    bool  "CLF"
+    default n
+
+if CLF
+
+    config    CLF_ASSERT
+        bool "CLF_ASSERT"
+        default n
+
+    config    CLF_DEBUG
+        bool "CLF_DEBUG"
+        default n
+
+    config    CLF_BEEP
+        bool "CLF_BEEP"
+        default n
+
+    config   CLF_BEEP_BASE
+        int "CLF_BEEP_BASE"
+        default 2000
+        depends on CLF_BEEP
+
+    config   CLF_BEEP_MAX
+        int "CLF_BEEP_MAX"
+        default 2500
+        depends on CLF_BEEP
+
+endif

@@ -1012,7 +1012,7 @@ static enum skb_drop_reason icmp_echo(struct sk_buff *skb)
 
 	net = dev_net(skb_dst(skb)->dev);
 	/* should there be an ICMP stat for ignored echos? */
-	if (READ_ONCE(net->ipv4.sysctl_icmp_echo_ignore_all))
+	if (CONFIG_SYSCTL_ICMP_ECHO_IGNORE_ALL)
 		return SKB_NOT_DROPPED_YET;
 
 	icmp_param.data.icmph	   = *icmp_hdr(skb);
@@ -1049,7 +1049,7 @@ bool icmp_build_probe(struct sk_buff *skb, struct icmphdr *icmphdr)
 	u16 ident_len;
 	u8 status;
 
-	if (!READ_ONCE(net->ipv4.sysctl_icmp_echo_enable_probe))
+	if (!CONFIG_SYSCTL_ICMP_ECHO_ENABLE_PROBE)
 		return false;
 
 	/* We currently only support probing interfaces on the proxy node
@@ -1275,7 +1275,7 @@ int icmp_rcv(struct sk_buff *skb)
 		 */
 		if ((icmph->type == ICMP_ECHO ||
 		     icmph->type == ICMP_TIMESTAMP) &&
-		    READ_ONCE(net->ipv4.sysctl_icmp_echo_ignore_broadcasts)) {
+		    CONFIG_SYSCTL_ICMP_ECHO_IGNORE_BROADCASTS) {
 			reason = SKB_DROP_REASON_INVALID_PROTO;
 			goto error;
 		}
@@ -1467,10 +1467,6 @@ static const struct icmp_control icmp_pointers[NR_ICMP_TYPES + 1] = {
 
 static int __net_init icmp_sk_init(struct net *net)
 {
-	/* Control parameters for ECHO replies. */
-	net->ipv4.sysctl_icmp_echo_ignore_all = 0;
-	net->ipv4.sysctl_icmp_echo_enable_probe = 0;
-	net->ipv4.sysctl_icmp_echo_ignore_broadcasts = 1;
 
 	/* Control parameter - ignore bogus broadcast responses? */
 	net->ipv4.sysctl_icmp_ignore_bogus_error_responses = 1;

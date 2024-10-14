@@ -796,6 +796,16 @@ include/config/auto.conf:
 endif # may-sync-config
 endif # need-config
 
+KBUILD_CFLAGS	+= -Wfatal-errors
+KBUILD_CFLAGS	+= -Wunused-function
+KBUILD_CFLAGS	+= -Wno-array-bounds
+KBUILD_CFLAGS	+= -Wno-unused-label
+KBUILD_CFLAGS	+= -Wno-unused-variable
+KBUILD_CFLAGS	+= -Wno-declaration-after-statement
+#KBUILD_CFLAGS	+= -Wmaybe-uninitialized
+KBUILD_CFLAGS	+= -Wuninitialized
+KBUILD_CFLAGS	+= -Wunused-function
+KBUILD_CFLAGS	+= -Wno-error=unused-function
 KBUILD_CFLAGS	+= -fno-delete-null-pointer-checks
 
 ifdef CONFIG_CC_OPTIMIZE_FOR_PERFORMANCE
@@ -1105,7 +1115,7 @@ export MODULES_NSDEPS := $(extmod_prefix)modules.nsdeps
 ifeq ($(KBUILD_EXTMOD),)
 
 build-dir	:= .
-clean-dirs	:= $(sort . Documentation \
+clean-dirs	:= $(sort . \
 		     $(patsubst %/,%,$(filter %/, $(core-) \
 			$(drivers-) $(libs-))))
 

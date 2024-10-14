@@ -271,7 +271,6 @@
 #include <net/icmp.h>
 #include <net/inet_common.h>
 #include <net/tcp.h>
-#include <net/mptcp.h>
 #include <net/proto_memory.h>
 #include <net/xfrm.h>
 #include <net/ip.h>
@@ -456,7 +455,7 @@ void tcp_init_sock(struct sock *sk)
 	tp->snd_cwnd_clamp = ~0;
 	tp->mss_cache = TCP_MSS_DEFAULT;
 
-	tp->reordering = READ_ONCE(sock_net(sk)->ipv4.sysctl_tcp_reordering);
+	tp->reordering = CONFIG_SYSCTL_TCP_REORDERING;
 	tcp_assign_congestion_control(sk);
 
 	tp->tsoffset = 0;
@@ -563,7 +562,7 @@ __poll_t tcp_poll(struct file *file, struct socket *sock, poll_table *wait)
 
 	/* Connected or passive Fast Open socket? */
 	if (state != TCP_SYN_SENT &&
-	    (state != TCP_SYN_RECV || rcu_access_pointer(tp->fastopen_rsk))) {
+	    (state != TCP_SYN_RECV || 0)) {
 		int target = sock_rcvlowat(sk, 0, INT_MAX);
 		u16 urg_data = READ_ONCE(tp->urg_data);
 
@@ -705,6 +704,7 @@ static inline void tcp_mark_urg(struct tcp_sock *tp, int flags)
  * autocorking if we only have an ACK in Qdisc/NIC queues,
  * or if TX completion was delayed after we processed ACK packet.
  */
+#if 0
 static bool tcp_should_autocork(struct sock *sk, struct sk_buff *skb,
 				int size_goal)
 {
@@ -714,6 +714,9 @@ static bool tcp_should_autocork(struct sock *sk, struct sk_buff *skb,
 	       refcount_read(&sk->sk_wmem_alloc) > skb->truesize &&
 	       tcp_skb_can_collapse_to(skb);
 }
+#else
+#define tcp_should_autocork(sk, skb, size_goal) false
+#endif
 
 void tcp_push(struct sock *sk, int flags, int mss_now,
 	      int nonagle, int size_goal)
@@ -993,61 +996,6 @@ int tcp_wmem_schedule(struct sock *sk, int copy)
 	return min(copy, sk->sk_forward_alloc);
 }
 
-void tcp_free_fastopen_req(struct tcp_sock *tp)
-{
-	if (tp->fastopen_req) {
-		kfree(tp->fastopen_req);
-		tp->fastopen_req = NULL;
-	}
-}
-
-int tcp_sendmsg_fastopen(struct sock *sk, struct msghdr *msg, int *copied,
-			 size_t size, struct ubuf_info *uarg)
-{
-	struct tcp_sock *tp = tcp_sk(sk);
-	struct inet_sock *inet = inet_sk(sk);
-	struct sockaddr *uaddr = msg->msg_name;
-	int err, flags;
-
-	if (!(READ_ONCE(sock_net(sk)->ipv4.sysctl_tcp_fastopen) &
-	      TFO_CLIENT_ENABLE) ||
-	    (uaddr && msg->msg_namelen >= sizeof(uaddr->sa_family) &&
-	     uaddr->sa_family == AF_UNSPEC))
-		return -EOPNOTSUPP;
-	if (tp->fastopen_req)
-		return -EALREADY; /* Another Fast Open is in progress */
-
-	tp->fastopen_req = kzalloc(sizeof(struct tcp_fastopen_request),
-				   sk->sk_allocation);
-	if (unlikely(!tp->fastopen_req))
-		return -ENOBUFS;
-	tp->fastopen_req->data = msg;
-	tp->fastopen_req->size = size;
-	tp->fastopen_req->uarg = uarg;
-
-	if (inet_test_bit(DEFER_CONNECT, sk)) {
-		err = tcp_connect(sk);
-		/* Same failure procedure as in tcp_v4/6_connect */
-		if (err) {
-			tcp_set_state(sk, TCP_CLOSE);
-			inet->inet_dport = 0;
-			sk->sk_route_caps = 0;
-		}
-	}
-	flags = (msg->msg_flags & MSG_DONTWAIT) ? O_NONBLOCK : 0;
-	err = __inet_stream_connect(sk->sk_socket, uaddr,
-				    msg->msg_namelen, flags, 1);
-	/* fastopen_req could already be freed in __inet_stream_connect
-	 * if the connection times out or gets rst
-	 */
-	if (tp->fastopen_req) {
-		*copied = tp->fastopen_req->copied;
-		tcp_free_fastopen_req(tp);
-		inet_clear_bit(DEFER_CONNECT, sk);
-	}
-	return err;
-}
-
 int tcp_sendmsg_locked(struct sock *sk, struct msghdr *msg, size_t size)
 {
 	struct tcp_sock *tp = tcp_sk(sk);
@@ -1084,16 +1032,6 @@ int tcp_sendmsg_locked(struct sock *sk, struct msghdr *msg, size_t size)
 			zc = MSG_SPLICE_PAGES;
 	}
 
-	if (unlikely(flags & MSG_FASTOPEN ||
-		     inet_test_bit(DEFER_CONNECT, sk)) &&
-	    !tp->repair) {
-		err = tcp_sendmsg_fastopen(sk, msg, &copied_syn, size, uarg);
-		if (err == -EINPROGRESS && copied_syn > 0)
-			goto out;
-		else if (err)
-			goto out_err;
-	}
-
 	timeo = sock_sndtimeo(sk, flags & MSG_DONTWAIT);
 
 	tcp_rate_check_app_limited(sk);  /* is sending application-limited? */
@@ -1103,7 +1041,7 @@ int tcp_sendmsg_locked(struct sock *sk, struct msghdr *msg, size_t size)
 	 * is fully established.
 	 */
 	if (((1 << sk->sk_state) & ~(TCPF_ESTABLISHED | TCPF_CLOSE_WAIT)) &&
-	    !tcp_passive_fastopen(sk)) {
+	    !0) {
 		err = sk_stream_wait_connect(sk, &timeo);
 		if (err != 0)
 			goto do_error;
@@ -3195,16 +3133,6 @@ adjudge_to_death:
 	}
 
 	if (sk->sk_state == TCP_CLOSE) {
-		struct request_sock *req;
-
-		req = rcu_dereference_protected(tcp_sk(sk)->fastopen_rsk,
-						lockdep_sock_is_held(sk));
-		/* We could get here with a non-NULL req if the socket is
-		 * aborted (e.g., closed with unread data) before 3WHS
-		 * finishes.
-		 */
-		if (req)
-			reqsk_fastopen_remove(sk, req, false);
 		inet_csk_destroy_sock(sk);
 	}
 	/* Otherwise, socket is reprieved until protocol close. */
@@ -3303,7 +3231,6 @@ int tcp_disconnect(struct sock *sk, int flags)
 	WRITE_ONCE(tp->urg_data, 0);
 	sk_set_peek_off(sk, -1);
 	tcp_write_queue_purge(sk);
-	tcp_fastopen_active_disable_ofo_check(sk);
 	skb_rbtree_purge(&tp->out_of_order_queue);
 
 	inet->inet_dport = 0;
@@ -3379,17 +3306,12 @@ int tcp_disconnect(struct sock *sk, int flags)
 	tp->rack.last_delivered = 0;
 	tp->rack.reo_wnd_persist = 0;
 	tp->rack.dsack_seen = 0;
-	tp->syn_data_acked = 0;
 	tp->rx_opt.saw_tstamp = 0;
 	tp->rx_opt.dsack = 0;
 	tp->rx_opt.num_sacks = 0;
 	tp->rcv_ooopack = 0;
 
-
-	/* Clean up fastopen related fields */
-	tcp_free_fastopen_req(tp);
 	inet_clear_bit(DEFER_CONNECT, sk);
-	tp->fastopen_client_fail = 0;
 
 	WARN_ON(inet->inet_num && !icsk->icsk_bind_hash);
 
@@ -3704,7 +3626,6 @@ int do_tcp_setsockopt(struct sock *sk, int level, int optname,
 {
 	struct tcp_sock *tp = tcp_sk(sk);
 	struct inet_connection_sock *icsk = inet_csk(sk);
-	struct net *net = sock_net(sk);
 	int val;
 	int err = 0;
 
@@ -3746,25 +3667,6 @@ int do_tcp_setsockopt(struct sock *sk, int level, int optname,
 		err = tcp_set_ulp(sk, name);
 		sockopt_release_sock(sk);
 		return err;
-	}
-	case TCP_FASTOPEN_KEY: {
-		__u8 key[TCP_FASTOPEN_KEY_BUF_LENGTH];
-		__u8 *backup_key = NULL;
-
-		/* Allow a backup key as well to facilitate key rotation
-		 * First key is the active one.
-		 */
-		if (optlen != TCP_FASTOPEN_KEY_LENGTH &&
-		    optlen != TCP_FASTOPEN_KEY_BUF_LENGTH)
-			return -EINVAL;
-
-		if (copy_from_sockptr(key, optval, optlen))
-			return -EFAULT;
-
-		if (optlen == TCP_FASTOPEN_KEY_BUF_LENGTH)
-			backup_key = key + TCP_FASTOPEN_KEY_LENGTH;
-
-		return tcp_fastopen_reset_cipher(net, sk, key, backup_key);
 	}
 	default:
 		/* fallthru */
@@ -3949,37 +3851,6 @@ ao_parse:
 		err = tp->af_specific->md5_parse(sk, optname, optval, optlen);
 		break;
 #endif
-	case TCP_FASTOPEN:
-		if (val >= 0 && ((1 << sk->sk_state) & (TCPF_CLOSE |
-		    TCPF_LISTEN))) {
-			tcp_fastopen_init_key_once(net);
-
-			fastopen_queue_tune(sk, val);
-		} else {
-			err = -EINVAL;
-		}
-		break;
-	case TCP_FASTOPEN_CONNECT:
-		if (val > 1 || val < 0) {
-			err = -EINVAL;
-		} else if (READ_ONCE(net->ipv4.sysctl_tcp_fastopen) &
-			   TFO_CLIENT_ENABLE) {
-			if (sk->sk_state == TCP_CLOSE)
-				tp->fastopen_connect = val;
-			else
-				err = -EINVAL;
-		} else {
-			err = -EOPNOTSUPP;
-		}
-		break;
-	case TCP_FASTOPEN_NO_COOKIE:
-		if (val > 1 || val < 0)
-			err = -EINVAL;
-		else if (!((1 << sk->sk_state) & (TCPF_CLOSE | TCPF_LISTEN)))
-			err = -EINVAL;
-		else
-			tp->fastopen_no_cookie = val;
-		break;
 	case TCP_TIMESTAMP:
 		if (!tp->repair) {
 			err = -EPERM;
@@ -4110,8 +3981,6 @@ void tcp_get_info(struct sock *sk, struct tcp_info *info)
 		info->tcpi_options |= TCPI_OPT_ECN;
 	if (tp->ecn_flags & TCP_ECN_SEEN)
 		info->tcpi_options |= TCPI_OPT_ECN_SEEN;
-	if (tp->syn_data_acked)
-		info->tcpi_options |= TCPI_OPT_SYN_DATA;
 	if (tp->tcp_usec_ts)
 		info->tcpi_options |= TCPI_OPT_USEC_TS;
 
@@ -4172,7 +4041,6 @@ void tcp_get_info(struct sock *sk, struct tcp_info *info)
 	info->tcpi_snd_wnd = tp->snd_wnd;
 	info->tcpi_rcv_wnd = tp->rcv_wnd;
 	info->tcpi_rehash = tp->plb_rehash + tp->timeout_rehash;
-	info->tcpi_fastopen_client_fail = tp->fastopen_client_fail;
 
 	info->tcpi_total_rto = tp->total_rto;
 	info->tcpi_total_rto_recoveries = tp->total_rto_recoveries;
@@ -4299,7 +4167,6 @@ int do_tcp_getsockopt(struct sock *sk, int level,
 {
 	struct inet_connection_sock *icsk = inet_csk(sk);
 	struct tcp_sock *tp = tcp_sk(sk);
-	struct net *net = sock_net(sk);
 	int val, len;
 
 	if (copy_from_sockptr(&len, optlen, sizeof(int)))
@@ -4336,12 +4203,12 @@ int do_tcp_getsockopt(struct sock *sk, int level,
 		break;
 	case TCP_SYNCNT:
 		val = READ_ONCE(icsk->icsk_syn_retries) ? :
-			READ_ONCE(net->ipv4.sysctl_tcp_syn_retries);
+			CONFIG_SYSCTL_TCP_SYN_RETRIES;
 		break;
 	case TCP_LINGER2:
 		val = READ_ONCE(tp->linger2);
 		if (val >= 0)
-			val = (val ? : READ_ONCE(net->ipv4.sysctl_tcp_fin_timeout)) / HZ;
+			val = (val ? : CONFIG_SYSCTL_TCP_FIN_TIMEOUT) / HZ;
 		break;
 	case TCP_DEFER_ACCEPT:
 		val = READ_ONCE(icsk->icsk_accept_queue.rskq_defer_accept);
@@ -4416,22 +4283,6 @@ int do_tcp_getsockopt(struct sock *sk, int level,
 			return -EFAULT;
 		return 0;
 
-	case TCP_FASTOPEN_KEY: {
-		u64 key[TCP_FASTOPEN_KEY_BUF_LENGTH / sizeof(u64)];
-		unsigned int key_len;
-
-		if (copy_from_sockptr(&len, optlen, sizeof(int)))
-			return -EFAULT;
-
-		key_len = tcp_fastopen_get_cipher(net, icsk, key) *
-				TCP_FASTOPEN_KEY_LENGTH;
-		len = min_t(unsigned int, len, key_len);
-		if (copy_to_sockptr(optlen, &len, sizeof(int)))
-			return -EFAULT;
-		if (copy_to_sockptr(optval, key, len))
-			return -EFAULT;
-		return 0;
-	}
 	case TCP_THIN_LINEAR_TIMEOUTS:
 		val = tp->thin_lto;
 		break;
@@ -4484,18 +4335,6 @@ int do_tcp_getsockopt(struct sock *sk, int level,
 
 	case TCP_USER_TIMEOUT:
 		val = READ_ONCE(icsk->icsk_user_timeout);
-		break;
-
-	case TCP_FASTOPEN:
-		val = READ_ONCE(icsk->icsk_accept_queue.fastopenq.max_qlen);
-		break;
-
-	case TCP_FASTOPEN_CONNECT:
-		val = tp->fastopen_connect;
-		break;
-
-	case TCP_FASTOPEN_NO_COOKIE:
-		val = tp->fastopen_no_cookie;
 		break;
 
 	case TCP_TX_DELAY:
@@ -4846,21 +4685,12 @@ EXPORT_SYMBOL_GPL(tcp_inbound_hash);
 
 void tcp_done(struct sock *sk)
 {
-	struct request_sock *req;
-
-	/* We might be called with a new socket, after
-	 * inet_csk_prepare_forced_close() has been called
-	 * so we can not use lockdep_sock_is_held(sk)
-	 */
-	req = rcu_dereference_protected(tcp_sk(sk)->fastopen_rsk, 1);
 
 	if (sk->sk_state == TCP_SYN_SENT || sk->sk_state == TCP_SYN_RECV)
 		TCP_INC_STATS(sock_net(sk), TCP_MIB_ATTEMPTFAILS);
 
 	tcp_set_state(sk, TCP_CLOSE);
 	tcp_clear_xmit_timers(sk);
-	if (req)
-		reqsk_fastopen_remove(sk, req, false);
 
 	WRITE_ONCE(sk->sk_shutdown, SHUTDOWN_MASK);
 
@@ -5149,5 +4979,4 @@ void __init tcp_init(void)
 	tcp_metrics_init();
 	BUG_ON(tcp_register_congestion_control(&tcp_reno) != 0);
 	tcp_tasklet_init();
-	mptcp_init();
 }

@@ -230,8 +230,6 @@ static int tcp_v6_connect(struct sock *sk, struct sockaddr *uaddr,
 
 		/* Paired with READ_ONCE() in tcp_(get|set)sockopt() */
 		WRITE_ONCE(icsk->icsk_af_ops, &ipv6_mapped);
-		if (sk_is_mptcp(sk))
-			mptcpv6_handle_mapped(sk, true);
 		sk->sk_backlog_rcv = tcp_v4_do_rcv;
 #if defined(CONFIG_TCP_MD5SIG) || defined(CONFIG_TCP_AO)
 		tp->af_specific = &tcp_sock_ipv6_mapped_specific;
@@ -243,8 +241,6 @@ static int tcp_v6_connect(struct sock *sk, struct sockaddr *uaddr,
 			icsk->icsk_ext_hdr_len = exthdrlen;
 			/* Paired with READ_ONCE() in tcp_(get|set)sockopt() */
 			WRITE_ONCE(icsk->icsk_af_ops, &ipv6_specific);
-			if (sk_is_mptcp(sk))
-				mptcpv6_handle_mapped(sk, false);
 			sk->sk_backlog_rcv = tcp_v6_do_rcv;
 #if defined(CONFIG_TCP_MD5SIG) || defined(CONFIG_TCP_AO)
 			tp->af_specific = &tcp_sock_ipv6_specific;
@@ -325,8 +321,6 @@ static int tcp_v6_connect(struct sock *sk, struct sockaddr *uaddr,
 						   sk->sk_v6_daddr.s6_addr32);
 	}
 
-	if (tcp_fastopen_defer_connect(sk, &err))
-		return err;
 	if (err)
 		goto late_failure;
 
@@ -377,7 +371,6 @@ static int tcp_v6_err(struct sk_buff *skb, struct inet6_skb_parm *opt,
 	const struct ipv6hdr *hdr = (const struct ipv6hdr *)skb->data;
 	const struct tcphdr *th = (struct tcphdr *)(skb->data+offset);
 	struct net *net = dev_net(skb->dev);
-	struct request_sock *fastopen;
 	struct ipv6_pinfo *np;
 	struct tcp_sock *tp;
 	__u32 seq, snd_una;
@@ -430,9 +423,7 @@ static int tcp_v6_err(struct sk_buff *skb, struct inet6_skb_parm *opt,
 	}
 
 	tp = tcp_sk(sk);
-	/* XXX (TFO) - tp->snd_una should be ISN (tcp_create_openreq_child() */
-	fastopen = rcu_dereference(tp->fastopen_rsk);
-	snd_una = fastopen ? tcp_rsk(fastopen)->snt_isn : tp->snd_una;
+	snd_una = tp->snd_una;
 	if (sk->sk_state != TCP_LISTEN &&
 	    !between(seq, snd_una, tp->snd_nxt)) {
 		__NET_INC_STATS(net, LINUX_MIB_OUTOFWINDOWICMPS);
@@ -485,8 +476,6 @@ static int tcp_v6_err(struct sk_buff *skb, struct inet6_skb_parm *opt,
 		/* Only in fast or simultaneous open. If a fast open socket is
 		 * already accepted it is treated as a connected one below.
 		 */
-		if (fastopen && !fastopen->sk)
-			break;
 
 		ipv6_icmp_error(sk, skb, err, th->dest, ntohl(info), (u8 *)th);
 
@@ -501,7 +490,7 @@ static int tcp_v6_err(struct sk_buff *skb, struct inet6_skb_parm *opt,
 		/* check if this ICMP message allows revert of backoff.
 		 * (see RFC 6069)
 		 */
-		if (!fastopen && type == ICMPV6_DEST_UNREACH &&
+		if (!0 && type == ICMPV6_DEST_UNREACH &&
 		    code == ICMPV6_NOROUTE)
 			tcp_ld_RTO_revert(sk, seq);
 	}
@@ -522,7 +511,6 @@ out:
 static int tcp_v6_send_synack(const struct sock *sk, struct dst_entry *dst,
 			      struct flowi *fl,
 			      struct request_sock *req,
-			      struct tcp_fastopen_cookie *foc,
 			      enum tcp_synack_type synack_type,
 			      struct sk_buff *syn_skb)
 {
@@ -539,7 +527,7 @@ static int tcp_v6_send_synack(const struct sock *sk, struct dst_entry *dst,
 					       IPPROTO_TCP)) == NULL)
 		goto done;
 
-	skb = tcp_make_synack(sk, dst, req, foc, synack_type, syn_skb);
+	skb = tcp_make_synack(sk, dst, req, synack_type, syn_skb);
 
 	if (skb) {
 		__tcp_v6_send_check(skb, &ireq->ir_v6_loc_addr,
@@ -882,14 +870,6 @@ static void tcp_v6_send_response(const struct sock *sk, struct sk_buff *skb, u32
 	if (tcp_key_is_ao(key))
 		tot_len += tcp_ao_len_aligned(key->ao_key);
 
-#ifdef CONFIG_MPTCP
-	if (rst && !tcp_key_is_md5(key)) {
-		mrst = mptcp_reset_option(skb);
-
-		if (mrst)
-			tot_len += sizeof(__be32);
-	}
-#endif
 
 	buff = alloc_skb(MAX_TCP_HEADER, GFP_ATOMIC);
 	if (!buff)
@@ -1381,8 +1361,6 @@ static struct sock *tcp_v6_syn_recv_sock(const struct sock *sk, struct sk_buff *
 		newnp->saddr = newsk->sk_v6_rcv_saddr;
 
 		inet_csk(newsk)->icsk_af_ops = &ipv6_mapped;
-		if (sk_is_mptcp(newsk))
-			mptcpv6_handle_mapped(newsk, true);
 		newsk->sk_backlog_rcv = tcp_v4_do_rcv;
 #if defined(CONFIG_TCP_MD5SIG) || defined(CONFIG_TCP_AO)
 		newtp->af_specific = &tcp_sock_ipv6_mapped_specific;
@@ -1831,7 +1809,7 @@ lookup:
 			th = (const struct tcphdr *)skb->data;
 			hdr = ipv6_hdr(skb);
 			tcp_v6_fill_cb(skb, hdr, th);
-			nsk = tcp_check_req(sk, skb, req, false, &req_stolen);
+			nsk = tcp_check_req(sk, skb, req, &req_stolen);
 		} else {
 			drop_reason = SKB_DROP_REASON_SOCKET_FILTER;
 		}
@@ -2176,7 +2154,6 @@ static void get_tcp6_sock(struct seq_file *seq, struct sock *sp, int i)
 	const struct inet_sock *inet = inet_sk(sp);
 	const struct tcp_sock *tp = tcp_sk(sp);
 	const struct inet_connection_sock *icsk = inet_csk(sp);
-	const struct fastopen_queue *fastopenq = &icsk->icsk_accept_queue.fastopenq;
 	int rx_queue;
 	int state;
 
@@ -2234,7 +2211,7 @@ static void get_tcp6_sock(struct seq_file *seq, struct sock *sp, int i)
 		   (icsk->icsk_ack.quick << 1) | inet_csk_in_pingpong_mode(sp),
 		   tcp_snd_cwnd(tp),
 		   state == TCP_LISTEN ?
-			fastopenq->max_qlen :
+			0 :
 			(tcp_in_initial_slowstart(tp) ? -1 : tp->snd_ssthresh)
 		   );
 }
@@ -2422,9 +2399,6 @@ int __init tcpv6_init(void)
 	if (ret)
 		goto out_tcpv6_protosw;
 
-	ret = mptcpv6_init();
-	if (ret)
-		goto out_tcpv6_pernet_subsys;
 
 out:
 	return ret;

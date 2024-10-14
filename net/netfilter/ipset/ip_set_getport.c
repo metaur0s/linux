@@ -51,7 +51,7 @@ get_port(const struct sk_buff *skb, int protocol, unsigned int protooff,
 		break;
 	}
 	case IPPROTO_UDP:
-	case IPPROTO_UDPLITE: {
+	{
 		struct udphdr _udph;
 		const struct udphdr *uh;
 
@@ -111,7 +111,6 @@ ip_set_get_ip4_port(const struct sk_buff *skb, bool src,
 		case IPPROTO_TCP:
 		case IPPROTO_SCTP:
 		case IPPROTO_UDP:
-		case IPPROTO_UDPLITE:
 		case IPPROTO_ICMP:
 			/* Port info not available for fragment offset > 0 */
 			return false;

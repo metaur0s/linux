@@ -360,15 +360,7 @@ static inline int inet_iif(const struct sk_buff *skb)
 	return skb->skb_iif;
 }
 
-static inline int ip4_dst_hoplimit(const struct dst_entry *dst)
-{
-	int hoplimit = dst_metric_raw(dst, RTAX_HOPLIMIT);
-	struct net *net = dev_net(dst->dev);
-
-	if (hoplimit == 0)
-		hoplimit = READ_ONCE(net->ipv4.sysctl_ip_default_ttl);
-	return hoplimit;
-}
+#define ip4_dst_hoplimit(dst) CONFIG_SYSCTL_IP_DEFAULT_TTL
 
 static inline struct neighbour *ip_neigh_gw4(struct net_device *dev,
 					     __be32 daddr)

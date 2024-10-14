@@ -2582,7 +2582,6 @@ D: cfdisk (curses based disk partitioning program)
 
 N: Mat Martineau
 E: martineau@kernel.org
-D: MPTCP subsystem co-maintainer
 D: Keyctl restricted keyring and Diffie-Hellman UAPI
 D: Bluetooth L2CAP ERTM mode and AMP
 S: USA
