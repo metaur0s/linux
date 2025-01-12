@@ -238,7 +238,6 @@ static __always_inline int parse_ip_proto(struct __sk_buff *skb, __u8 proto)
 		keys->dport = tcp->dest;
 		return export_flow_keys(keys, BPF_OK);
 	case IPPROTO_UDP:
-	case IPPROTO_UDPLITE:
 		udp = bpf_flow_dissect_get_header(skb, sizeof(*udp), &_udp);
 		if (!udp)
 			return export_flow_keys(keys, BPF_DROP);

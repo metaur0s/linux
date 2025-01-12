@@ -1,0 +1,111 @@
+#!/bin/bash
+exit
+
+set -u -e
+
+cd /build
+
+# NO COMMIT DO ULTIMO MERGE, NO SITE:
+#   2 parents 134824d + d717180 commit e0dcb65493b9c9fa9fa1c213237eef082faa27c3
+#                           \-> É ESSE
+HASH=
+MYVERSION=$(date +%s)
+
+MYBACKUP=linux-${MYVERSION}.tar
+MYORIGIN=linux-${MYVERSION}-${HASH}.tar.gz
+ MYPATCH=linux-${MYVERSION}-${HASH}.diff
+
+LINUX_NEW=/tmp/linux-NEW
+
+rm -r -f -- ${MYPATCH}
+rm -r -f -- ${LINUX_NEW}
+rm -r -f -- /tmp/linux-${HASH}
+
+# FAZ UM BACKUP
+tar -c -f ${MYBACKUP} linux
+# PEGA O ORIGINAL
+wget -O ${MYORIGIN} https://github.com/torvalds/linux/archive/${HASH}.tar.gz
+
+# GERA AS DIFERENCAS QUE NOS FIZEMOS
+rm -r -f -- linux/.git
+tar -z -x -f ${MYORIGIN} -C /tmp/
+diff -Naur /tmp/linux-${HASH} linux > ${MYPATCH}
+rm -r -f -- /tmp/linux-${HASH}
+
+# APAGA O REPOSITORIO NO SITE
+# FORK O ORIGINAL ATUAL NO SITE
+
+# CLONA ESTE NOSSO REPOSITORIO, QUE É O ORIGINAL ATUAL
+git clone --depth 1 https://github.com/speedyb0y/linux.git ${LINUX_NEW}
+
+# APLICA O PATCH
+# TODO: patch --normal ou --unified ?
+(cd ${LINUX_NEW} && patch -p1 < /build/${MYPATCH})
+
+# COMPARA OS ARQUIVOS FAILED E VAI DANDO MERGE
+# NOTE: SÓ PODE FECHAR O MELD APÓS TERMINAR DE FAZER TUDO
+# FAZ O MERGE DE AMBOS OS LADOS ATE FICAREM IGUAIS
+for FAILED in $( (cd ${LINUX_NEW} && find . -type f | grep -E '[.](rej|orig)$' | sed -r -e 's/[.](rej|orig)$//g' | sort | uniq) ) ; do
+    while ! cmp --quiet {linux,${LINUX_NEW}}/${FAILED} ; do
+                   meld {linux,${LINUX_NEW}}/${FAILED}
+    done
+    rm -f -v -- ${LINUX_NEW}/${FAILED}.orig
+    rm -f -v -- ${LINUX_NEW}/${FAILED}.rej
+done
+
+# AGORA COLOCA MINHAS MUDANCAS NO SITE
+cd ${LINUX_NEW}
+git config credential.helper store
+git add --all
+git commit -m "INITIAL ${MYVERSION}"
+git push
+
+# PASSA A USAR ELE
+cd /build
+rm -r -f --              linux
+mv    -i -- ${LINUX_NEW} linux
+
+###############################
+
+exit 0
+
+# meld
+# dirdiff.py
+#  def shallow_equal ():
+#    return self.size == other.size
+
+NO CASO DO
+    clear_cpu_cap(c, X86_FEATURE_RDRAND);
+TRANSFORMAR EM MACRO
+    clear_cpu_cap(c, X86_FEATURE_RDRAND_);
+
+# TODO: sock_net()
+# TODO: remover net namespace
+# inet_request_sock
+# ireq_opt
+# ./net/ipv4/tcp_input.c
+
+# NAO PODE TER #ifdef
+# NAO PODE TER defined()
+# SE NAO FOR BOOL, nao pode ter #(if|elif)
+wget -q -O - https://github.com/torvalds/linux/compare/master...speedyb0y:master.diff | grep XCONF_
+
+CAPRICHAR NO
+ X86_MATCH_VENDOR_FEATURE(vendor)
+     (vendor == CPU_VENDOR_ID) && feature...
+e restaurar todos os X86_MATCH_VENDOR_FEATURE( e recolocar o argumento vendor
+
+
+###
+geany $(for f in $(find . -type f -iname '*.rej' | sort) ; do echo ${f} ${f/.rej/} ; done)
+: du --bytes $(find . -type f -iname '*.rej')
+:  rm -f -v $(find . -type f -iname '*.rej')
+:  rm -f -v $(find . -type f -iname '*.orig')
+git diff > ../diff
+
+        git config http.postBuffer 524288000
+        git config credential.helper store
+        git add --all
+        git commit -m "$(date +%s)"
+        git push
+
