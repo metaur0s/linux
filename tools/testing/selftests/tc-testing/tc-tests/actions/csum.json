@@ -243,33 +243,6 @@
         ]
     },
     {
-        "id": "c220",
-        "name": "Add csum udplite action",
-        "category": [
-            "actions",
-            "csum"
-        ],
-        "plugins": {
-           "requires": "nsPlugin"
-        },
-        "setup": [
-            [
-                "$TC actions flush action csum",
-                0,
-                1,
-                255
-            ]
-        ],
-        "cmdUnderTest": "$TC actions add action csum udplite continue index 3",
-        "expExitCode": "0",
-        "verifyCmd": "$TC actions get action csum index 3",
-        "matchPattern": "action order [0-9]*: csum \\(udplite\\) action continue.*index 3 ref",
-        "matchCount": "1",
-        "teardown": [
-            "$TC actions flush action csum"
-        ]
-    },
-    {
         "id": "8993",
         "name": "Add csum sctp action",
         "category": [
@@ -379,7 +352,7 @@
     },
     {
         "id": "b10b",
-        "name": "Add all 7 csum actions",
+        "name": "Add all 6 csum actions",
         "category": [
             "actions",
             "csum"
@@ -395,10 +368,10 @@
                 255
             ]
         ],
-        "cmdUnderTest": "$TC actions add action csum icmp ip4h sctp igmp udplite udp tcp index 7",
+        "cmdUnderTest": "$TC actions add action csum icmp ip4h sctp igmp udp tcp index 6",
         "expExitCode": "0",
-        "verifyCmd": "$TC actions get action csum index 7",
-        "matchPattern": "action order [0-9]*: csum \\(iph, icmp, igmp, tcp, udp, udplite, sctp\\).*index 7 ref",
+        "verifyCmd": "$TC actions get action csum index 6",
+        "matchPattern": "action order [0-9]*: csum \\(iph, icmp, igmp, tcp, udp, sctp\\).*index 6 ref",
         "matchCount": "1",
         "teardown": [
             "$TC actions flush action csum"
