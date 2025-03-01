@@ -201,4 +201,14 @@ typedef struct hdr_x_s hdr_x_s;
 static inline u64   swap64 (const u64 x) { const uint q = popcount64(x); return (x >> q) | (x << (64 - q)); }
 static inline u64 unswap64 (const u64 x) { const uint q = popcount64(x); return (x << q) | (x >> (64 - q)); }
 
+static inline u64 __u64x8_sum_reduced (const u64x8 V[], const uint n) {
+
+    u64x8 v = { 0, 0, 0, 0, 0, 0, 0, 0 };
+
+    for (uint i = 0; i != n; i++)
+        v += V[i];
+
+    return v[0] + v[1] + v[2] + v[3] + v[4] + v[5] + v[6] + v[7];
+}
+
 #endif

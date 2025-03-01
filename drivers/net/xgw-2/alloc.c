@@ -1,4 +1,7 @@
 
+#ifndef __XGW_ALLOC__
+#define __XGW_ALLOC__
+
 #include "base.h"
 
 static inline uint paged_order (const size_t size) {
@@ -20,3 +23,5 @@ static void* paged_alloc (const size_t size) {
 
     return (void*)__get_free_pages(GFP_NOWAIT, paged_order(size));
 }
+
+#endif

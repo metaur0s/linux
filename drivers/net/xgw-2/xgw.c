@@ -3,6 +3,14 @@
 */
 
 #include "base.h"
+#include "alloc.h"
+#include "ports.h"
+#include "crypto.h"
+#include "pkt.h"
+#include "stats.h"
+#include "nodes.h"
+#include "dhcp.h"
+#include "cmd.h"
 
 #ifdef CONFIG_XGW_GATEWAY
 #define XGW_TCP_PROXY_MARK_4 0x25440000U
@@ -40,14 +48,6 @@
 // NOTE: SE MUDAR DE INTERFACE VAI TER QUE REMOVER DA LISTA PRIMEIRO, E SÓ DEPOIS JOGAR PARA OUTRO
 #define PING_QUEUES_N 8
 
-#include "ports.h"
-#include "crypto.h"
-#include "pkt.h"
-#include "stats.h"
-#include "nodes.h"
-#include "dhcp.h"
-#include "cmd.h"
-
 DEFINE_SPINLOCK(xlock);
 
 static net_device_s* xgw;
@@ -70,10 +70,6 @@ static volatile u16 nmap [NODES_N];
 //    - SO IT CAN BE DONE PER INTERFACE HASH
 static path_s* pings [PING_QUEUES_N];
 
-static void paged_free (void* const a, const size_t size);
-static void* paged_alloc (const size_t size);
-
-
 static void __cold_as_ice __optimize_size stats_print (void);
 
 // EXPOSED TO KERNEL
@@ -94,8 +90,6 @@ int in (skb_s* const skb);
 #include "dev.c"
 #include "cmd.c"
 #include "alloc.c"
-
-
 
 /*
 

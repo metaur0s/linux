@@ -2,9 +2,6 @@
 #include "base.h"
 #include "crypto.h"
 
-static inline u64   swap64 (const u64 x) { const uint q = popcount64(x); return (x >> q) | (x << (64 - q)); }
-static inline u64 unswap64 (const u64 x) { const uint q = popcount64(x); return (x << q) | (x >> (64 - q)); }
-
 // !!!!!! TODO: XGW TO XGW REDIRECT WITHOUT GOING THROUGH IP STACK
 
 // TODO: TEM QUE SER TUDO += E SEM ESTE ^=
@@ -116,28 +113,18 @@ static inline u64 decrypt (const u64x8 K[K_LEN], u64* restrict ptr, u64* restric
 }
 
 // MUST NOT EXPOSE KEYS
-static noinline void learn (const node_s* const node, const u64 ping[PING_WORDS_N], u64 K[KEYS_N]) {
-
-    // CONSTANTE
-    u64 A = 0x05D171D85D80EBC4ULL, B = 0x9985E7AB107E8FCAULL, C = 0x263F3484D10AC084ULL, D = 0x47FDF736769A001AULL,
-        E = 0xC6D8BC149729F1C4ULL, F = 0xC445BC1CB6B1BD4DULL, G = 0x96579857437F26A3ULL, H = 0x0780BABD0EF6CE16ULL;
+static noinline void learn (const node_s* const node, const u64 ping[PING_WORDS_N], u64x8 K[K_LEN]) {
 
     // DINAMICO ALEATORIO
-    for_count (i, PING_WORDS_N)
-        __KEYS_ITER(BE64(ping[i]));
+    for_count (i, K_LEN)
+        for_count (ii, 8)
+            K[i][ii] = BE64(ping[i*K_LEN + ii]);
 
     // CONSTANTE, DINAMICAMENTE ESCOLHIDO
-    const u64* const restrict S = node->secret[(((((((A + B) ^ C) + D) ^ E) + F) ^ G) + H) % SECRET_PAIRS_N];
+    const u64x8* const restrict S = node->secret[__u64x8_sum_reduced(K, K_LEN) % SECRET_PAIRS_N];
 
-    // KEY[k] = (SECRET[s][k] + DYNAMIC[k])
-    K[0] = S[0] + A;
-    K[1] = S[1] + B;
-    K[2] = S[2] + C;
-    K[3] = S[3] + D;
-    K[4] = S[4] + E;
-    K[5] = S[5] + F;
-    K[6] = S[6] + G;
-    K[7] = S[7] + H;
+    for_count (i, K_LEN)
+        K[i] += S[i];
 }
 
 // CONSTANT KEYS, FOR PING/PONG
