@@ -21,18 +21,9 @@
 // AUTHENTICITY, INTEGRITY AND PRIVACY
 // - DATA
 
-#define A k[0]
-#define B k[1]
-#define C k[2]
-#define D k[3]
-#define E k[4]
-#define F k[5]
-#define G k[6]
-#define H k[7]
-
-// NAO FAZ UM SWAP FINAL POIS O VALOR É EXPOSTO E ISSO SERIA INUTIL
-#define ENC(x) (  swap64(  swap64(  swap64(  swap64(  swap64(  swap64(  swap64((x) + A[0]) + A[1]) + A[2]) + A[3]) + A[4]) + A[5]) + A[6]) + A[7])
-#define DEC(x) (unswap64(unswap64(unswap64(unswap64(unswap64(unswap64(unswap64((x) - A[7]) - A[6]) - A[5]) - A[4]) - A[3]) - A[2]) - A[1]) - A[0])
+// NAO FAZ UM SWAP FINAL POIS O VALOR É EXPOSTO k[4] ISSO SERIA INUTIL
+#define ENC(x) (  swap64(  swap64(  swap64(  swap64(  swap64(  swap64(  swap64((x) + k[0][0]) + k[0][1]) + k[0][2]) + k[0][3]) + k[0][4]) + k[0][5]) + k[0][6]) + k[0][7])
+#define DEC(x) (unswap64(unswap64(unswap64(unswap64(unswap64(unswap64(unswap64((x) - k[0][7]) - k[0][6]) - k[0][5]) - k[0][4]) - k[0][3]) - k[0][2]) - k[0][1]) - k[0][0])
 
 static inline u64 encrypt (const u64x8 K[K_LEN], u64* restrict ptr, u64* restrict const lmt, const u64 sign) {
 
@@ -60,8 +51,8 @@ static inline u64 encrypt (const u64x8 K[K_LEN], u64* restrict ptr, u64* restric
         *ptr++ = BE64(e);
 
         // AVALANCHE OF X THROUGH KEYS
-        H += G += F += E += D += C += B += A += x;
-        A ^= G ^= C ^= E ^= H ^= D ^= B ^= F;
+        k[7] += k[6] += k[5] += k[4] += k[3] += k[2] += k[1] += k[0] += x;
+        k[0] ^= k[6] ^= k[2] ^= k[4] ^= k[7] ^= k[3] ^= k[1] ^= k[5];
     }
 }
 
@@ -91,8 +82,8 @@ static inline u64 decrypt (const u64x8 K[K_LEN], u64* restrict ptr, u64* restric
         *ptr++ = BE64(x);
 
         // AVALANCHE OF X THROUGH KEYS
-        H += G += F += E += D += C += B += A += x;
-        A ^= G ^= C ^= E ^= H ^= D ^= B ^= F;
+        k[7] += k[6] += k[5] += k[4] += k[3] += k[2] += k[1] += k[0] += x;
+        k[0] ^= k[6] ^= k[2] ^= k[4] ^= k[7] ^= k[3] ^= k[1] ^= k[5];
     }
 }
 
