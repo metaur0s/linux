@@ -139,7 +139,7 @@ static noinline void reset_node_ping_keys (node_s* const node, const uint self, 
 
     // MESMO QUE USE O MESMO PASSWORD ENTRE VARIOS NODES, NAO DEIXA QUE O PING KEYS SEJA O MESMO
     u64x8 x = node->secret[2][0] * (self > peer ? self : peer);
-    u64x8 y = node->secret[2][1] * (self > peer ? self : peer);
+    u64x8 y = node->secret[2][1] * (self > peer ? peer : self);
 
     //
     for_count (s, SECRET_PAIRS_N) {
