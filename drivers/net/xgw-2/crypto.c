@@ -163,30 +163,27 @@ static noinline void secret_derivate (node_s* const node, const u8* const restri
          = BE64(node->secret[p][k][w]);
 #endif
 
-    u64x8 x = {
-        0x5F72D0422FE2CB94ULL, 0x404B238BAAB7F569ULL, 0x8BC0A61857A6C9A6ULL, 0x0189D9EA53018DB2ULL,
-        0x44D023C1E7FB2EAEULL, 0xD23789A7CBB074ABULL, 0x815583AD150B4C6AULL, 0x56F755173318EF82ULL
-    };
-
     // NAO DEIXA SER APENAS UMA REPETICAO
-    // any(print('0x%016X' % ((0x815583AD150B4C6A * p + 0x5F72D0422FE2CB94  * k) & ((1 << 64) - 1))) for p in range(16) for k in range(KEYS_N))
     for_count (p, SECRET_PAIRS_N)
         for_count (k, K_LEN)
-            x += node->secret[p][k] += p*x + k*x;
+            node->secret[p][k] +=
+                p * 0x815583AD150B4C6AULL +
+                k * 0x5F72D0422FE2CB94ULL;
 
-    // SECRET
+    u64x8 x = node->secret[0][0];
+
     for_count (c, PASSWORD_ROUNDS) {
         for_count (p, SECRET_PAIRS_N) {
             for_count (k, K_LEN) {
 
-                x += node->secret[x[7] % SECRET_PAIRS_N][x[3] % KEYS_N] * x[0];
-                x += node->secret[x[6] % SECRET_PAIRS_N][x[1] % KEYS_N] * x[1];
-                x += node->secret[x[5] % SECRET_PAIRS_N][x[0] % KEYS_N] * x[2];
-                x += node->secret[x[4] % SECRET_PAIRS_N][x[2] % KEYS_N] * x[3];
-                x += node->secret[x[3] % SECRET_PAIRS_N][x[7] % KEYS_N] * x[4];
-                x += node->secret[x[2] % SECRET_PAIRS_N][x[4] % KEYS_N] * x[5];
-                x += node->secret[x[1] % SECRET_PAIRS_N][x[5] % KEYS_N] * x[6];
-                x += node->secret[x[0] % SECRET_PAIRS_N][x[6] % KEYS_N] * x[7];
+                x += node->secret[x[7] % SECRET_PAIRS_N][x[3] % K_LEN] * x[0];
+                x += node->secret[x[6] % SECRET_PAIRS_N][x[1] % K_LEN] * x[1];
+                x += node->secret[x[5] % SECRET_PAIRS_N][x[0] % K_LEN] * x[2];
+                x += node->secret[x[4] % SECRET_PAIRS_N][x[2] % K_LEN] * x[3];
+                x += node->secret[x[3] % SECRET_PAIRS_N][x[7] % K_LEN] * x[4];
+                x += node->secret[x[2] % SECRET_PAIRS_N][x[4] % K_LEN] * x[5];
+                x += node->secret[x[1] % SECRET_PAIRS_N][x[5] % K_LEN] * x[6];
+                x += node->secret[x[0] % SECRET_PAIRS_N][x[6] % K_LEN] * x[7];
 
                 node->secret[p][k] = x;
             }
