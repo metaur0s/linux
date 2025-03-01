@@ -147,19 +147,12 @@ static noinline void reset_node_ping_keys (node_s* const node, const uint self, 
     }
 
     //
-    memset(Kx, 0, sizeof(*Kx));
-    memset(Ky, 0, sizeof(*Ky));
+    memcpy(Kx, node->secret[0], sizeof(*Kx));
+    memcpy(Ky, node->secret[1], sizeof(*Ky));
 
-    // TODO: OTHER CONSTANTS HERE
-    u64x8 x = {
-        0x05D171D85D80EBC4ULL, 0x9985E7AB107E8FCAULL, 0x263F3484D10AC084ULL, 0x47FDF736769A001AULL,
-        0xC6D8BC149729F1C4ULL, 0xC445BC1CB6B1BD4DULL, 0x96579857437F26A3ULL, 0x0780BABD0EF6CE16ULL
-    };
-
-    u64x8 y = {
-        0x05D171D85D80EBC4ULL, 0x9985E7AB107E8FCAULL, 0x263F3484D10AC084ULL, 0x47FDF736769A001AULL,
-        0xC6D8BC149729F1C4ULL, 0xC445BC1CB6B1BD4DULL, 0x96579857437F26A3ULL, 0x0780BABD0EF6CE16ULL
-    };
+    //
+    u64x8 x = node->secret[2];
+    u64x8 y = node->secret[3];
 
     // MESMO QUE USE O MESMO PASSWORD ENTRE VARIOS NODES, NAO DEIXA QUE O PING KEYS SEJA O MESMO
     if (self > peer) {
@@ -173,8 +166,8 @@ static noinline void reset_node_ping_keys (node_s* const node, const uint self, 
     //
     for_count (s, SECRET_PAIRS_N) {
         for_count (i, K_LEN) {
-            Kx[s % K_LEN] += x += node->secret[s][i];
-            Ky[s % K_LEN] += y += node->secret[s][i];
+            x = Kx[s % K_LEN] += x * node->secret[s][i];
+            y = Ky[s % K_LEN] += y * node->secret[s][i];
         }
     }
 }
