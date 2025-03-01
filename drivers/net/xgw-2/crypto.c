@@ -34,7 +34,7 @@ static inline u64 encrypt (const u64x8 _K[K_LEN], u64* restrict ptr, u64* restri
 
         // AVALANCHE OF X THROUGH KEYS
         K[7] += K[6] += K[5] += K[4] += K[3] += K[2] += K[1] += K[0] += x;
-        K[0] ^= K[6] ^= K[2] ^= K[4] ^= K[7] ^= K[3] ^= K[1] ^= K[5];
+        K[0] += K[6] += K[2] += K[4] += K[7] += K[3] += K[1] += K[5];
 
         if (ptr != lmt)
             // READ THE ORIGINAL VALUE
@@ -63,7 +63,7 @@ static inline u64 decrypt (const u64x8 _K[K_LEN], u64* restrict ptr, u64* restri
 
         // AVALANCHE OF X THROUGH KEYS
         K[7] += K[6] += K[5] += K[4] += K[3] += K[2] += K[1] += K[0] += x;
-        K[0] ^= K[6] ^= K[2] ^= K[4] ^= K[7] ^= K[3] ^= K[1] ^= K[5];
+        K[0] += K[6] += K[2] += K[4] += K[7] += K[3] += K[1] += K[5];
 
         if (ptr != lmt)
             // READ THE ENCRYPTED VALUE
@@ -83,19 +83,23 @@ static inline u64 decrypt (const u64x8 _K[K_LEN], u64* restrict ptr, u64* restri
     }
 }
 
-// MUST NOT EXPOSE KEYS
-static noinline void learn (const node_s* const node, const u64 ping[K_LEN * 8], u64x8 K[K_LEN]) {
+// MUST NOT EXPOSE SECRETS
+static noinline void learn (const node_s* const node, const u64 ping[K_LEN][8], u64x8 K[K_LEN]) {
+
+    u64x8 v = { 0, 0, 0, 0, 0, 0, 0, 0 }; u64 s = 0;
 
     // DINAMICO ALEATORIO
-    for_count (i, K_LEN)
-        for_count (ii, 8)
-            K[i][ii] = BE64(ping[i*K_LEN + ii]);
+    for_count (k, K_LEN) {
+        for_count (w, 8)
+            v[w] += s += BE64(ping[k][w]);
+        K[k] = v;
+    }
 
     // CONSTANTE, DINAMICAMENTE ESCOLHIDO
-    const u64x8* const restrict S = node->secret[__u64x8_sum_reduced(K, K_LEN) % SECRET_PAIRS_N];
+    const u64x8* const restrict S = node->secret[s % SECRET_PAIRS_N];
 
-    for_count (i, K_LEN)
-        K[i] += S[i];
+    for_count (k, K_LEN)
+        K[k] += S[k];
 }
 
 // CONSTANT KEYS, FOR PING/PONG
