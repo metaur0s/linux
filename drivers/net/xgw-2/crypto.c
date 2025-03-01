@@ -1,19 +1,6 @@
 
 // !!!!!! TODO: XGW TO XGW REDIRECT WITHOUT GOING THROUGH IP STACK
 
-// TODO: TEM QUE SER TUDO += E SEM ESTE ^=
-#define __KEYS_ITER(x) { \
-        A ^= B += C ^= D += E ^= F += G ^= H += ((x) + ITER_X_ADD) ^ ITER_X_MASK; \
-        A += ((ITER_KEY_ADD_0 + H) * popcount(B) + F) * popcount(E); \
-        B += ((ITER_KEY_ADD_1 + G) * popcount(C) + D) * popcount(C); \
-        C += ((ITER_KEY_ADD_2 + F) * popcount(D) + B) * popcount(H); \
-        D += ((ITER_KEY_ADD_3 + E) * popcount(E) + A) * popcount(G); \
-        E += ((ITER_KEY_ADD_4 + D) * popcount(F) + G) * popcount(A); \
-        F += ((ITER_KEY_ADD_5 + C) * popcount(G) + H) * popcount(B); \
-        G += ((ITER_KEY_ADD_6 + B) * popcount(H) + C) * popcount(D); \
-        H += ((ITER_KEY_ADD_7 + A) * popcount(A) + E) * popcount(F); \
-    }
-
 // QUANTAS PALAVRAS TEM, CONSIDERANDO INCOMPLETAS COMO INTEIRAS
 #define PKT_Q(size) ((size) + sizeof(u64)) / sizeof(u64)
 #define PKT_P(pkt, size) (PTR((pkt)->p) + (size) % sizeof(u64))
