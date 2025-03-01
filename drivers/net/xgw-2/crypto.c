@@ -1,18 +1,18 @@
 
 // !!!!!! TODO: XGW TO XGW REDIRECT WITHOUT GOING THROUGH IP STACK
 
-// QUANTAS PALAVRAS TEM, CONSIDERANDO INCOMPLETAS COMO INTEIRAS
-#define PKT_Q(size) ((size) + sizeof(u64)) / sizeof(u64)
-#define PKT_P(pkt, size) (PTR((pkt)->p) + (size) % sizeof(u64))
-
 //
 #define PKT_SEED(pkt) \
     BE64( (pkt)->x.info \
         ^ (pkt)->x.seed )
 
+// QUANTAS PALAVRAS TEM, CONSIDERANDO INCOMPLETAS COMO INTEIRAS
+#define PKT_Q(size) ((size) + sizeof(u64)) / sizeof(u64)
+#define PKT_P(pkt, size) (PTR((pkt)->p) + (size) % sizeof(u64))
+
 //
-#define pkt_encrypt(node, o, pkt, size, rcounter) encrypt((node)->oKeys[o], PKT_P(pkt, size), PKT_Q(size), PKT_SEED(pkt), (rcounter))
-#define pkt_decrypt(node, i, pkt, size)           decrypt((node)->iKeys[i], PKT_P(pkt, size), PKT_Q(size), PKT_SEED(pkt), BE64((pkt)->x.sign))
+#define pkt_encrypt(node, o, pkt, size, rcounter) encrypt((node)->oKeys[o], PKT_P(pkt, size), PKT_P(pkt, size) + PKT_Q(size), PKT_SEED(pkt), (rcounter))
+#define pkt_decrypt(node, i, pkt, size)           decrypt((node)->iKeys[i], PKT_P(pkt, size), PKT_P(pkt, size) + PKT_Q(size), PKT_SEED(pkt), BE64((pkt)->x.sign))
 
 // AUTHENTICITY AND INTEGRITY
 // - HOST IDS
@@ -21,18 +21,20 @@
 // AUTHENTICITY, INTEGRITY AND PRIVACY
 // - DATA
 
-// NAO FAZ UM SWAP FINAL POIS O VALOR É EXPOSTO k[4] ISSO SERIA INUTIL
-#define ENC(x) (  swap64(  swap64(  swap64(  swap64(  swap64(  swap64(  swap64((x) + k[0][0]) + k[0][1]) + k[0][2]) + k[0][3]) + k[0][4]) + k[0][5]) + k[0][6]) + k[0][7])
-#define DEC(x) (unswap64(unswap64(unswap64(unswap64(unswap64(unswap64(unswap64((x) - k[0][7]) - k[0][6]) - k[0][5]) - k[0][4]) - k[0][3]) - k[0][2]) - k[0][1]) - k[0][0])
+// NAO FAZ UM SWAP FINAL POIS O VALOR É EXPOSTO K[4] ISSO SERIA INUTIL
+#define ENC(x) (  swap64(  swap64(  swap64(  swap64(  swap64(  swap64(  swap64((x) + K[0][0]) + K[0][1]) + K[0][2]) + K[0][3]) + K[0][4]) + K[0][5]) + K[0][6]) + K[0][7])
+#define DEC(x) (unswap64(unswap64(unswap64(unswap64(unswap64(unswap64(unswap64((x) - K[0][7]) - K[0][6]) - K[0][5]) - K[0][4]) - K[0][3]) - K[0][2]) - K[0][1]) - K[0][0])
 
-static inline u64 encrypt (const u64x8 K[K_LEN], u64* restrict ptr, u64* restrict const lmt, const u64 sign) {
+static inline u64 encrypt (const u64x8 _K[K_LEN], u64* restrict ptr, u64* restrict const lmt, u64 x, const u64 sign) {
 
     // INITIAL KEYS, PER INTERVAL
-    u64x8 k[K_LEN] = { K[0], K[1], K[2], K[3], K[4], K[5], K[6], K[7] };
+    u64x8 K[K_LEN] = { _K[0], _K[1], _K[2], _K[3], _K[4], _K[5], _K[6], _K[7] };
 
     loop {
 
-        u64 x;
+        // AVALANCHE OF X THROUGH KEYS
+        K[7] += K[6] += K[5] += K[4] += K[3] += K[2] += K[1] += K[0] += x;
+        K[0] ^= K[6] ^= K[2] ^= K[4] ^= K[7] ^= K[3] ^= K[1] ^= K[5];
 
         if (ptr != lmt)
             // READ THE ORIGINAL VALUE
@@ -49,21 +51,19 @@ static inline u64 encrypt (const u64x8 K[K_LEN], u64* restrict ptr, u64* restric
 
         // WRITE THE ENCRYPTED VALUE
         *ptr++ = BE64(e);
-
-        // AVALANCHE OF X THROUGH KEYS
-        k[7] += k[6] += k[5] += k[4] += k[3] += k[2] += k[1] += k[0] += x;
-        k[0] ^= k[6] ^= k[2] ^= k[4] ^= k[7] ^= k[3] ^= k[1] ^= k[5];
     }
 }
 
-static inline u64 decrypt (const u64x8 K[K_LEN], u64* restrict ptr, u64* restrict const lmt, const u64 sign) {
+static inline u64 decrypt (const u64x8 _K[K_LEN], u64* restrict ptr, u64* restrict const lmt, u64 x, const u64 sign) {
 
     // INITIAL KEYS, PER INTERVAL
-    u64x8 k[8] = { K[0], K[1], K[2], K[3], K[4], K[5], K[6], K[7] };
+    u64x8 K[K_LEN] = { _K[0], _K[1], _K[2], _K[3], _K[4], _K[5], _K[6], _K[7] };
 
     loop {
 
-        u64 x;
+        // AVALANCHE OF X THROUGH KEYS
+        K[7] += K[6] += K[5] += K[4] += K[3] += K[2] += K[1] += K[0] += x;
+        K[0] ^= K[6] ^= K[2] ^= K[4] ^= K[7] ^= K[3] ^= K[1] ^= K[5];
 
         if (ptr != lmt)
             // READ THE ENCRYPTED VALUE
@@ -80,10 +80,6 @@ static inline u64 decrypt (const u64x8 K[K_LEN], u64* restrict ptr, u64* restric
 
         // WRITE THE ORIGINAL VALUE
         *ptr++ = BE64(x);
-
-        // AVALANCHE OF X THROUGH KEYS
-        k[7] += k[6] += k[5] += k[4] += k[3] += k[2] += k[1] += k[0] += x;
-        k[0] ^= k[6] ^= k[2] ^= k[4] ^= k[7] ^= k[3] ^= k[1] ^= k[5];
     }
 }
 
