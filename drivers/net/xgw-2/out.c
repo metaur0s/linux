@@ -1,9 +1,4 @@
 
-#include "base.h"
-#include "pkt.h"
-#include "nodes.h"
-#include "out.h"
-
 // NOTE: ASSUME NO IPV4 OPTIONS
 // ip: IP PACKET
 // size: IP SIZE
