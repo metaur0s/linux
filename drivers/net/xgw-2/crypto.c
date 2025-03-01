@@ -96,11 +96,16 @@ static noinline void learn (const node_s* const node, const u64 ping[K_LEN][8], 
     }
 
     // REDUCE IT TO A SINGLE WORD
-    const u64 s = v[0] + v[1] + v[2] + v[3] +
-                  v[4] + v[5] + v[6] + v[7];
+    u64 s = v[0] + v[1] + v[2] + v[3] +
+            v[4] + v[5] + v[6] + v[7];
+
+    // HASH IT AS AN INDEX
+    s += s >> 32;
+    s += s >> 16;
+    s %= SECRET_PAIRS_N;
 
     // CONSTANTE, DINAMICAMENTE ESCOLHIDO
-    const u64x8* const restrict S = node->secret[s % SECRET_PAIRS_N];
+    const u64x8* const restrict S = node->secret[s];
 
     for_count (k, K_LEN)
         K[k] += S[k];
