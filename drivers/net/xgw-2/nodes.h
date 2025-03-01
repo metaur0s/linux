@@ -278,7 +278,7 @@ BUILD_ASSERT(sizeof(((node_s*)NULL)->iKeys)  == 131072);
 BUILD_ASSERT(sizeof(((node_s*)NULL)->secret) == 1048576);
 BUILD_ASSERT(sizeof(((node_s*)NULL)->paths)  == 5120);
 BUILD_ASSERT(sizeof(((node_s*)NULL)->pstats) == 16384);
-BUILD_ASSERT(sizeof(node_s)                  == 685696);
+BUILD_ASSERT(sizeof(node_s)                  == 1209984);
 
 //
 BUILD_ASSERT(sizeof(((node_s*)NULL)->secret) == SECRET_SIZE);
