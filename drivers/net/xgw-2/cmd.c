@@ -1,12 +1,4 @@
 
-#include "base.h"
-#include "crypto.h"
-#include "ports.h"
-#include "nodes.h"
-#include "dev.h"
-#include "stats.h"
-#include "cmd.h"
-
 // TODO: VAI TER QUE PASSAR O COMANDO ALINHADO,
 // TODO: E AO INVES DE COPIAR SIMPLESMENTE LER
 //      (ou copiar os primeiros 64 bytes) e se for key, copiar o restante

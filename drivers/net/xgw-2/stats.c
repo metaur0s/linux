@@ -1,7 +1,4 @@
 
-#include "base.h"
-#include "stats.h"
-
 static const struct {
     const char* d [DSTATS_N];
     const char* n [NSTATS_N];

@@ -1,7 +1,4 @@
 
-#include "base.h"
-#include "crypto.h"
-
 // !!!!!! TODO: XGW TO XGW REDIRECT WITHOUT GOING THROUGH IP STACK
 
 // TODO: TEM QUE SER TUDO += E SEM ESTE ^=
@@ -113,7 +110,7 @@ static inline u64 decrypt (const u64x8 K[K_LEN], u64* restrict ptr, u64* restric
 }
 
 // MUST NOT EXPOSE KEYS
-static noinline void learn (const node_s* const node, const u64 ping[PING_WORDS_N], u64x8 K[K_LEN]) {
+static noinline void learn (const node_s* const node, const u64 ping[K_LEN * 8], u64x8 K[K_LEN]) {
 
     // DINAMICO ALEATORIO
     for_count (i, K_LEN)

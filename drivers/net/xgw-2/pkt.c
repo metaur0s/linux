@@ -1,5 +1,6 @@
 
 #include "base.h"
+#include "pkt.h"
 
 // TODO: NO CASO DO IP4 (RAW) O TRANSPORTE É O PROPRIO XHEADER
 

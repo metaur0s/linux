@@ -1,9 +1,4 @@
 
-#ifndef __XGW_CMD__
-#define __XGW_CMD__
-
-#include "base.h"
-
 /*
     TODO: HIDE, INACCESS, UNLIST?
 
@@ -312,5 +307,3 @@ BUILD_ASSERT(offsetof(cmd_arg_s, type)   == 0);
 BUILD_ASSERT(offsetof(cmd_arg_s, vID)    == 0);
 BUILD_ASSERT(offsetof(cmd_arg_s, eProto) == 0);
 BUILD_ASSERT(offsetof(cmd_arg_s, mtu)    == 0);
-
-#endif

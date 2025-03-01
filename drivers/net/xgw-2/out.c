@@ -1,7 +1,6 @@
 
 #include "base.h"
-#include "crypto.h"
-#include "ports.h"
+#include "pkt.h"
 #include "nodes.h"
 #include "out.h"
 
