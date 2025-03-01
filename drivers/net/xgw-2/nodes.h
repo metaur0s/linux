@@ -261,24 +261,24 @@ struct node_s { // DEIXA TUDO NO MESMO CACHE LINE PARA A ITERACAO DO KEEPER
 // 16384 --
     volatile stat_s pstats [PATHS_N] [64]; // TODO: DIMINUIR ISSO
 // ---------------------- NODE_SIZE_INIT -----------------------------
-// 1024 + 64 -- KEEPER/OUT READ, IN WRITE
-    u64 oKeys [O_PAIRS_ALL] [KEYS_N];
-// 16384 -- IN READ, KEEPER WRITE
-    u64 iKeys [I_PAIRS_ALL] [KEYS_N];
-// 65536 -- RO
-    u64 secret [SECRET_PAIRS_N] [KEYS_N]; // TODO: PARA SER DINAMICO, TERA QUE RESETAR TAMBEM O node->paths[*].pstats
+// 8640 + 64 -- KEEPER/OUT READ, IN WRITE
+    u64x8 oKeys [O_PAIRS_ALL] [KEYS_N];
+// 131072 -- IN READ, KEEPER WRITE
+    u64x8 iKeys [I_PAIRS_ALL] [KEYS_N];
+// 524288 -- RO
+    u64x8 secret [SECRET_PAIRS_N] [KEYS_N]; // TODO: PARA SER DINAMICO, TERA QUE RESETAR TAMBEM O node->paths[*].pstats
 };
 
 BUILD_ASSERT(sizeof(((node_s*)NULL)->pstats)
          >= (sizeof(((node_s*)NULL)->pstats[0][0]) * PSTATS_N));
 
 //
-BUILD_ASSERT(sizeof(((node_s*)NULL)->oKeys)  == 1088);
-BUILD_ASSERT(sizeof(((node_s*)NULL)->iKeys)  == 16384);
-BUILD_ASSERT(sizeof(((node_s*)NULL)->secret) == 65536);
+BUILD_ASSERT(sizeof(((node_s*)NULL)->oKeys)  == 8704);
+BUILD_ASSERT(sizeof(((node_s*)NULL)->iKeys)  == 131072);
+BUILD_ASSERT(sizeof(((node_s*)NULL)->secret) == 524288);
 BUILD_ASSERT(sizeof(((node_s*)NULL)->paths)  == 5120);
 BUILD_ASSERT(sizeof(((node_s*)NULL)->pstats) == 16384);
-BUILD_ASSERT(sizeof(node_s)                  == 104640);
+BUILD_ASSERT(sizeof(node_s)                  == 685696);
 
 //
 BUILD_ASSERT(sizeof(((node_s*)NULL)->secret) == SECRET_SIZE);
