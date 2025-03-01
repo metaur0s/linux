@@ -150,18 +150,9 @@ static noinline void reset_node_ping_keys (node_s* const node, const uint self, 
     memcpy(Kx, node->secret[0], sizeof(node->secret[0]));
     memcpy(Ky, node->secret[1], sizeof(node->secret[1]));
 
-    //
-    u64x8 x = node->secret[2][0];
-    u64x8 y = node->secret[2][1];
-
     // MESMO QUE USE O MESMO PASSWORD ENTRE VARIOS NODES, NAO DEIXA QUE O PING KEYS SEJA O MESMO
-    if (self > peer) {
-        x *= self;
-        y *= peer;
-    } else {
-        x *= peer;
-        y *= self;
-    }
+    u64x8 x = node->secret[2][0] * self;
+    u64x8 y = node->secret[2][1] * peer;
 
     //
     for_count (s, SECRET_PAIRS_N) {
