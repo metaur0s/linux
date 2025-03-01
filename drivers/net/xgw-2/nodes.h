@@ -265,7 +265,7 @@ struct node_s { // DEIXA TUDO NO MESMO CACHE LINE PARA A ITERACAO DO KEEPER
     u64x8 oKeys [O_PAIRS_ALL] [KEYS_N];
 // 131072 -- IN READ, KEEPER WRITE
     u64x8 iKeys [I_PAIRS_ALL] [KEYS_N];
-// 524288 -- RO
+// 1048576 -- RO
     u64x8 secret [SECRET_PAIRS_N] [KEYS_N]; // TODO: PARA SER DINAMICO, TERA QUE RESETAR TAMBEM O node->paths[*].pstats
 };
 
@@ -275,7 +275,7 @@ BUILD_ASSERT(sizeof(((node_s*)NULL)->pstats)
 //
 BUILD_ASSERT(sizeof(((node_s*)NULL)->oKeys)  == 8704);
 BUILD_ASSERT(sizeof(((node_s*)NULL)->iKeys)  == 131072);
-BUILD_ASSERT(sizeof(((node_s*)NULL)->secret) == 524288);
+BUILD_ASSERT(sizeof(((node_s*)NULL)->secret) == 1048576);
 BUILD_ASSERT(sizeof(((node_s*)NULL)->paths)  == 5120);
 BUILD_ASSERT(sizeof(((node_s*)NULL)->pstats) == 16384);
 BUILD_ASSERT(sizeof(node_s)                  == 685696);
