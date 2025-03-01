@@ -1,5 +1,6 @@
 
 #include "base.h"
+#include "crypto.h"
 
 static inline u64   swap64 (const u64 x) { const uint q = popcount64(x); return (x >> q) | (x << (64 - q)); }
 static inline u64 unswap64 (const u64 x) { const uint q = popcount64(x); return (x << q) | (x >> (64 - q)); }
@@ -38,8 +39,6 @@ static inline u64 unswap64 (const u64 x) { const uint q = popcount64(x); return 
 // - LEARN IN/OUT SLOT
 // AUTHENTICITY, INTEGRITY AND PRIVACY
 // - DATA
-
-#define K_LEN 8
 
 #define A k[0]
 #define B k[1]

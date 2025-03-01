@@ -1,4 +1,6 @@
 
+#if 0
+
 #define XADDR_MATCH_PHYS       0
 #define XADDR_MATCH_IF_IDX     1
 #define XADDR_MATCH_ETH_DST    2
@@ -144,3 +146,5 @@ static int testa (dhcp_s* const entry, skb_s* const skb) {
     }
 
 }
+
+#endif

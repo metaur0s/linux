@@ -1,4 +1,9 @@
 
+#ifndef __XGW_STATS__
+#define __XGW_STATS__
+
+#include "base.h"
+
 // STATISTICS
 
 // NOTE: THOSE ORDERS MUST CONSIDER CACHE USAGE
@@ -91,3 +96,5 @@ struct stat_s {
 #define ret_dev(i)  { stat = i; goto _ret_dev;  }
 #define ret_node(i) { stat = i; goto _ret_node; }
 #define ret_path(i) { stat = i; goto _ret_path; }
+
+#endif

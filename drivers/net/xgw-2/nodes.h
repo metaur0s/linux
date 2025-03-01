@@ -1,5 +1,6 @@
 
 #include "base.h"
+#include "crypto.h"
 
 //
 #define CONNS_MIN CONFIG_XGW_CONNS_MIN

@@ -1,4 +1,10 @@
 
+#include "base.h"
+#include "crypto.h"
+#include "ports.h"
+#include "nodes.h"
+#include "out.h"
+
 // NOTE: ASSUME NO IPV4 OPTIONS
 // ip: IP PACKET
 // size: IP SIZE
@@ -228,27 +234,27 @@ static netdev_tx_t out (skb_s* const skb, net_device_s* const dev) {
     switch (skb->mark & 0xFFFF0000U) { // TODO: TEM QUE IMPEDIR DE SETAR MANUALMENTE ESTES MARKS NO SETSOCKOPT, IPTABLES ETC
 
         case XGW_TCP_PROXY_MARK_4: {
-    
+
             ASSERT(skb->protocol == BE16(ETH_P_IP));
-            
+
             ip4_s* const ip = SKB_NETWORK(skb);
-    
+
             ASSERT(ip->proto == BE8(IPPROTO_TCP));
-    
+
             // TODO: SE FOR SYN/SYN-ACK, ADJUST MSS
             ip->sport  = BE16(skb->mark & 0xFFFFU);
 
         } break;
-        
+
         case XGW_TCP_PROXY_MARK_6: {
-            
+
             // TODO:
             ASSERT(skb->protocol == BE16(ETH_P_IPV6));
-    
+
             ip6_s* const ip = SKB_NETWORK(skb);
-    
+
             ASSERT(ip->proto == BE8(IPPROTO_TCP));
-    
+
             // TODO: SE FOR SYN/SYN-ACK, ADJUST MSS
             ip->sport  = BE16(skb->mark & 0xFFFFU);
 
@@ -258,7 +264,7 @@ static netdev_tx_t out (skb_s* const skb, net_device_s* const dev) {
 
     // THE PAYLOAD (THIS WILL POINT TO THE NETWORK HEADER)
     u64* const p = SKB_NETWORK(skb);
-    
+
     // WILL GET DESTINATION NODE AND HASH THE PATH
     u64 nid, cid;
 
@@ -308,11 +314,11 @@ static netdev_tx_t out (skb_s* const skb, net_device_s* const dev) {
 #endif
 
     ASSERT(nid < NODES_N);
-    
+
     // CANNOT SEND TO ITSELF
     if (nid == nodeSelf)
         ret_dev(DSTATS_O_DATA_TO_SELF);
-    
+
     // TODO: CONTINUAR RECEBENDO PACOTES DE CONTROLE/PING/PONG MESMO COM A INTERFACE DESATIVADA
     //        DAI SERA INTERESSANTE UMA FLAG GLOBAL XGW ON / OFF, NO MESMO ESQUEMA QUE O NODE->ON & PATH->ON
 

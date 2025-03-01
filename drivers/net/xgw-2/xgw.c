@@ -9,9 +9,6 @@
 #define XGW_TCP_PROXY_MARK_6 0x25660000U
 #endif
 
-// ALL UDP PORTS
-#define UDP_PORTS_N 65536
-
 // QUANTO MAIS INTERVALOS AGUENTA MAIS TEMPO DE FALHAS DE CONEXAO SEM TER QUE RENEGOCIAR E EXPOR AS PRESHAREDS
 // QUANTO MAIS INTERVALOS MENOS PROBABILIDADE DA RESINCRONIZACAO DE L/R COUNTERS SOBRESCREVER IKEYS ATUAIS
 
@@ -35,19 +32,6 @@
 #define V6_WIDTH_PREFIX 16
 #define V6_WIDTH_NODE 16
 
-//
-#define KEYS_N 8
-
-#define SECRET_PAIRS_N 1024
-
-#define SECRET_SIZE 65536
-
-// DO QUAL DERIVAREMOS O SECRET
-#define PASSWORD_SIZE_MIN    16
-#define PASSWORD_SIZE_MAX 65536
-
-//
-#define PASSWORD_ROUNDS 16
 
 //
 #define KEEPER_INTERVAL ((9 * HZ) / 10)
@@ -56,17 +40,8 @@
 // NOTE: SE MUDAR DE INTERFACE VAI TER QUE REMOVER DA LISTA PRIMEIRO, E SÓ DEPOIS JOGAR PARA OUTRO
 #define PING_QUEUES_N 8
 
-//
-#define PORTS_N (UDP_PORTS_N / PORTS_WIDTH)
-
-#define PORTS_WIDTH 32
-#define PORTS_SHIFT 5
-#define PORTS_MASK 0b11111
-#define PORTS_W (ports[port >> PORTS_SHIFT])
-#define PORTS_B (1 << (port & PORTS_MASK))
-
-typedef int ports_t;
-
+#include "ports.h"
+#include "crypto.h"
 #include "pkt.h"
 #include "stats.h"
 #include "nodes.h"
@@ -75,7 +50,6 @@ typedef int ports_t;
 
 DEFINE_SPINLOCK(xlock);
 
-static volatile u64 _xrnd;
 static net_device_s* xgw;
 static node_s* knodes;
 static u16 nodeSelf;
@@ -99,11 +73,6 @@ static path_s* pings [PING_QUEUES_N];
 static void paged_free (void* const a, const size_t size);
 static void* paged_alloc (const size_t size);
 
-static u64 random64 (const u64 seed);
-
-static inline void ports_enable (const uint port);
-static inline void ports_disable (const uint port);
-static inline ports_t ports_is_enabled (const uint port);
 
 static void __cold_as_ice __optimize_size stats_print (void);
 
@@ -126,15 +95,7 @@ int in (skb_s* const skb);
 #include "cmd.c"
 #include "alloc.c"
 
-// TODO: SO APRENDER UM PATH SE TAL PORTA ESTIVER CONFIGURADA NELE
-static inline void ports_enable (const uint port)
-    { PORTS_W |= PORTS_B; }
 
-static inline void ports_disable (const uint port)
-    { PORTS_W &= ~PORTS_B; }
-
-static inline ports_t ports_is_enabled (const uint port)
-    { return PORTS_W & PORTS_B; }
 
 /*
 
@@ -150,18 +111,6 @@ static inline ports_t ports_is_enabled (const uint port)
 
 // TERMINADO EM 1: SEM IN/OUT (ESTA DISABLED)
 // NULL -> NAO TEM, OU ESTA SENDO DELETADO
-
-// NAO É RANDOM NO SENTIDO DE NAO ADIVINHAVEL, MAS FICA NAO TAO SEQUENCIAL E ALTERANDO DIFERENTES BITS
-static u64 random64 (const u64 seed) {
-
-#ifdef CONFIG_XGW_RDRAND
-    u64 R; __builtin_ia32_rdrand64_step(&R);
-#else // TODO:
-    u64 R = 0;
-#endif
-
-    return atomic_add(&_xrnd, _swap64(_swap64(_xrnd + seed) + __builtin_ia32_rdtsc()) + R);
-}
 
 // vai ter que retirar o erro node_is_self :S ?
 //  ou nao vai poder setar o self comoum que ja existe

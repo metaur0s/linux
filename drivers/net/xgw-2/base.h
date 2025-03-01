@@ -52,6 +52,10 @@
 #define TCP_SIZE 20 // sizeof(struct tcphdr)
 #define UDP_SIZE  8 // sizeof(struct udphdr)
 
+// TODO:
+#define popcount32 __builtin_popcount
+#define popcount64 __builtin_popcountll
+
 #define popcount(x) \
     __builtin_choose_expr(__builtin_types_compatible_p(typeof(x),  int  ), __builtin_popcount(x),   \
     __builtin_choose_expr(__builtin_types_compatible_p(typeof(x), uint  ), __builtin_popcount(x),   \
@@ -192,5 +196,9 @@ typedef struct encap_eth_vlan_ppp_ip4_s encap_eth_vlan_ppp_ip4_s;
 typedef struct encap_eth_vlan_ppp_ip6_s encap_eth_vlan_ppp_ip6_s;
 
 typedef struct hdr_x_s hdr_x_s;
+
+//
+static inline u64   swap64 (const u64 x) { const uint q = popcount64(x); return (x >> q) | (x << (64 - q)); }
+static inline u64 unswap64 (const u64 x) { const uint q = popcount64(x); return (x << q) | (x >> (64 - q)); }
 
 #endif

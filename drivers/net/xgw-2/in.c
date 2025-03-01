@@ -1,5 +1,9 @@
 
 #include "base.h"
+#include "crypto.h"
+#include "ports.h"
+#include "nodes.h"
+#include "in.h"
 
 enum PPP_PROTO {
     PPP_PROTO_IP4   = 0x0021,

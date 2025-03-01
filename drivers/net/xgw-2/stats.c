@@ -1,4 +1,7 @@
 
+#include "base.h"
+#include "stats.h"
+
 static const struct {
     const char* d [DSTATS_N];
     const char* n [NSTATS_N];
@@ -87,7 +90,7 @@ static void __cold_as_ice __optimize_size stats_print (void) {
             for_count (pid, PATHS_N) {
 
                 const path_s* const path = &node->paths[pid];
-                
+
                 if (path->info) {
                     for_count (s, PSTATS_N) {
                         const uintll c = atomic_get(&(node->pstats[pid][s].count));

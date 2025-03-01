@@ -1,4 +1,7 @@
 
+#include "base.h"
+#include "dev.h"
+
 static int __cold_as_ice __optimize_size dev_up (net_device_s* const dev) {
 
     // TODO: ATIVA O TIMER
@@ -72,14 +75,14 @@ static inline net_device_s* dev_create_node (const char* const name, const uint 
 
     // CREATE THE VIRTUAL INTERFACE
     net_device_s* const dev = alloc_netdev(sizeof(uint), name, NET_NAME_USER, dev_setup);
-   
+
     if (dev == NULL) {
         printk("XGW: FAILED TO ALLOCATE\n");
         return NULL;
     }
 
     *(uint*)netdev_priv(dev) = nid;
-    
+
     // MAKE IT VISIBLE IN THE SYSTEM
     if (register_netdev(dev)) {
         // TODO: FREE
@@ -89,4 +92,3 @@ static inline net_device_s* dev_create_node (const char* const name, const uint 
 
     return dev;
 }
-

@@ -89,44 +89,4 @@ endif
       hex "XGW_RANDOM_PING"
         default 0x59114f654f2185ad
 
-    config XGW_ITER_X_ADD
-      hex "XGW_ITER_X_ADD"
-        default 0x7dd15b2541258e21
-
-    config XGW_ITER_X_MASK
-      hex "XGW_ITER_X_MASK"
-        default 0x03dee57e21b29778
-
-    config XGW_ITER_KEY_ADD_0
-      hex "XGW_ITER_KEY_ADD_0"
-        default 0x6a1574c070136dbf
-
-    config XGW_ITER_KEY_ADD_1
-      hex "XGW_ITER_KEY_ADD_1"
-        default 0x5cbcf578be1729da
-
-    config XGW_ITER_KEY_ADD_2
-      hex "XGW_ITER_KEY_ADD_2"
-        default 0x47b9b6242285ace6
-
-    config XGW_ITER_KEY_ADD_3
-      hex "XGW_ITER_KEY_ADD_3"
-        default 0x8666c295a8a39271
-
-    config XGW_ITER_KEY_ADD_4
-      hex "XGW_ITER_KEY_ADD_4"
-        default 0xd7d2f52cb5312659
-
-    config XGW_ITER_KEY_ADD_5
-      hex "XGW_ITER_KEY_ADD_5"
-        default 0x6740ecf6e02a3d90
-
-    config XGW_ITER_KEY_ADD_6
-      hex "XGW_ITER_KEY_ADD_6"
-        default 0xc93d95b312e46b5b
-
-    config XGW_ITER_KEY_ADD_7
-      hex "XGW_ITER_KEY_ADD_7"
-        default 0x5b208970d1f5449b
-
 endif
