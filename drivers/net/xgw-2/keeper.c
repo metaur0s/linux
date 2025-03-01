@@ -1,10 +1,4 @@
 
-#include "base.h"
-#include "crypto.h"
-#include "pkt.h"
-#include "nodes.h"
-#include "keeper.h"
-
 #define __ct1(x) __ctz(~(x))
 
 static void keeper (struct timer_list* const timer) {

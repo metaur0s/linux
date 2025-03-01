@@ -1,7 +1,4 @@
 
-#ifndef __XGW_PKT__
-#define __XGW_PKT__
-
 #define XGW_PAYLOAD_MIN     28 // AN EMPTY IPV4/UDP
 #define XGW_PAYLOAD_MAX 0xFFFF // MUST FIT ON PKT->SIZE
 
@@ -374,5 +371,3 @@ BUILD_ASSERT(sizeof(ip6_s) == (sizeof(hdr_ip6_s) + 2 * sizeof(u16)));
 #define PKT_IP6(pkt)   ((hdr_ip6_s*)(PTR(pkt) + (pkt)->Noffset))
 #define PKT_UDP(pkt)   ((hdr_udp_s*)(PTR(pkt) + (pkt)->toffset))
 #define PKT_TCP(pkt)   ((hdr_tcp_s*)(PTR(pkt) + (pkt)->toffset))
-
-#endif

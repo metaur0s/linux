@@ -1,7 +1,4 @@
 
-#include "base.h"
-#include "dev.h"
-
 static int __cold_as_ice __optimize_size dev_up (net_device_s* const dev) {
 
     // TODO: ATIVA O TIMER

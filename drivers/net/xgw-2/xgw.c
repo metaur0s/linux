@@ -2,7 +2,6 @@
 
 */
 
-
 #include "kconfig.h"
 
 #if 1
@@ -197,6 +196,13 @@ typedef struct encap_eth_vlan_ppp_ip4_s encap_eth_vlan_ppp_ip4_s;
 typedef struct encap_eth_vlan_ppp_ip6_s encap_eth_vlan_ppp_ip6_s;
 
 typedef struct hdr_x_s hdr_x_s;
+
+//
+#define KEEPER_INTERVAL ((9 * HZ) / 10)
+
+// HASHEIA E AGRUPA POR INTERFACE INDEX
+// NOTE: SE MUDAR DE INTERFACE VAI TER QUE REMOVER DA LISTA PRIMEIRO, E SÓ DEPOIS JOGAR PARA OUTRO
+#define PING_QUEUES_N 8
 
 // ALL UDP PORTS
 #define UDP_PORTS_N 65536
@@ -611,10 +617,9 @@ BUILD_ASSERT((typeof(((node_s*)NULL)->ipaths))IPATHS == IPATHS);
 static inline u64   swap64 (const u64 x) { const uint q = popcount64(x); return (x >> q) | (x << (64 - q)); }
 static inline u64 unswap64 (const u64 x) { const uint q = popcount64(x); return (x << q) | (x >> (64 - q)); }
 
-static inline u64 __u64x8_sum_reduced (const u64x8 V[], const uint n);
-
 DEFINE_SPINLOCK(xlock);
 
+static volatile u64 _xrnd;
 static volatile ports_t ports [PORTS_N];
 static volatile stat_s dstats           [DSTATS_N];
 static volatile stat_s nstats [NODES_N] [NSTATS_N];
@@ -643,6 +648,9 @@ static void __cold_as_ice __optimize_size dev_setup (net_device_s* const dev);
 static inline void ports_enable (const uint port);
 static inline void ports_disable (const uint port);
 static inline ports_t ports_is_enabled (const uint port);
+static void keeper (struct timer_list* const timer);
+static u64 random64 (const u64 seed);
+static inline u64 __u64x8_sum_reduced (const u64x8 V[], const uint n);
 
 // EXPOSED TO KERNEL
 // net/core/dev.c WILL USE US
@@ -670,6 +678,18 @@ static inline u64 __u64x8_sum_reduced (const u64x8 V[], const uint n) {
         v += V[i];
 
     return v[0] + v[1] + v[2] + v[3] + v[4] + v[5] + v[6] + v[7];
+}
+
+// NAO É RANDOM NO SENTIDO DE NAO ADIVINHAVEL, MAS FICA NAO TAO SEQUENCIAL E ALTERANDO DIFERENTES BITS
+static u64 random64 (const u64 seed) {
+
+#ifdef CONFIG_XGW_RDRAND
+    u64 R; __builtin_ia32_rdrand64_step(&R);
+#else // TODO:
+    u64 R = 0;
+#endif
+
+    return atomic_add(&_xrnd, swap64(swap64(_xrnd + seed) + __builtin_ia32_rdtsc()) + R);
 }
 
 // TODO: SO APRENDER UM PATH SE TAL PORTA ESTIVER CONFIGURADA NELE
