@@ -280,9 +280,6 @@ BUILD_ASSERT(sizeof(((node_s*)NULL)->paths)  == 5120);
 BUILD_ASSERT(sizeof(((node_s*)NULL)->pstats) == 16384);
 BUILD_ASSERT(sizeof(node_s)                  == 1209984);
 
-//
-BUILD_ASSERT(sizeof(((node_s*)NULL)->secret) == SECRET_SIZE);
-
 BUILD_ASSERT(offsetof(node_s, opaths)   % CACHE_LINE_SIZE == 0);
 BUILD_ASSERT(offsetof(node_s, ptr)      % CACHE_LINE_SIZE == 0);
 BUILD_ASSERT(offsetof(node_s, paths)    % CACHE_LINE_SIZE == 0);

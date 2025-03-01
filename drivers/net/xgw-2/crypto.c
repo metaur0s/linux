@@ -151,14 +151,14 @@ static noinline void reset_node_ping_keys (node_s* const node, const uint self, 
     memcpy(Ky, node->secret[1], sizeof(node->secret[1]));
 
     // MESMO QUE USE O MESMO PASSWORD ENTRE VARIOS NODES, NAO DEIXA QUE O PING KEYS SEJA O MESMO
-    u64x8 x = node->secret[2][0] * self;
-    u64x8 y = node->secret[2][1] * peer;
+    u64x8 x = node->secret[2][0] * (self > peer ? self : peer);
+    u64x8 y = node->secret[2][1] * (self > peer ? self : peer);
 
     //
     for_count (s, SECRET_PAIRS_N) {
-        for_count (i, K_LEN) {
-            x += Kx[s % K_LEN] += x * node->secret[s][i];
-            y += Ky[s % K_LEN] += y * node->secret[s][i];
+        for_count (k, K_LEN) {
+            x += Kx[s % K_LEN] += x * node->secret[s][k];
+            y += Ky[s % K_LEN] += y * node->secret[s][k];
         }
     }
 }
@@ -168,25 +168,25 @@ static noinline void secret_derivate (node_s* const node, const u8* const restri
 
     ASSERT(size >= PASSWORD_SIZE_MIN);
     ASSERT(size <= PASSWORD_SIZE_MAX);
-    ASSERT(PASSWORD_SIZE_MAX <= SECRET_SIZE);
-
-    //
-    memcpy(node->secret, password, size);
+    ASSERT(PASSWORD_SIZE_MAX <= sizeof(node->secret));
 
     // REPETE ELE ATE PREENCHER TODA A ARRAY
-    do { uint chunk = SECRET_SIZE - size;
+    memcpy(node->secret, password, size);
+
+    do { uint chunk = sizeof(node->secret) - size;
         if (chunk > size)
             chunk = size;
         memcpy(PTR(node->secret) + size, node->secret, chunk);
         size += chunk;
-    } while (size != SECRET_SIZE);
+    } while (size != sizeof(node->secret));
 
 #if 1
     // EM LOCAL ENDIAN
     for_count (p, SECRET_PAIRS_N)
         for_count (k, KEYS_N)
-                node->secret[p][k] =
-           BE64(node->secret[p][k]);
+            for_count (w, 8)
+                node->secret[p][k][w]
+         = BE64(node->secret[p][k][w]);
 #endif
 
     // NAO DEIXA SER APENAS UMA REPETICAO

@@ -156,8 +156,6 @@ static int __init xgw_init (void) {
 
     //BUILD_ASSERT(sizeof(dhcp_s) == DHCP_SIZE);
 
-    //BUILD_ASSERT(sizeof(((node_s*)NULL->secret) == SECRET_SIZE);
-
     //
     BUILD_ASSERT( ( ((uintptr_t)0xffffffffffffffffULL) & (~(uintptr_t)1) ) == (0xffffffffffffffffULL ^ 1) );
 
