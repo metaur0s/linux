@@ -1,0 +1,16 @@
+
+//
+#define KEYS_N 8
+
+#define K_LEN 8
+
+#define SECRET_PAIRS_N 1024
+
+#define SECRET_SIZE 65536
+
+// DO QUAL DERIVAREMOS O SECRET
+#define PASSWORD_SIZE_MIN    16
+#define PASSWORD_SIZE_MAX 65536
+
+//
+#define PASSWORD_ROUNDS 16
