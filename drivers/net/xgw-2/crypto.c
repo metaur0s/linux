@@ -183,37 +183,38 @@ static noinline void secret_derivate (node_s* const node, const u8* const restri
 #if 1
     // EM LOCAL ENDIAN
     for_count (p, SECRET_PAIRS_N)
-        for_count (k, KEYS_N)
+        for_count (k, K_LEN)
             for_count (w, 8)
                 node->secret[p][k][w]
          = BE64(node->secret[p][k][w]);
 #endif
 
+    u64x8 x = {
+        0x5F72D0422FE2CB94ULL, 0x404B238BAAB7F569ULL, 0x8BC0A61857A6C9A6ULL, 0x0189D9EA53018DB2ULL,
+        0x44D023C1E7FB2EAEULL, 0xD23789A7CBB074ABULL, 0x815583AD150B4C6AULL, 0x56F755173318EF82ULL
+    };
+
     // NAO DEIXA SER APENAS UMA REPETICAO
     // any(print('0x%016X' % ((0x815583AD150B4C6A * p + 0x5F72D0422FE2CB94  * k) & ((1 << 64) - 1))) for p in range(16) for k in range(KEYS_N))
     for_count (p, SECRET_PAIRS_N)
-        for_count (k, KEYS_N)
-            node->secret[p][k] += 0x815583AD150B4C6AULL * p
-                                + 0x5F72D0422FE2CB94ULL * k;
+        for_count (k, K_LEN)
+            x += node->secret[p][k] += p*x + k*x;
 
     // SECRET
-    u64 A = 0x5F72D0422FE2CB94ULL, B = 0x404B238BAAB7F569ULL, C = 0x8BC0A61857A6C9A6ULL, D = 0x0189D9EA53018DB2ULL,
-        E = 0x44D023C1E7FB2EAEULL, F = 0xD23789A7CBB074ABULL, G = 0x815583AD150B4C6AULL, H = 0x56F755173318EF82ULL;
-
     for_count (c, PASSWORD_ROUNDS) {
         for_count (p, SECRET_PAIRS_N) {
-            for_count (k, KEYS_N) {
+            for_count (k, K_LEN) {
 
-                A += node->secret[H % SECRET_PAIRS_N][popcount(F) % KEYS_N] * popcount(G);
-                B += node->secret[G % SECRET_PAIRS_N][popcount(E) % KEYS_N] * popcount(H);
-                C += node->secret[F % SECRET_PAIRS_N][popcount(D) % KEYS_N] * popcount(A);
-                D += node->secret[E % SECRET_PAIRS_N][popcount(C) % KEYS_N] * popcount(B);
-                E += node->secret[D % SECRET_PAIRS_N][popcount(B) % KEYS_N] * popcount(C);
-                F += node->secret[C % SECRET_PAIRS_N][popcount(A) % KEYS_N] * popcount(D);
-                G += node->secret[B % SECRET_PAIRS_N][popcount(H) % KEYS_N] * popcount(E);
-                H += node->secret[A % SECRET_PAIRS_N][popcount(G) % KEYS_N] * popcount(F);
+                x += node->secret[x[7] % SECRET_PAIRS_N][x[3] % KEYS_N] * x[0];
+                x += node->secret[x[6] % SECRET_PAIRS_N][x[1] % KEYS_N] * x[1];
+                x += node->secret[x[5] % SECRET_PAIRS_N][x[0] % KEYS_N] * x[2];
+                x += node->secret[x[4] % SECRET_PAIRS_N][x[2] % KEYS_N] * x[3];
+                x += node->secret[x[3] % SECRET_PAIRS_N][x[7] % KEYS_N] * x[4];
+                x += node->secret[x[2] % SECRET_PAIRS_N][x[4] % KEYS_N] * x[5];
+                x += node->secret[x[1] % SECRET_PAIRS_N][x[5] % KEYS_N] * x[6];
+                x += node->secret[x[0] % SECRET_PAIRS_N][x[6] % KEYS_N] * x[7];
 
-                node->secret[p][k] = enc64(node->secret[p][k]);
+                node->secret[p][k] = x;
             }
         }
     }
