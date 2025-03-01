@@ -1,4 +1,10 @@
 
+#include "base.h"
+#include "crypto.h"
+#include "pkt.h"
+#include "nodes.h"
+#include "keeper.h"
+
 #define __ct1(x) __ctz(~(x))
 
 static void keeper (struct timer_list* const timer) {
@@ -375,7 +381,7 @@ _skip:
             __atomic_store_n(&node->opaths, 0, __ATOMIC_SEQ_CST);
 
             ASSERT(!opaths);
-            
+
             ASSERT(!node->opaths);
             ASSERT(!node->ipaths);
 
