@@ -157,8 +157,8 @@ static noinline void reset_node_ping_keys (node_s* const node, const uint self, 
     //
     for_count (s, SECRET_PAIRS_N) {
         for_count (i, K_LEN) {
-            x = Kx[s % K_LEN] += x * node->secret[s][i];
-            y = Ky[s % K_LEN] += y * node->secret[s][i];
+            x += Kx[s % K_LEN] += x * node->secret[s][i];
+            y += Ky[s % K_LEN] += y * node->secret[s][i];
         }
     }
 }
