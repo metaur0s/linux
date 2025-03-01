@@ -134,8 +134,8 @@ static noinline void reset_node_ping_keys (node_s* const node, const uint self, 
     ASSERT(peer < NODES_N);
     ASSERT(self != peer);
 
-    u64* restrict Kx;
-    u64* restrict Ky;
+    u64x8* restrict Kx;
+    u64x8* restrict Ky;
 
     // CADA LADO USA UM PAR
     if (self > peer) {
@@ -147,22 +147,22 @@ static noinline void reset_node_ping_keys (node_s* const node, const uint self, 
     }
 
     // TODO: OTHER CONSTANTS HERE
-    u64 A = 0x05D171D85D80EBC4ULL, B = 0x9985E7AB107E8FCAULL, C = 0x263F3484D10AC084ULL, D = 0x47FDF736769A001AULL,
-        E = 0xC6D8BC149729F1C4ULL, F = 0xC445BC1CB6B1BD4DULL, G = 0x96579857437F26A3ULL, H = 0x0780BABD0EF6CE16ULL;
+    u64x8 k = {
+        0x05D171D85D80EBC4ULL, 0x9985E7AB107E8FCAULL, 0x263F3484D10AC084ULL, 0x47FDF736769A001AULL,
+        0xC6D8BC149729F1C4ULL, 0xC445BC1CB6B1BD4DULL, 0x96579857437F26A3ULL, 0x0780BABD0EF6CE16ULL
+    };
 
     // MESMO QUE USE O MESMO PASSWORD ENTRE VARIOS NODES, NAO DEIXA QUE O PING KEYS SEJA O MESMO
-    A += B += C += D += E += F += G += H +=
-        0x0000000100000001ULL * (
-            self > peer ? // MAS AMBOS OS LADOS TEM QUE GERAR O MESMO SECRET
-                (self << 16) | peer :
-                (peer << 16) | self
-        )
-    ;
+    k += 0x0000000100000001ULL * (
+        self > peer ? // MAS AMBOS OS LADOS TEM QUE GERAR O MESMO SECRET
+            (self << 16) | peer :
+            (peer << 16) | self
+    );
 
     //
-    for_count (p, SECRET_PAIRS_N)
-        for_count (k, KEYS_N)
-            __KEYS_ITER(node->secret[p][k]);
+    for_count (s, SECRET_PAIRS_N)
+        for_count (k, K_LEN)
+            k += node->secret[s][k];
 
     Kx[0] = H; Kx[1] = G;
     Kx[2] = F; Kx[3] = E;
@@ -170,9 +170,9 @@ static noinline void reset_node_ping_keys (node_s* const node, const uint self, 
     Kx[6] = B; Kx[7] = A;
 
     //
-    for_count (p, SECRET_PAIRS_N)
-        for_count (k, KEYS_N)
-            __KEYS_ITER(node->secret[p][k]);
+    for_count (s, SECRET_PAIRS_N)
+        for_count (k, K_LEN)
+            k ^= node->secret[s][k];
 
     Ky[0] = A; Ky[1] = B;
     Ky[2] = C; Ky[3] = D;
