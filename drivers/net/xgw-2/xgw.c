@@ -81,9 +81,6 @@ static inline u64 unswap64 (const u64 x) { const uint q = popcount64(x); return 
 DEFINE_SPINLOCK(xlock);
 
 static volatile u64 _xrnd;
-static volatile ports_t ports [PORTS_N];
-static volatile stat_s dstats           [DSTATS_N];
-static volatile stat_s nstats [NODES_N] [NSTATS_N];
 static net_device_s* xgw;
 static node_s* knodes;
 static u16 nodeSelf;
@@ -93,6 +90,9 @@ static node_s* volatile nodes [NODES_N];
 #ifdef CONFIG_XGW_NMAP
 static volatile u16 nmap [NODES_N];
 #endif
+static volatile ports_t ports [PORTS_N];
+static volatile stat_s dstats           [DSTATS_N];
+static volatile stat_s nstats [NODES_N] [NSTATS_N];
 
 // NEED TO BE SEPARATE
 //    - SO IT CAN BE USET WITHOUT THE LOCK
@@ -102,15 +102,9 @@ static volatile u16 nmap [NODES_N];
 static path_s* pings [PING_QUEUES_N];
 
 static netdev_tx_t out (skb_s* const skb, net_device_s* const dev);
-static void paged_free (void* const a, const size_t size);
-static void* paged_alloc (const size_t size);
 static void __cold_as_ice __optimize_size stats_print (void);
 static void __cold_as_ice __optimize_size dev_setup (net_device_s* const dev);
-static inline void ports_enable (const uint port);
-static inline void ports_disable (const uint port);
-static inline ports_t ports_is_enabled (const uint port);
 static void keeper (struct timer_list* const timer);
-static u64 random64 (const u64 seed);
 static inline u64 __u64x8_sum_reduced (const u64x8 V[], const uint n);
 
 // EXPOSED TO KERNEL
@@ -119,9 +113,12 @@ static inline u64 __u64x8_sum_reduced (const u64x8 V[], const uint n);
 
 int in (skb_s* const skb);
 
+#include "alloc.c"
 #ifdef CONFIG_XGW_BEEP
 #include "beep.c"
 #endif
+#include "random.c"
+#include "ports.c"
 #include "pkt.c"
 #include "crypto.c"
 #include "out.c"
@@ -131,9 +128,6 @@ int in (skb_s* const skb);
 #include "dev.c"
 #include "cmd.c"
 #include "vect.c"
-#include "random.c"
-#include "ports.c"
-#include "alloc.c"
 
 /*
 
