@@ -161,8 +161,8 @@ static noinline void reset_node_ping_keys (node_s* const node, const uint self, 
 
     //
     for_count (s, SECRET_PAIRS_N)
-        for_count (k, K_LEN)
-            k += node->secret[s][k];
+        for_count (i, K_LEN)
+            k += node->secret[s][i];
 
     Kx[0] = H; Kx[1] = G;
     Kx[2] = F; Kx[3] = E;
@@ -171,8 +171,8 @@ static noinline void reset_node_ping_keys (node_s* const node, const uint self, 
 
     //
     for_count (s, SECRET_PAIRS_N)
-        for_count (k, K_LEN)
-            k ^= node->secret[s][k];
+        for_count (i, K_LEN)
+            k ^= node->secret[s][i];
 
     Ky[0] = A; Ky[1] = B;
     Ky[2] = C; Ky[3] = D;
