@@ -146,7 +146,9 @@ static noinline void reset_node_ping_keys (node_s* const node, const uint self, 
         Kx = node->iKeys[I_PAIR_PING];
     }
 
-    u64x8 K[K_LEN] = { { 0 }, { 0 }, { 0 }, { 0 }, { 0 }, { 0 }, { 0 }, { 0 } };
+    //
+    memset(Kx, 0, sizeof(*Kx));
+    memset(Ky, 0, sizeof(*Ky));
 
     // TODO: OTHER CONSTANTS HERE
     u64x8 x = {
