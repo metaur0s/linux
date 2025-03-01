@@ -167,8 +167,8 @@ static noinline void secret_derivate (node_s* const node, const u8* const restri
     for_count (p, SECRET_PAIRS_N)
         for_count (k, K_LEN)
             node->secret[p][k] +=
-                p * 0x815583AD150B4C6AULL +
-                k * 0x5F72D0422FE2CB94ULL;
+           (node->secret[p][k] * p) ^
+           (node->secret[p][k] * k);
 
     u64x8 x = node->secret[0][0];
 
