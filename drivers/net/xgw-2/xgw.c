@@ -10,10 +10,12 @@
 #define BUILD_ASSERT(c)
 #endif
 
-#ifdef CONFIG_XGW_ASSERT___TODO_FIXME
+#ifdef CONFIG_XGW_ASSERT
 #define ASSERT(c) ({ if (unlikely(!(c))) printk("XGW: %s:%d: ASSERT FAILED: %s\n", __FILE__, __LINE__, #c); })
-#else
+#elif 0
 #define ASSERT(c) __attribute__((assume(c)))
+#else
+#define ASSERT(c) ({})
 #endif
 
 #define CACHE_LINE_SIZE 64
