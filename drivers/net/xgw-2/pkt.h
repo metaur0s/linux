@@ -1,4 +1,10 @@
 
+#define PKT_X_SIZE 32
+
+#define PKT_ALIGN_SIZE (PKT_ALIGN_RANDOMS * sizeof(u64))
+#define PKT_ALIGN_MIN_SIZE (1 * sizeof(u64))
+#define PKT_ALIGN_RANDOMS 2
+
 #define XGW_PAYLOAD_MIN     28 // AN EMPTY IPV4/UDP
 #define XGW_PAYLOAD_MAX 0xFFFF // MUST FIT ON PKT->SIZE
 
@@ -237,12 +243,12 @@ enum H_OFFSET {
 };
 
 // NOTE: ESSA PORRA DESSE ALINHAMENTO NAO ESTA DEIXANDO OS 64-BIT WORDS ALINHADOS PARA PROCESSARMOS
-#define XGW_HEADROOM (sizeof(pkt_s) + sizeof(u64))
+#define XGW_HEADROOM (sizeof(pkt_s) + (PKT_ALIGN_RANDOMS * sizeof(u64)))
 
 // ESTAMOS PEGANDO TODOS OS ENCAPSULAMENTOS QUE O SISTEMA JA USA, E AUMENTANDO ISSO:
-//  PAD_NO_ENCAP + sizeof(hdr_x_s) + sizeof(u64)
+//  PAD_NO_ENCAP + sizeof(hdr_x_s) + PKT_ALIGN_RANDOMS*sizeof(u64)
 // PORTANTO:
-//      32 + sizeof(hdr_x_s) + sizeof(u64) = 64
+//      32 + sizeof(hdr_x_s) + PKT_ALIGN_RANDOMS*sizeof(u64) = 64
 // DEVERA INFLUENCIAR:
 //  -   LL_MAX_HEADER
 //  -   MAX_HEADER
@@ -254,7 +260,7 @@ BUILD_ASSERT(LL_MAX_HEADER == 196 );
 BUILD_ASSERT(MAX_HEADER == (196 + 48));
 
 // JA O MTU, INFLUENCIA
-// sizeof(hdr_x_s) + sizeof(u64) = 32
+// sizeof(hdr_x_s) + PKT_ALIGN_RANDOMS*sizeof(u64) = 40
 
 #define __
 
@@ -306,7 +312,7 @@ struct pkt_s {
             u16 protocol;      // skb->protocol
         };
     };
-    u64 p []; // PING / PAYLOAD
+    u64 p []; // ALIGN | PING / PONG / PAYLOAD
 };
 
 //
@@ -345,7 +351,8 @@ BUILD_ASSERT(sizeof(pkt_s) == (ENCAP_SIZE + sizeof(hdr_x_s)));
 //
 //BUILD_ASSERT(sizeof(*(((pkt_s*)NULL)->p)) * PING_WORDS_N == PING_SIZE);
 
-//
+BUILD_ASSERT(sizeof(hdr_x_s) == PKT_X_SIZE);
+BUILD_ASSERT(sizeof(u64) * PKT_ALIGN_RANDOMS == PKT_ALIGN_SIZE);
 BUILD_ASSERT(sizeof(pkt_s) == PKT_SIZE);
 
 //

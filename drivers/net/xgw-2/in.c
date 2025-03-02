@@ -170,7 +170,7 @@ static inline int in_pp_pong (node_s* const node, path_s* const path, const u64 
     return PSTATS_I_PONG_GOOD;
 }
 
-static inline int in_pp_ping (node_s* const node, path_s* const path, skb_s* const iskb, const ping_s* const ping, const u64 p_lcounter, const u64 p_rcounter) {
+static inline int in_pp_ping (node_s* const node, path_s* const path, const skb_s* const iskb, const ping_s* const ping, const u64 p_lcounter, const u64 p_rcounter) {
 
     pkt_s* skel; pkt_s skel_;
 
@@ -243,7 +243,7 @@ static inline int in_pp_ping (node_s* const node, path_s* const path, skb_s* con
             u64 path_rcounter_listening = COUNTER_LISTENING;
 
             if (__atomic_compare_exchange_n(&path->rcounter, &path_rcounter_listening, COUNTER_ACCEPTING, 0, __ATOMIC_ACQUIRE, __ATOMIC_RELAXED)) {
-    // a)            WE ARE THE SERVER, AND THIS IS THE FIRST PING THE CLIENT SENT WITH OUR COUNTER
+                // a) WE ARE THE SERVER, AND THIS IS THE FIRST PING THE CLIENT SENT WITH OUR COUNTER
                 // DISCOVER THE CLIENT PATH
                     in_discover(path, iskb, &path->skel);
                 // DISCOVER THE CLIENT COUNTER
@@ -251,7 +251,7 @@ static inline int in_pp_ping (node_s* const node, path_s* const path, skb_s* con
                 // START SENDING PINGS
                     __atomic_store_n(&path->rcounter, p_rcounter, __ATOMIC_RELEASE);
             } else
-    // b)            RACED COM OUTRO ACCEPT
+                // b) RACED COM OUTRO ACCEPT
                 return PSTATS_I_PING_RACED;
         }
 
@@ -275,15 +275,16 @@ static inline int in_pp_ping (node_s* const node, path_s* const path, skb_s* con
     // AGORA ENVIA O PONG
     uint s;
 
-    skb_s* const oskb = alloc_skb(64 + sizeof(pkt_s) + sizeof(u64) + PONG_SIZE + 64, GFP_ATOMIC);
+    skb_s* const oskb = alloc_skb(64 + PKT_SIZE + PKT_ALIGN_SIZE + PONG_SIZE + 64, GFP_ATOMIC);
 
     if (oskb) {
 
         // TODO: USA O SKB_DATA ALIGNED
-        u64* const pong = SKB_DATA(oskb) + 64 + sizeof(pkt_s) + sizeof(u64);
+        u64* const pong = SKB_DATA(oskb) + 64 + PKT_SIZE + PKT_ALIGN_SIZE;
 
         random64_n(pong, PONG_SIZE / sizeof(u64), p_rcounter);
 
+        // TODO: O ALIGN COM RANDOM TEM QUE SER COLOCADO FORA DO ENCAPSULATE, POIS NO CASO DO PING/PONG NAO VAMOS USAR
         pkt_encapsulate(node, O_PAIR_PING, p_rcounter, skel, oskb, pong, PONG_SIZE);
 
         oskb->ip_summed = CHECKSUM_NONE;
@@ -294,7 +295,7 @@ static inline int in_pp_ping (node_s* const node, path_s* const path, skb_s* con
     }   else s = PSTATS_O_PONG_SKB_FAILED;
 
     // NOTE: WE WILL INFORM THE TOTAL SIZE SENT THROUGHT THE PHYSICAL INTERFACE
-    atomic_add(&path->pstats[s].bytes, skel->hsize + sizeof(u64) + PONG_SIZE);
+    atomic_add(&path->pstats[s].bytes, skel->hsize + PKT_ALIGN_SIZE + PONG_SIZE);
     atomic_inc(&path->pstats[s].count);
 
     return PSTATS_I_PING_GOOD;
@@ -459,7 +460,7 @@ _is_xgw:
     if (size < XGW_PAYLOAD_MIN)
         ret_path(PSTATS_I_SIZE_SMALL);
 
-    if ((PTR(&pkt->p[1]) + size) > end)
+    if ((PTR(pkt) + PKT_SIZE + PKT_ALIGN_SIZE + size) > end)
         ret_path(PSTATS_I_SIZE_TRUNCATED);
 
     //
@@ -482,7 +483,7 @@ _is_xgw:
         ret_path(PSTATS_I_DATA_LCOUNTER_MISMATCH);
 
     // AVANCA O ALIGNMENT
-    void* const orig = PTR(&pkt->p[1]);
+    void* const orig = PTR(pkt) + PKT_SIZE + PKT_ALIGN_SIZE;
 
     if (BE8(*(u8*)orig) == 0x45) { // TODO:
 

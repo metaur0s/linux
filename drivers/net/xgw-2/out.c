@@ -69,7 +69,7 @@ static void pkt_encapsulate (const node_s* const node, const uint o, const u64 r
     ASSERT(size >= XGW_PAYLOAD_MIN);
     ASSERT(size <= XGW_PAYLOAD_MAX);
 
-    pkt_s* const pkt = orig - (sizeof(pkt_s) + sizeof(u64));
+    pkt_s* const pkt = orig - (PKT_SIZE + PKT_ALIGN_SIZE);
 
     ASSERT(skel->x.src  == BE16(nodeSelf));
     ASSERT(skel->x.dst  == BE16(node->nid));
@@ -89,7 +89,7 @@ static void pkt_encapsulate (const node_s* const node, const uint o, const u64 r
     // INSERT OUR HEADER
     memcpy(PTR(pkt) + skel->moffset, PTR(skel) + skel->moffset, skel->hsize);
 
-    skb->len       = pkt->hsize + sizeof(u64) + size; // TODO: COLOCAR ESSE U64 NOS HSIZES DOS MODELS, E RETIRAR DAQUI
+    skb->len       = pkt->hsize + PKT_ALIGN_SIZE + size; // TODO: COLOCAR ESSE U64 NOS HSIZES DOS MODELS, E RETIRAR DAQUI
     skb->dev       = pkt->phys;
     skb->mac_len   = pkt->msize;
     skb->protocol  = pkt->protocol;
@@ -108,12 +108,12 @@ static void pkt_encapsulate (const node_s* const node, const uint o, const u64 r
     skb->mac_header       = (PTR(pkt) + pkt->moffset) - SKB_HEAD(skb);
     skb->network_header   = (PTR(pkt) + pkt->noffset) - SKB_HEAD(skb);
     skb->transport_header = (PTR(pkt) + pkt->toffset) - SKB_HEAD(skb);
-    skb->tail             = (PTR(pkt) + sizeof(pkt_s) + sizeof(u64) + size) - SKB_HEAD(skb);
+    skb->tail             = (PTR(pkt) + PKT_SIZE + PKT_ALIGN_SIZE + size) - SKB_HEAD(skb);
 #else
     skb->mac_header       =  PTR(pkt) + pkt->moffset;
     skb->network_header   =  PTR(pkt) + pkt->noffset; // TODO: TEM QUE SER O VLAN???
     skb->transport_header =  PTR(pkt) + pkt->toffset;
-    skb->tail             = (PTR(pkt) + sizeof(pkt_s) + sizeof(u64) + size);
+    skb->tail             = (PTR(pkt) + PKT_SIZE + PKT_ALIGN_SIZE + size);
 #endif
 
     ASSERT(SKB_DATA(skb) >= SKB_HEAD(skb));
@@ -130,37 +130,47 @@ static void pkt_encapsulate (const node_s* const node, const uint o, const u64 r
 
     const enum H_TYPE type = pkt->type;
 
+    const u64 lcounter = __atomic_load_n(&node->lcounter, __ATOMIC_RELAXED);
+
     //
-    random64_n(pkt->p, 2, SUFFIX_ULL(CONFIG_XGW_RANDOM_ENCRYPT_ALIGN));
+    random64_n(pkt->p, 2, lcounter);
 
     //
     pkt->x.dsize    = BE16(size);
     pkt->x.version  = BE8(node->oVersions[o]);
-    pkt->x.scounter = BE64(__atomic_load_n(&node->lcounter, __ATOMIC_RELAXED));
+    pkt->x.scounter = BE64(lcounter);
     pkt->x.dcounter = BE64(pkt_encrypt(node, o, pkt, size, rcounter));
 
     switch (type) {
 
         case H_TYPE_ETH_PPP_IP4:
         case H_TYPE_ETH_VLAN_PPP_IP4:
-            pkt->encap_eth_ppp_ip4.ppp.size = BE16(size + (sizeof(hdr_x_s) + sizeof(u64)) + sizeof(hdr_ip4_s) + sizeof(u16));
+
+            pkt->encap_eth_ppp_ip4.ppp.size = BE16(PKT_X_SIZE + PKT_ALIGN_SIZE + size + sizeof(hdr_ip4_s) + sizeof(u16));
+
             fallthrough;
         case H_TYPE_IP4:
         case H_TYPE_ETH_IP4:
         case H_TYPE_ETH_VLAN_IP4:
+
      ASSERT(pkt->encap_eth_ppp_ip4.ip4.cksum == BE16(0));
-            pkt->encap_eth_ppp_ip4.ip4.size  = BE16(size + (sizeof(hdr_x_s) + sizeof(u64)) + sizeof(hdr_ip4_s));
+            pkt->encap_eth_ppp_ip4.ip4.size  = BE16(PKT_X_SIZE + PKT_ALIGN_SIZE + size + sizeof(hdr_ip4_s));
             pkt->encap_eth_ppp_ip4.ip4.cksum = ip_fast_csum(&pkt->encap_ip4.ip4, 5);
+
             break;
 
         case H_TYPE_ETH_PPP_IP6:
         case H_TYPE_ETH_VLAN_PPP_IP6:
-            pkt->encap_eth_ppp_ip6.ppp.size = BE16(size + (sizeof(hdr_x_s) + sizeof(u64)) + sizeof(hdr_ip6_s) + sizeof(u16));
+
+            pkt->encap_eth_ppp_ip6.ppp.size = BE16(PKT_X_SIZE + PKT_ALIGN_SIZE + size + sizeof(hdr_ip6_s) + sizeof(u16));
+
             fallthrough;
         case H_TYPE_IP6:
         case H_TYPE_ETH_IP6:
         case H_TYPE_ETH_VLAN_IP6:
-            pkt->encap_eth_ppp_ip6.ip6.size = BE16(size + (sizeof(hdr_x_s) + sizeof(u64)));
+
+            pkt->encap_eth_ppp_ip6.ip6.size = BE16(PKT_X_SIZE + PKT_ALIGN_SIZE + size);
+
             break;
 
         case H_TYPE_IP4_UDP:
@@ -170,8 +180,8 @@ static void pkt_encapsulate (const node_s* const node, const uint o, const u64 r
             ASSERT(pkt->encap_ip4_udp.udp.cksum == BE16(0));
             ASSERT(pkt->encap_ip4_udp.ip4.cksum == BE16(0));
 
-            pkt->encap_ip4_udp.udp.size  = BE16(sizeof(hdr_udp_s) + sizeof(hdr_x_s) + sizeof(u64) + size);
-            pkt->encap_ip4_udp.ip4.size  = BE16(sizeof(hdr_udp_s) + sizeof(hdr_x_s) + sizeof(hdr_ip4_s) + sizeof(u64) + size);
+            pkt->encap_ip4_udp.udp.size  = BE16(PKT_X_SIZE + PKT_ALIGN_SIZE + size + sizeof(hdr_udp_s));
+            pkt->encap_ip4_udp.ip4.size  = BE16(PKT_X_SIZE + PKT_ALIGN_SIZE + size + sizeof(hdr_udp_s) + sizeof(hdr_ip4_s));
             pkt->encap_ip4_udp.ip4.cksum = ip_fast_csum(&pkt->encap_ip4_udp.ip4, 5);
 
             break;
@@ -182,14 +192,16 @@ static void pkt_encapsulate (const node_s* const node, const uint o, const u64 r
 
             ASSERT(pkt->encap_ip6_udp.udp.cksum == BE16(0));
 
-            pkt->encap_ip6_udp.udp.size = BE16(sizeof(hdr_udp_s) + sizeof(hdr_x_s) + sizeof(u64) + size);
-            pkt->encap_ip6_udp.ip6.size = BE16(sizeof(hdr_udp_s) + sizeof(hdr_x_s) + sizeof(u64) + size);
+            pkt->encap_ip6_udp.udp.size = BE16(PKT_X_SIZE + PKT_ALIGN_SIZE + size + sizeof(hdr_udp_s));
+            pkt->encap_ip6_udp.ip6.size = BE16(PKT_X_SIZE + PKT_ALIGN_SIZE + size + sizeof(hdr_udp_s));
 
             break;
 
         case H_TYPE_ETH_PPP:
         case H_TYPE_ETH_VLAN_PPP:
-            pkt->encap_eth_ppp.ppp.size = BE16(2 + sizeof(hdr_x_s) + sizeof(u64) + size);
+
+            pkt->encap_eth_ppp.ppp.size = BE16(PKT_X_SIZE + PKT_ALIGN_SIZE + size + 2);
+
             break;
 
         case H_TYPE_IP4_TCP:
@@ -376,7 +388,7 @@ static netdev_tx_t out (skb_s* const skb, net_device_s* const dev) {
 #endif
 
     // NOTE: THIS STAT WILL ONLY HAPPEN ON DATA, NOT ON PING/PONG
-    if ((PTR(p) - (path->skel.hsize + sizeof(u64))) < SKB_HEAD(skb))
+    if ((PTR(p) - (path->skel.hsize + PKT_ALIGN_SIZE)) < SKB_HEAD(skb))
         ret_path(PSTATS_O_DATA_NO_HEADROOM);
 
     pkt_encapsulate(node,

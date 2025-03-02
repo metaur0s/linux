@@ -282,18 +282,18 @@ static void keeper (struct timer_list* const timer) {
                 // MAKE PING
                 // TODO: SO FAZER ISSO SE A INTERFACE ESTIVER UP E COM CARRIER, PARA NAO PERDER IKEYS ATOA
                 // NOTE: RESERVA HEAD AND TAIL ROOM POIS PODE TER MAIS ENCAPSULAMENTOS NO PHYS
-                skb_s* const skb = alloc_skb(64 + sizeof(pkt_s) + sizeof(u64) + PING_SIZE + 64, GFP_ATOMIC);
+                skb_s* const skb = alloc_skb(64 + PKT_SIZE + PKT_ALIGN_SIZE + PING_SIZE + 64, GFP_ATOMIC);
 
                 if ((path->_skb = skb)) {
 
                     // TODO: AQUI PELO MENOS PODEMOS ALINHAR - PTR(((uintptr_t)SKB_DATA(skb) + sizeof(u64) - 1) % sizeof(u64))
-                    ping_s* const ping = SKB_DATA(skb) + 64 + sizeof(pkt_s) + sizeof(u64);
+                    ping_s* const ping = SKB_DATA(skb) + 64 + PKT_SIZE + PKT_ALIGN_SIZE;
 
                     // A CADA PING A INPUT KEY MAIS ANTIGA É EXPIRADA
                     const uint i = node->iCycle = ((uint)node->iCycle + 1) % I_PAIRS_DYNAMIC;
 
                     //
-                    random64_n(ping->w, PING_SIZE / sizeof(u64), SUFFIX_ULL(CONFIG_XGW_RANDOM_PING));
+                    random64_n(PTR(ping), PING_SIZE / sizeof(u64), SUFFIX_ULL(CONFIG_XGW_RANDOM_PING));
 
                     // OVERWRITE WITH THE VERSION
                     ping->ver = BE8(i);
@@ -375,7 +375,6 @@ _skip:
             __atomic_store_n(&node->opaths, 0, __ATOMIC_SEQ_CST);
 
             ASSERT(!opaths);
-
             ASSERT(!node->opaths);
             ASSERT(!node->ipaths);
 
@@ -384,7 +383,6 @@ _skip:
         } elif (!node->kpaths) {
 
             ASSERT(!opaths);
-
             ASSERT(!node->opaths);
             ASSERT(!node->ipaths);
 

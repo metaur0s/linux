@@ -31,11 +31,11 @@ static void __cold_as_ice __optimize_size dev_setup (net_device_s* const dev) {
     dev->type            = ARPHRD_NONE;
     dev->addr_len        = 0; // TODO: 2 nodeSelf ?
     dev->hard_header_len = 0;
-//    dev->min_header_len  = 0;
+//  dev->min_header_len  = 0;
     dev->needed_headroom = XGW_HEADROOM;
     dev->min_mtu         = XGW_PAYLOAD_MIN;
     dev->max_mtu         = XGW_PAYLOAD_MAX;
-    dev->mtu             = XGW_PAYLOAD_MAX;
+    dev->mtu             = XGW_PAYLOAD_MAX; // TODO: DETAULT ETH_MTU - (PKT_X_SIZE + PKT_ALIGN_SIZE)
     dev->tx_queue_len    = 0; // DEFAULT_TX_QUEUE_LEN
     dev->flags           = 0
         | IFF_POINTOPOINT

@@ -1,2 +1,2 @@
 
-#define RANDOM_LEN 256
+#define RANDOM_LEN 16
