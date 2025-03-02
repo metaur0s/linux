@@ -6,8 +6,10 @@ struct ping_s {
     u64 ctr; // SENDER'S COUNTER
 };
 
+#define PONG_RANDOMS_N 8
+
 struct pong_s {
-    u64 rnd [8];
+    u64 rnd [PONG_RANDOMS_N];
     u64 ctr; // SENDER'S COUNTER
 };
 

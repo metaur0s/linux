@@ -256,7 +256,7 @@ static noinline int __optimize_size in_pp (node_s* const node, skb_s* const iskb
             //       ENTAO PODE ACABAR TENDO RACE CONDITION AQUI.
             // POR PRECAUCAO O IDEAL É TER MAIS ENTRADAS NA ARRAY DO QUE PROCESSADORES/THREADS
             const uint o = __atomic_add_fetch(&node->oCycle, 1, __ATOMIC_ACQUIRE) % O_PAIRS_DYNAMIC;
-                                               node->oVersions[o] = BE64(pkt->p[1 + P__VER]) & 0xFF;
+                                               node->oVersions[o] = BE8(ping->ver);
                                         memcpy(node->oKeys[o], K, sizeof(K));
                              __atomic_store_n(&node->oIndex,   o,          __ATOMIC_RELAXED);
                              __atomic_store_n(&node->rcounter, p_rcounter, __ATOMIC_RELEASE);
@@ -294,18 +294,18 @@ static noinline int __optimize_size in_pp (node_s* const node, skb_s* const iskb
         // AGORA ENVIA O PONG
         uint s;
 
-        skb_s* const oskb = alloc_skb(64 + sizeof(pkt_s) + sizeof(u64) + PONG_SIZE + 64, GFP_ATOMIC);
+        skb_s* const oskb = alloc_skb(64 + sizeof(pkt_s) + sizeof(u64) + sizeof(pong_s) + 64, GFP_ATOMIC);
 
         if (oskb) {
 
             // TODO: USA O SKB_DATA ALIGNED
-            u64* const pong = SKB_DATA(oskb) + 64 + sizeof(pkt_s) + sizeof(u64);
+            pong_s* const pong = SKB_DATA(oskb) + 64 + sizeof(pkt_s) + sizeof(u64);
 
-            for_count (i, PONG_WORDS_N) {
-                pong[i] += random64(p_rcounter);
-            }   pong[P__CTR] = BE64(__atomic_load_n(&node->lcounter, __ATOMIC_RELAXED));
+            for_count (i, sizeof(pong->rnd) / sizeof(u64)) {
+                pong->rnd[i] = random64(p_rcounter);
+            }   pong->ctr = BE64(__atomic_load_n(&node->lcounter, __ATOMIC_RELAXED));
 
-            pkt_encapsulate(node, O_PAIR_PING, p_rcounter, skel, oskb, pong, PONG_SIZE);
+            pkt_encapsulate(node, O_PAIR_PING, p_rcounter, skel, oskb, pong, sizeof(pong_s));
 
             oskb->ip_summed = CHECKSUM_NONE;
 
