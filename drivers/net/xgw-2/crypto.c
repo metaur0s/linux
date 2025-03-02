@@ -86,7 +86,9 @@ static inline u64 decrypt (const u64x8 _K[K_LEN], u64* restrict ptr, u64* restri
 // MUST NOT EXPOSE SECRETS
 static noinline void learn (const node_s* const node, const u64 ping[K_LEN][K_WORDS], u64x8 K[K_LEN]) {
 
-    u64x8 v = { 0, 0, 0, 0, 0, 0, 0, 0 };
+    //
+    // NOTE: VAI CONTINUAR MUDANDO ESSA VARIAVEL E AFETANDO CADA K[k] LIDO DO PING
+    u64x8 v = node->learn0;
 
     // DINAMICO ALEATORIO
     for_count (k, K_LEN) {
@@ -148,6 +150,9 @@ static noinline void reset_node_ping_keys (node_s* const node, const uint self, 
             y += Ky[k] += y * node->secret[s][k];
         }
     }
+
+    // TODO:
+    node->learn0 = x + y;
 }
 
 // TODO: COLD FUNCTION
