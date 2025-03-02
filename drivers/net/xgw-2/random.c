@@ -36,8 +36,8 @@ static void randomize64 (u64 words[], uint n, u64 seed) {
 #endif
 
     for_count (i, n) {
-        seed += _xrnd[seed % RANDOM_LEN];
-        seed += _xrnd[seed % RANDOM_LEN] += seed;
+        seed = swap64(_xrnd[seed % RANDOM_LEN] +  seed);
+        seed =        _xrnd[seed % RANDOM_LEN] += seed;
         words[i] = seed;
     }
 }
