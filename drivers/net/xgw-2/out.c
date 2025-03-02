@@ -71,7 +71,9 @@ static void pkt_encapsulate (const node_s* const node, const uint o, const u64 r
 
     pkt_s* const pkt = orig - (sizeof(pkt_s) + sizeof(u64));
 
-    ASSERT(skel->x.dst == BE16(node->nid));
+    ASSERT(skel->x.src  == BE16(nodeSelf));
+    ASSERT(skel->x.dst  == BE16(node->nid));
+    ASSERT(skel->x.path == BE8(path->pid));
 
     ASSERT(skel->phys);
 

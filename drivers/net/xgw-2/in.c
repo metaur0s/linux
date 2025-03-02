@@ -179,7 +179,25 @@ static inline int in_pp_ping (node_s* const node, path_s* const path, skb_s* con
         // CANNOT BECAME LISTENING/DISCOVERING/CONNECTING
         return PSTATS_I_PING_RCOUNTER_INVALID;
 
-    if (p_lcounter != COUNTER_SYN) { // NOTE: THE SIGN HE SENT IS FROM THE NODE->LCOUNTER; IT WOULD BE CORRECT EVEN WITHOUT HANDSHAKE, BUT KEEPER WON'T SEND WITHOUT ONE
+    if (p_lcounter == COUNTER_SYN) {
+        // SYN
+
+        if (__atomic_load_n(&path->rcounter, __ATOMIC_SEQ_CST) != COUNTER_LISTENING)
+            // WE RECEIVED A SYN PACKET BUT WE ARE NOT LISTENING
+            return PSTATS_I_PING_SYN_NOT_LISTENING;
+
+        // TODO: LIMITAR A QUANTIDADE DE SYNS RECEBIVEIS A CADA KEEPER INTERVAL
+
+        // NESTE CASO, LEARN O PATH EM UM PACOTE TEMPORARIO
+        // NESTE CASO, NAO APRENDE KEYS E NEM COUNTERS
+        in_discover(path, iskb, &skel_);
+
+        skel = &skel_;
+
+    } else { // NOTE: THE SIGN HE SENT IS FROM THE NODE->LCOUNTER; IT WOULD BE CORRECT EVEN WITHOUT HANDSHAKE, BUT KEEPER WON'T SEND WITHOUT ONE
+
+        // TODO: LIMITAR A QUANTIDADE DE PINGS RECEBIVEIS A CADA KEEPER INTERVAL
+        //  NA VERDADE, SO RECEBE UM PING A CADA INTERVAL
 
         u64 node_lcounter = __atomic_load_n(&node->lcounter, __ATOMIC_RELAXED);
         u64 path_rcounter = __atomic_load_n(&path->rcounter, __ATOMIC_RELAXED); // COUNTER DELE, DO ULTIMO PING QUE ELE NOS MANDOU
@@ -252,34 +270,7 @@ static inline int in_pp_ping (node_s* const node, path_s* const path, skb_s* con
                          __atomic_store_n(&node->rcounter, p_rcounter, __ATOMIC_RELEASE);
 
         skel = &path->skel;
-
-    } elif (__atomic_load_n(&path->rcounter, __ATOMIC_SEQ_CST) == COUNTER_LISTENING) {
-        // SYN
-
-#if 0// TODO:
-        uint synCtr;
-        do {
-            if ((synCtr = __atomic_load_n(&path->synCtr, __ATOMIC_RELAXED)) == 0)
-                return TOO_MANY_SYNS;
-        } while (!__atomic_compare_exchange_n(&path->synCtr, synCtr, synCtr - 1, 0, __ATOMIC_SEQ_CST, __ATOMIC_RELAXED);
-#endif
-
-        // a cada keeper interval:
-        // __atomic_add_n(&path->synCtr, path->synLimit - __atomic_load_n(&path->synCtr, __ATOMIC_RELAXED), __ATOMIC_RELAXED);
-
-        // NESTE CASO, LEARN O PATH EM UM PACOTE TEMPORARIO
-        // NESTE CASO, NAO APRENDE KEYS E NEM COUNTERS
-        in_discover(path, iskb, &skel_);
-
-        skel = &skel_;
-
-    } else
-        // SYN
-        return PSTATS_I_PING_SYN_NOT_LISTENING;
-
-    ASSERT(skel->x.src  == BE16(nodeSelf));
-    ASSERT(skel->x.dst  == BE16(path->nid));
-    ASSERT(skel->x.path == BE8(path->pid));
+    }
 
     // AGORA ENVIA O PONG
     uint s;
@@ -299,7 +290,7 @@ static inline int in_pp_ping (node_s* const node, path_s* const path, skb_s* con
         oskb->ip_summed = CHECKSUM_NONE;
 
         if (dev_queue_xmit(oskb))
-                s = PSTATS_O_PONG_FAILED;
+             s = PSTATS_O_PONG_FAILED;
         else s = PSTATS_O_PONG_OK;
     }   else s = PSTATS_O_PONG_SKB_FAILED;
 
