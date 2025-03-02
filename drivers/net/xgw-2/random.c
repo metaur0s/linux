@@ -1,12 +1,43 @@
 
-// NAO É RANDOM NO SENTIDO DE NAO ADIVINHAVEL, MAS FICA NAO TAO SEQUENCIAL E ALTERANDO DIFERENTES BITS
-static u64 random64 (const u64 seed) {
-
+// X86 RDRAND
 #ifdef CONFIG_XGW_RDRAND
-    u64 R; __builtin_ia32_rdrand64_step(&R);
-#else // TODO:
-    u64 R = 0;
+static inline u64 rdrand64 (void) {
+
+    u64 r;
+
+    __builtin_ia32_rdrand64_step(&r);
+
+    return r;
+}
 #endif
 
-    return atomic_add(&_xrnd, swap64(swap64(_xrnd + seed) + __builtin_ia32_rdtsc()) + R);
+static u64 random64 (u64 seed) {
+
+#ifdef CONFIG_XGW_RDRAND
+    seed += rdrand64();
+#endif
+#if 1
+    seed += __builtin_ia32_rdtsc();
+#endif
+    seed += _xrnd[seed % RANDOM_LEN];
+    seed += _xrnd[seed % RANDOM_LEN] += seed;
+
+    return seed;
+}
+
+// NAO É RANDOM NO SENTIDO DE NAO ADIVINHAVEL, MAS FICA NAO TAO SEQUENCIAL E ALTERANDO DIFERENTES BITS
+static void randomize64 (u64 words[], uint n, u64 seed) {
+
+#ifdef CONFIG_XGW_RDRAND
+    seed += rdrand64();
+#endif
+#if 1
+    seed += __builtin_ia32_rdtsc();
+#endif
+
+    for_count (i, n) {
+        seed += _xrnd[seed % RANDOM_LEN];
+        seed += _xrnd[seed % RANDOM_LEN] += seed;
+        words[i] = seed;
+    }
 }

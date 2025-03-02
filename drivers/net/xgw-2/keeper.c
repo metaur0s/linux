@@ -292,9 +292,11 @@ static void keeper (struct timer_list* const timer) {
                     // A CADA PING A INPUT KEY MAIS ANTIGA É EXPIRADA
                     const uint i = node->iCycle = ((uint)node->iCycle + 1) % I_PAIRS_DYNAMIC;
 
-                    for_count (i, PING_SIZE / sizeof(*ping->w)) {
-                        ping->w[i] = random64(SUFFIX_ULL(CONFIG_XGW_RANDOM_PING));
-                    }   ping->ver = BE8(i);
+                    //
+                    randomize64(ping->w, PING_SIZE / sizeof(u64), SUFFIX_ULL(CONFIG_XGW_RANDOM_PING));
+
+                    // OVERWRITE WITH THE VERSION
+                    ping->ver = BE8(i);
 
                     // SEM ATOMICITY/BARRIER POR QUE O PEER SO VAI REFERENCIAR ESSE NOSSO INPUT INDEX QUANDO ELE RECEBER
                     learn(node, ping->rnd, node->iKeys[i]);

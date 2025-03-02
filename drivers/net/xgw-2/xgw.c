@@ -71,6 +71,7 @@
 #include "base.h"
 #include "types.h"
 #include "ports.h"
+#include "random.h"
 #include "crypto.h"
 #include "ping.h"
 #include "pkt.h"
@@ -85,7 +86,7 @@ static inline u64 unswap64 (const u64 x) { const uint q = popcount64(x); return 
 
 DEFINE_SPINLOCK(xlock);
 
-static volatile u64 _xrnd;
+static volatile u64 _xrnd [RANDOM_LEN];
 static net_device_s* xgw;
 static node_s* knodes;
 static u16 nodeSelf;
@@ -174,7 +175,11 @@ static int __init xgw_init (void) {
 
     gwsN = 0;
 
-    _xrnd = 0;
+    //
+    { u64 r = 0x3240554432ULL;
+        for_count (i, RANDOM_LEN)
+            r += _xrnd[i] = r;
+    }
 
     knodes = NULL;
 

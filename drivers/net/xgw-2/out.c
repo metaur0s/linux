@@ -93,8 +93,8 @@ static void pkt_encapsulate (const node_s* const node, const uint o, const u64 r
     skb->dev       = pkt->phys;
     skb->mac_len   = pkt->msize;
     skb->protocol  = pkt->protocol;
-// TODO: ISSO AQUI NO PING E NOS PONGS
-//    skb->ip_summed = CHECKSUM_NONE;
+    // NOTE: ISSO AQUI NO PING/PONG
+ // skb->ip_summed = CHECKSUM_NONE;
 
     // NOTE: pkt->[mnt]offset NUNCA PODE COMECAR EM 0 POIS O COMECINHO É O RESERVADO
     skb->data = PTR(pkt) + pkt->moffset;
@@ -131,8 +131,7 @@ static void pkt_encapsulate (const node_s* const node, const uint o, const u64 r
     const enum H_TYPE type = pkt->type;
 
     //
-    pkt->p[0] = random64(SUFFIX_ULL(CONFIG_XGW_RANDOM_ENCRYPT_ALIGN));
-    pkt->p[1] = random64(SUFFIX_ULL(CONFIG_XGW_RANDOM_ENCRYPT_ALIGN));
+    randomize64(pkt->p, 2, SUFFIX_ULL(CONFIG_XGW_RANDOM_ENCRYPT_ALIGN));
 
     //
     pkt->x.dsize    = BE16(size);

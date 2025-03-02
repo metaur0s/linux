@@ -282,8 +282,7 @@ static inline int in_pp_ping (node_s* const node, path_s* const path, skb_s* con
         // TODO: USA O SKB_DATA ALIGNED
         u64* const pong = SKB_DATA(oskb) + 64 + sizeof(pkt_s) + sizeof(u64);
 
-        for_count (i, sizeof(PONG_SIZE) / sizeof(*pong))
-            pong[i] = random64(p_rcounter);
+        randomize64(pong, PONG_SIZE / sizeof(u64), p_rcounter);
 
         pkt_encapsulate(node, O_PAIR_PING, p_rcounter, skel, oskb, pong, PONG_SIZE);
 
