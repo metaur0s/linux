@@ -87,14 +87,14 @@ static inline u64 decrypt (const u64x8 _K[K_LEN], u64* restrict ptr, u64* restri
 static noinline void learn (const node_s* const node, const u64 ping[K_LEN][K_WORDS], u64x8 K[K_LEN]) {
 
     // DINAMICO ALEATORIO
+    // LOAD THE UNALIGNED, BIG ENDIAN WORDS
     for_count (k, K_LEN)
         for_count (w, K_WORDS)
             K[k][w] = BE64(ping[k][w]);
 
-    //
-    u64x8 v = node->learn0;
-
     // REDUCE IT TO A SINGLE VECTOR
+    u64x8 v = { 0, 0, 0, 0, 0, 0, 0, 0 };
+
     for_count (k, K_LEN)
         v += K[k];
 
@@ -111,7 +111,7 @@ static noinline void learn (const node_s* const node, const u64 ping[K_LEN][K_WO
     const u64x8* const restrict S = node->secret[s];
 
     for_count (k, K_LEN)
-        v += K[k] += S[k] ^ v;
+        K[k] += S[k];
 }
 
 // CONSTANT KEYS, FOR PING/PONG
@@ -132,28 +132,23 @@ static noinline void reset_node_ping_keys (node_s* const node, const uint self, 
         Kx = node->oKeys[O_PAIR_PING];
         Ky = node->iKeys[I_PAIR_PING];
     } else {
-        Ky = node->oKeys[O_PAIR_PING];
         Kx = node->iKeys[I_PAIR_PING];
+        Ky = node->oKeys[O_PAIR_PING];
     }
 
-    //
-    memcpy(Kx, node->secret[0], sizeof(node->secret[0]));
-    memcpy(Ky, node->secret[1], sizeof(node->secret[1]));
-
     // MESMO QUE USE O MESMO PASSWORD ENTRE VARIOS NODES, NAO DEIXA QUE O PING KEYS SEJA O MESMO
-    u64x8 x = node->secret[2][0] + ((self > peer) ? ((self << 16) | peer) : ((peer << 16) | self));
-    u64x8 y = node->secret[2][1] + ((self > peer) ? ((self << 16) | peer) : ((peer << 16) | self));
+    for_count (k, K_LEN)
+        Kx[k] = Ky[k] = (self > peer) ?
+            ((self << 16) | peer) :
+            ((peer << 16) | self);
 
     //
     for_count (s, SECRET_PAIRS_N) {
         for_count (k, K_LEN) {
-            x += Kx[k] += node->secret[s][k] ^ x;
-            y += Ky[k] += node->secret[s][k] ^ y;
+            Kx[k] += node->secret[s][k];
+            Ky[k] += node->secret[s][k];
         }
     }
-
-    // TODO:
-    node->learn0 = x + y;
 }
 
 // TODO: COLD FUNCTION

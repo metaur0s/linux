@@ -262,11 +262,11 @@ struct node_s { // DEIXA TUDO NO MESMO CACHE LINE PARA A ITERACAO DO KEEPER
     volatile stat_s pstats [PATHS_N] [64]; // TODO: DIMINUIR ISSO
 // ---------------------- NODE_SIZE_INIT -----------------------------
 // 8640 + 64 -- KEEPER/OUT READ, IN WRITE
-    u64x8 oKeys [O_PAIRS_ALL] [KEYS_N];
+    u64x8 oKeys [O_PAIRS_ALL] [K_LEN];
 // 131072 -- IN READ, KEEPER WRITE
-    u64x8 iKeys [I_PAIRS_ALL] [KEYS_N];
+    u64x8 iKeys [I_PAIRS_ALL] [K_LEN];
 // 1048576 -- RO
-    u64x8 secret [SECRET_PAIRS_N] [KEYS_N]; // TODO: PARA SER DINAMICO, TERA QUE RESETAR TAMBEM O node->paths[*].pstats
+    u64x8 secret [SECRET_PAIRS_N] [K_LEN]; // TODO: PARA SER DINAMICO, TERA QUE RESETAR TAMBEM O node->paths[*].pstats
 };
 
 BUILD_ASSERT(sizeof(((node_s*)NULL)->pstats)
