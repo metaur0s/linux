@@ -457,7 +457,10 @@ _is_xgw:
     if (!(__atomic_load_n(&node->ipaths, __ATOMIC_SEQ_CST) & IPATH(pid)))
         ret_path(PSTATS_I_DISABLED);
 
-    const uint size = BE16(pkt->x.dsize);
+    const uint size      = BE16(pkt->x.dsize);
+    const uint i         = BE8 (pkt->x.version);
+    const u64 p_rcounter = BE64(pkt->x.scounter);
+          u64 p_lcounter = BE64(pkt->x.dcounter);
 
     if (size < XGW_PAYLOAD_MIN)
         ret_path(PSTATS_I_SIZE_SMALL);
@@ -465,13 +468,8 @@ _is_xgw:
     if ((PTR(&pkt->p[1]) + size) > end)
         ret_path(PSTATS_I_SIZE_TRUNCATED);
 
-    // TODO: SIMPLIFICAR: decrypt() sem o argumento i, ler o i no decrypt(), assinar com 0 no ping/pong
-    const uint i = BE8(pkt->x.version);
-
-    // PRIVACY
-    const u64 p_rcounter = BE64(pkt->x.scounter);
-          u64 p_lcounter = BE64(pkt->x.dcounter);
-              p_lcounter = pkt_decrypt(node, i, pkt, size, p_lcounter);
+    //
+    p_lcounter = pkt_decrypt(node, i, pkt, size, p_lcounter);
 
     if (i == I_PAIR_PING)
         // PING/PONG
