@@ -137,17 +137,29 @@ static noinline void reset_node_ping_keys (node_s* const node, const uint self, 
     }
 
     // MESMO QUE USE O MESMO PASSWORD ENTRE VARIOS NODES, NAO DEIXA QUE O PING KEYS SEJA O MESMO
-    for_count (k, K_LEN)
-        Kx[k] = Ky[k] = (self > peer) ?
-            ((self << 16) | peer) :
-            ((peer << 16) | self);
+    u64x8 x = { 1, 1, 1, 1, 1, 1, 1, 1 }; // MAIOR NODE ID
+    u64x8 y = { 1, 1, 1, 1, 1, 1, 1, 1 }; // MENOR NODE ID
 
-    //
+    if (self > peer)
+        { x *= self; y *= peer; }
+    else
+        { x *= peer; y *= self; }
+
+    for_count (k, K_LEN) Kx[k] = x;
+    for_count (k, K_LEN) Ky[k] = y;
+
     for_count (s, SECRET_PAIRS_N) {
         for_count (k, K_LEN) {
-            Kx[k] += node->secret[s][k];
-            Ky[k] += node->secret[s][k];
-        }
+            x += node->secret[s][k];
+            x += x * x[k % K_WORDS];
+        }   x += x * x[s % K_WORDS];
+    }
+
+    for_count (s, SECRET_PAIRS_N) {
+        for_count (k, K_LEN) {
+            y += node->secret[s][k];
+            y += y * y[k % K_WORDS];
+        }   y += y * y[s % K_WORDS];
     }
 }
 
