@@ -84,13 +84,13 @@ static inline u64 decrypt (const u64x8 _K[K_LEN], u64* restrict ptr, u64* restri
 }
 
 // MUST NOT EXPOSE SECRETS
-static noinline void learn (const node_s* const node, const u64 ping[K_LEN][8], u64x8 K[K_LEN]) {
+static noinline void learn (const node_s* const node, const u64 ping[K_LEN][K_WORDS], u64x8 K[K_LEN]) {
 
     u64x8 v = { 0, 0, 0, 0, 0, 0, 0, 0 };
 
     // DINAMICO ALEATORIO
     for_count (k, K_LEN) {
-        for_count (w, 8)
+        for_count (w, K_WORDS)
             v[w] += BE64(ping[k][w]);
         K[k] = v;
     }
@@ -171,7 +171,7 @@ static noinline void secret_derivate (node_s* const node, const u8* const restri
     // EM LOCAL ENDIAN
     for_count (p, SECRET_PAIRS_N)
         for_count (k, K_LEN)
-            for_count (w, 8)
+            for_count (w, K_WORDS)
                 node->secret[p][k][w]
          = BE64(node->secret[p][k][w]);
 #endif
