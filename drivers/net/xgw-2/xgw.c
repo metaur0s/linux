@@ -176,10 +176,7 @@ static int __init xgw_init (void) {
     gwsN = 0;
 
     //
-    { u64 r = 0x3240554432ULL;
-        for_count (i, RANDOM_LEN)
-            r += _xrnd[i] = r;
-    }
+    random_init();
 
     knodes = NULL;
 

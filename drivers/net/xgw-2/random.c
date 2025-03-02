@@ -36,8 +36,25 @@ static void randomize64 (u64 words[], uint n, u64 seed) {
 #endif
 
     for_count (i, n) {
-        seed = swap64(_xrnd[seed % RANDOM_LEN] +  seed);
-        seed =        _xrnd[seed % RANDOM_LEN] += seed;
+        seed += swap64(_xrnd[seed % RANDOM_LEN]);
+                       _xrnd[seed % RANDOM_LEN] = seed;
         words[i] = seed;
+    }
+}
+
+static void random_init (void) {
+
+    u64 seed = 0x3240554432ULL;
+
+#if 1
+    seed += __builtin_ia32_rdtsc();
+#endif
+
+    for_count (i, RANDOM_LEN) {
+        seed += seed * popcount(seed);
+#ifdef CONFIG_XGW_RDRAND
+        seed += rdrand64();
+#endif
+        _xrnd[i] = seed;
     }
 }
