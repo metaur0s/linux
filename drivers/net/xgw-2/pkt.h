@@ -1,8 +1,8 @@
 
-#define PKT_X_SIZE 32
+#define PKT_X_SIZE 24
 
-#define PKT_ALIGN_SIZE (PKT_ALIGN_RANDOMS * sizeof(u64))
-#define PKT_ALIGN_MIN_SIZE (1 * sizeof(u64))
+#define PKT_ALIGN_SIZE     ( PKT_ALIGN_RANDOMS      * sizeof(u64))
+#define PKT_ALIGN_MIN_SIZE ((PKT_ALIGN_RANDOMS - 1) * sizeof(u64))
 #define PKT_ALIGN_RANDOMS 2
 
 #define XGW_PAYLOAD_MIN     28 // AN EMPTY IPV4/UDP
@@ -352,7 +352,6 @@ BUILD_ASSERT(sizeof(pkt_s) == (ENCAP_SIZE + sizeof(hdr_x_s)));
 //BUILD_ASSERT(sizeof(*(((pkt_s*)NULL)->p)) * PING_WORDS_N == PING_SIZE);
 
 BUILD_ASSERT(sizeof(hdr_x_s) == PKT_X_SIZE);
-BUILD_ASSERT(sizeof(u64) * PKT_ALIGN_RANDOMS == PKT_ALIGN_SIZE);
 BUILD_ASSERT(sizeof(pkt_s) == PKT_SIZE);
 
 //
