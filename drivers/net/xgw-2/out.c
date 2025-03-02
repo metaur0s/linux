@@ -133,7 +133,7 @@ static void pkt_encapsulate (const node_s* const node, const uint o, const u64 r
     const u64 lcounter = __atomic_load_n(&node->lcounter, __ATOMIC_RELAXED);
 
     //
-    random64_n(pkt->p, 2, lcounter);
+    random64_n(pkt->p, PKT_ALIGN_RANDOMS, lcounter);
 
     //
     pkt->x.dsize    = BE16(size);
