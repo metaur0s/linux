@@ -111,7 +111,7 @@ static noinline void learn (const node_s* const node, const u64 ping[K_LEN][K_WO
     const u64x8* const restrict S = node->secret[s];
 
     for_count (k, K_LEN)
-        K[k] += S[k];
+        K[k] += S[k] * v;
 }
 
 // CONSTANT KEYS, FOR PING/PONG
