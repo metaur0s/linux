@@ -261,6 +261,7 @@ struct node_s { // DEIXA TUDO NO MESMO CACHE LINE PARA A ITERACAO DO KEEPER
 // 16384 --
     volatile stat_s pstats [PATHS_N] [64]; // TODO: DIMINUIR ISSO
 // ---------------------- NODE_SIZE_INIT -----------------------------
+    char _ [384]; // 512 - ((1209984 - (1048576+131072+8640+64)) % 512)
 // 8640 + 64 -- KEEPER/OUT READ, IN WRITE
     u64x8 oKeys [O_PAIRS_ALL] [K_LEN];
 // 131072 -- IN READ, KEEPER WRITE
@@ -278,7 +279,7 @@ BUILD_ASSERT(sizeof(((node_s*)NULL)->iKeys)  == 131072);
 BUILD_ASSERT(sizeof(((node_s*)NULL)->secret) == 1048576);
 BUILD_ASSERT(sizeof(((node_s*)NULL)->paths)  == 5120);
 BUILD_ASSERT(sizeof(((node_s*)NULL)->pstats) == 16384);
-BUILD_ASSERT(sizeof(node_s)                  == 1209984);
+BUILD_ASSERT(sizeof(node_s)                  == 1209984 + 384);
 
 BUILD_ASSERT(offsetof(node_s, opaths)   % CACHE_LINE_SIZE == 0);
 BUILD_ASSERT(offsetof(node_s, ptr)      % CACHE_LINE_SIZE == 0);
@@ -287,6 +288,10 @@ BUILD_ASSERT(offsetof(node_s, pstats)   % CACHE_LINE_SIZE == 0);
 BUILD_ASSERT(offsetof(node_s, oKeys)    % CACHE_LINE_SIZE == 0);
 BUILD_ASSERT(offsetof(node_s, iKeys)    % CACHE_LINE_SIZE == 0);
 BUILD_ASSERT(offsetof(node_s, secret)   % CACHE_LINE_SIZE == 0);
+
+BUILD_ASSERT(offsetof(node_s, oKeys)    % 512 == 0);
+BUILD_ASSERT(offsetof(node_s, iKeys)    % 512 == 0);
+BUILD_ASSERT(offsetof(node_s, secret)   % 512 == 0);
 
 // THE TYPES MUST BE ABLE TO HOLD THE VALUES
 BUILD_ASSERT((typeof(((node_s*)NULL)->nid))NID_MAX == NID_MAX);

@@ -148,9 +148,9 @@ static noinline int __optimize_size in_pp (node_s* const node, skb_s* const iskb
 
     path_s* const path = &node->paths[BE8(pkt->x.path)];
 
-    if (size == PONG_SIZE) {
+    if (size == sizeof(pong_s)) {
 
-        const u64 p_rcounter = BE64(pkt->p[1 + P__CTR]);
+        const u64 p_rcounter = BE64(((pong_s*)(pkt->p))->ctr);
 
         if (p_rcounter <= COUNTER_CONNECTING)
             // HIS COUNTER IS INVALID
@@ -176,11 +176,13 @@ static noinline int __optimize_size in_pp (node_s* const node, skb_s* const iskb
         return PSTATS_I_PONG_GOOD;
     }
 
-    if (size == PING_SIZE) {
+    if (size == sizeof(ping_s)) {
+
+        ping_s* const ping = PTR(pkt->p);
 
         pkt_s* skel; pkt_s skel_;
 
-        const u64 p_rcounter = BE64(pkt->p[1 + P__CTR]);
+        const u64 p_rcounter = BE64(ping->ctr);
 
         if (p_rcounter <= COUNTER_CONNECTING)
             // HIS COUNTER IS INVALID
@@ -245,9 +247,9 @@ static noinline int __optimize_size in_pp (node_s* const node, skb_s* const iskb
                     return PSTATS_I_PING_RACED;
             }
 
-            u64 keys [KEYS_N];
+            u64x8 K[K_LEN];
 
-            learn(node, pkt->p + 1, keys);
+            learn(node, ping->rnd, K);
 
             // FAZ ISSO PRIMEIRO ANTES DE LIBERAR O PATH PARA ENVIAR
             // NOTE: A CADA INTERVALO SAO ENVIADOS PINGS POR TODOS OS PATHS,
@@ -255,8 +257,8 @@ static noinline int __optimize_size in_pp (node_s* const node, skb_s* const iskb
             // POR PRECAUCAO O IDEAL É TER MAIS ENTRADAS NA ARRAY DO QUE PROCESSADORES/THREADS
             const uint o = __atomic_add_fetch(&node->oCycle, 1, __ATOMIC_ACQUIRE) % O_PAIRS_DYNAMIC;
                                                node->oVersions[o] = BE64(pkt->p[1 + P__VER]) & 0xFF;
-                                        memcpy(node->oKeys[o], keys, sizeof(keys));
-                             __atomic_store_n(&node->oIndex,   o,       __ATOMIC_RELAXED);
+                                        memcpy(node->oKeys[o], K, sizeof(K));
+                             __atomic_store_n(&node->oIndex,   o,          __ATOMIC_RELAXED);
                              __atomic_store_n(&node->rcounter, p_rcounter, __ATOMIC_RELEASE);
 
             skel = &path->skel;

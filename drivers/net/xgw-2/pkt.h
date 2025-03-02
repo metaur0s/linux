@@ -236,16 +236,6 @@ enum H_OFFSET {
     H_OFFSET_IP6_TCP          = PKT_SIZE - H_SIZE_IP6_TCP,
 };
 
-// HOW MANY WORDS IN THE PING/PONG PACKETS
-#define PING_WORDS_N 16 // 128 BYTES
-#define PONG_WORDS_N 8  //  64 BYTES
-
-#define PING_SIZE (PING_WORDS_N * sizeof(u64))
-#define PONG_SIZE (PONG_WORDS_N * sizeof(u64))
-
-#define P__CTR 4 // SENDER'S COUNTER
-#define P__VER 6 // SENDER'S IKEYS INDEX BEING REGISTERED
-
 // NOTE: ESSA PORRA DESSE ALINHAMENTO NAO ESTA DEIXANDO OS 64-BIT WORDS ALINHADOS PARA PROCESSARMOS
 #define XGW_HEADROOM (sizeof(pkt_s) + sizeof(u64))
 
@@ -353,7 +343,7 @@ BUILD_ASSERT(offsetof(pkt_s, encap_raw) == 0);
 BUILD_ASSERT(sizeof(pkt_s) == (ENCAP_SIZE + sizeof(hdr_x_s)));
 
 //
-BUILD_ASSERT(sizeof(*(((pkt_s*)NULL)->p)) * PING_WORDS_N == PING_SIZE);
+//BUILD_ASSERT(sizeof(*(((pkt_s*)NULL)->p)) * PING_WORDS_N == PING_SIZE);
 
 //
 BUILD_ASSERT(sizeof(pkt_s) == PKT_SIZE);

@@ -71,9 +71,10 @@
 #include "base.h"
 #include "types.h"
 #include "ports.h"
+#include "crypto.h"
+#include "ping.h"
 #include "pkt.h"
 #include "stats.h"
-#include "crypto.h"
 #include "nodes.h"
 
 //
