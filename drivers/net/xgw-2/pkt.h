@@ -1,8 +1,7 @@
 
 #define PKT_X_SIZE 24
 
-#define PKT_ALIGN_SIZE     ( PKT_ALIGN_RANDOMS      * sizeof(u64))
-#define PKT_ALIGN_MIN_SIZE ((PKT_ALIGN_RANDOMS - 1) * sizeof(u64))
+#define PKT_ALIGN_SIZE  16
 #define PKT_ALIGN_RANDOMS 2
 
 #define XGW_PAYLOAD_MIN     28 // AN EMPTY IPV4/UDP

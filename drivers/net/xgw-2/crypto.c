@@ -1,15 +1,9 @@
 
 // !!!!!! TODO: XGW TO XGW REDIRECT WITHOUT GOING THROUGH IP STACK
 
-// QUANTAS PALAVRAS TEM, CONSIDERANDO INCOMPLETAS COMO INTEIRAS
-#define PKT_Q(size) ((size) + sizeof(u64)) / sizeof(u64)
-#define PKT_P(pkt, size) (PTR(pkt) + PKT_SIZE + (size) % sizeof(u64) + PKT_ALIGN_MIN_SIZE)
-
-
-
 // NOTE: TEM QUE FAZER APOS TER SETADO O PKT->X.SCTR
-#define pkt_encrypt(node, o, pkt, size, rcounter) encrypt((node)->oKeys[o], PKT_P(pkt, size), PKT_P(pkt, size) + PKT_Q(size), BE64((pkt)->x.info ^ (pkt)->x.scounter), rcounter)
-#define pkt_decrypt(node, i, pkt, size, lcounter) decrypt((node)->iKeys[i], PKT_P(pkt, size), PKT_P(pkt, size) + PKT_Q(size), BE64((pkt)->x.info ^ (pkt)->x.scounter), lcounter)
+static inline u64 pkt_encrypt(const node_s* const node, const uint o, pkt_s* const pkt, const uint size, const u64 rcounter) { return encrypt(node->oKeys[o], PTR(pkt) + PKT_SIZE + size % sizeof(u64), PTR(pkt) + PKT_SIZE + PKT_ALIGN_SIZE + size, BE64(pkt->x.info ^ pkt->x.scounter), rcounter); }
+static inline u64 pkt_decrypt(const node_s* const node, const uint i, pkt_s* const pkt, const uint size, const u64 lcounter) { return decrypt(node->iKeys[i], PTR(pkt) + PKT_SIZE + size % sizeof(u64), PTR(pkt) + PKT_SIZE + PKT_ALIGN_SIZE + size, BE64(pkt->x.info ^ pkt->x.scounter), lcounter); }
 
 // AUTHENTICITY AND INTEGRITY
 // - HOST IDS
