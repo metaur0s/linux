@@ -176,7 +176,7 @@ static int __init xgw_init (void) {
     gwsN = 0;
 
     //
-    random_init();
+    random64_init();
 
     knodes = NULL;
 

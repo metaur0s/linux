@@ -131,7 +131,7 @@ static void pkt_encapsulate (const node_s* const node, const uint o, const u64 r
     const enum H_TYPE type = pkt->type;
 
     //
-    randomize64(pkt->p, 2, SUFFIX_ULL(CONFIG_XGW_RANDOM_ENCRYPT_ALIGN));
+    random64_n(pkt->p, 2, SUFFIX_ULL(CONFIG_XGW_RANDOM_ENCRYPT_ALIGN));
 
     //
     pkt->x.dsize    = BE16(size);

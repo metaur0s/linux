@@ -878,8 +878,8 @@ static ssize_t __cold_as_ice __optimize_size cmd (struct file *file, const char 
                 node->conns[cid] = cid % PATHS_N;
 
             // NO DYNAMIC KEYS CREATED YET
-            { u64x8 r; randomize64((u64*)&r, K_WORDS, SUFFIX_ULL(CONFIG_XGW_RANDOM_INIT_IPAIRS)); for_count (i, I_PAIRS_DYNAMIC) for_count (k, K_LEN) node->iKeys[i][k] += r; }
-            { u64x8 r; randomize64((u64*)&r, K_WORDS, SUFFIX_ULL(CONFIG_XGW_RANDOM_INIT_OPAIRS)); for_count (o, O_PAIRS_DYNAMIC) for_count (k, K_LEN) node->oKeys[o][k] += r; }
+            { u64x8 r; random64_n((u64*)&r, K_WORDS, SUFFIX_ULL(CONFIG_XGW_RANDOM_INIT_IPAIRS)); for_count (i, I_PAIRS_DYNAMIC) for_count (k, K_LEN) node->iKeys[i][k] += r; }
+            { u64x8 r; random64_n((u64*)&r, K_WORDS, SUFFIX_ULL(CONFIG_XGW_RANDOM_INIT_OPAIRS)); for_count (o, O_PAIRS_DYNAMIC) for_count (k, K_LEN) node->oKeys[o][k] += r; }
 
             // START ON PATHS
             for_count (pid, PATHS_N) {

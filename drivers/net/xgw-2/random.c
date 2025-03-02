@@ -26,7 +26,7 @@ static u64 random64 (u64 seed) {
 }
 
 // NAO É RANDOM NO SENTIDO DE NAO ADIVINHAVEL, MAS FICA NAO TAO SEQUENCIAL E ALTERANDO DIFERENTES BITS
-static void randomize64 (u64 words[], uint n, u64 seed) {
+static void random64_n (u64 words[], uint n, u64 seed) {
 
 #ifdef CONFIG_XGW_RDRAND
     seed += rdrand64();
@@ -42,7 +42,7 @@ static void randomize64 (u64 words[], uint n, u64 seed) {
     }
 }
 
-static void random_init (void) {
+static void random64_init (void) {
 
     u64 seed = 0x3240554432ULL;
 

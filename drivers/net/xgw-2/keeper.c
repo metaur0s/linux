@@ -293,7 +293,7 @@ static void keeper (struct timer_list* const timer) {
                     const uint i = node->iCycle = ((uint)node->iCycle + 1) % I_PAIRS_DYNAMIC;
 
                     //
-                    randomize64(ping->w, PING_SIZE / sizeof(u64), SUFFIX_ULL(CONFIG_XGW_RANDOM_PING));
+                    random64_n(ping->w, PING_SIZE / sizeof(u64), SUFFIX_ULL(CONFIG_XGW_RANDOM_PING));
 
                     // OVERWRITE WITH THE VERSION
                     ping->ver = BE8(i);
