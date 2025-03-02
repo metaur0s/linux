@@ -2,8 +2,8 @@
 // !!!!!! TODO: XGW TO XGW REDIRECT WITHOUT GOING THROUGH IP STACK
 
 // NOTE: TEM QUE FAZER APOS TER SETADO O PKT->X.SCTR
-static inline u64 pkt_encrypt(const node_s* const node, const uint o, pkt_s* const pkt, const uint size, const u64 rcounter) { return encrypt(node->oKeys[o], PTR(pkt) + PKT_SIZE + size % sizeof(u64), PTR(pkt) + PKT_SIZE + PKT_ALIGN_SIZE + size, BE64(pkt->x.info ^ pkt->x.scounter), rcounter); }
-static inline u64 pkt_decrypt(const node_s* const node, const uint i, pkt_s* const pkt, const uint size, const u64 lcounter) { return decrypt(node->iKeys[i], PTR(pkt) + PKT_SIZE + size % sizeof(u64), PTR(pkt) + PKT_SIZE + PKT_ALIGN_SIZE + size, BE64(pkt->x.info ^ pkt->x.scounter), lcounter); }
+#define pkt_encrypt(node, o, pkt, size, rcounter) encrypt(node->oKeys[o], PTR(pkt) + PKT_SIZE + size % sizeof(u64), PTR(pkt) + PKT_SIZE + PKT_ALIGN_SIZE + size, BE64(pkt->x.info ^ pkt->x.scounter), rcounter)
+#define pkt_decrypt(node, i, pkt, size, lcounter) decrypt(node->iKeys[i], PTR(pkt) + PKT_SIZE + size % sizeof(u64), PTR(pkt) + PKT_SIZE + PKT_ALIGN_SIZE + size, BE64(pkt->x.info ^ pkt->x.scounter), lcounter)
 
 // AUTHENTICITY AND INTEGRITY
 // - HOST IDS
