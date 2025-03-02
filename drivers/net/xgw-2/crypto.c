@@ -94,8 +94,9 @@ static noinline void learn (const node_s* const node, const u64 ping[K_LEN][K_WO
     //
     u64x8 v = node->learn0;
 
+    // REDUCE IT TO A SINGLE VECTOR
     for_count (k, K_LEN)
-        v = K[k] += K[k] * v;
+        v += K[k];
 
     // REDUCE IT TO A SINGLE WORD
     u64 s = v[0] + v[1] + v[2] + v[3] +
