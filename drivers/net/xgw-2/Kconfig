@@ -47,6 +47,10 @@ endif
         bool "XGW_RDRAND"
         default n
 
+    config    XGW_RDTSC
+        bool "XGW_RDTSC"
+        default y
+
     config    XGW_BEEP
         bool "XGW_BEEP"
         default n
@@ -88,5 +92,9 @@ endif
     config XGW_RANDOM_PING
       hex "XGW_RANDOM_PING"
         default 0x59114f654f2185ad
+
+    config XGW_RANDOM_INIT
+      hex "XGW_RANDOM_INIT"
+        default 0xb5bea7cb62e5ffd4
 
 endif
