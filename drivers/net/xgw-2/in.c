@@ -144,177 +144,181 @@ static inline int __compare_exchange64_cst (volatile u64* const where, u64 old, 
     return __atomic_compare_exchange_n(where, &old, new, 0, __ATOMIC_SEQ_CST, __ATOMIC_RELAXED);
 }
 
-static noinline int __optimize_size in_pp (node_s* const node, skb_s* const iskb, const pkt_s* const pkt, const uint size, const u64 p_lcounter, const u64 p_rcounter) {
+static inline int in_pp_pong (node_s* const node, path_s* const path, const u64 p_lcounter, const u64 p_rcounter) {
+
+    if (p_rcounter <= COUNTER_CONNECTING)
+        // HIS COUNTER IS INVALID
+        return PSTATS_I_PONG_RCOUNTER_INVALID;
+
+    // PONGS TEM QUE SER DENTRO DO INTERVALO
+    if (!__compare_exchange64_cst(&path->lcounter, p_lcounter, get_jiffies_64()))
+        // O RACE PODE TER ACONTECIDO JUNTO COM OUTRO RECEIVE, OU O KEEPER ACABA DE AVANCAR
+        return PSTATS_I_PONG_LCOUNTER_MISMATCH;
+
+    // SAVED O HORARIO EM QUE RECEBEU O PONG PARA O LCOUNTER ATUAL
+
+    // PATH->RCOUNTER IS RESPONSIBILITY OF THE PING, NOT THE PONG;
+    // BUT IF THIS PONG IS THE SYN-ACK, THIS IS WHERE THE CLIENT DISCOVERS THE SERVER COUNTER,
+    // AND THEN STOPS SENDING SYN
+    __compare_exchange64_cst(&path->rcounter, COUNTER_CONNECTING, p_rcounter);
+
+    // SAVE REMOTE COUNTER
+    // NOTE: HERE WE RACE WITH ABOVE; THE KEEPEER MAY HAVE READ AN INVALID node->rcounter
+    // BUT THAT WOULD MEAN WE RECEIED A PONG AFTER A KEEPER INTERVAL
+    __atomic_store_n(&node->rcounter, p_rcounter, __ATOMIC_RELAXED);
+
+    return PSTATS_I_PONG_GOOD;
+}
+
+static inline int in_pp_ping (node_s* const node, path_s* const path, skb_s* const iskb, const ping_s* const ping, const u64 p_lcounter, const u64 p_rcounter) {
+
+    pkt_s* skel; pkt_s skel_;
+
+    if (p_rcounter <= COUNTER_CONNECTING)
+        // HIS COUNTER IS INVALID
+        // CANNOT BECAME LISTENING/DISCOVERING/CONNECTING
+        return PSTATS_I_PING_RCOUNTER_INVALID;
+
+    if (p_lcounter != COUNTER_SYN) { // NOTE: THE SIGN HE SENT IS FROM THE NODE->LCOUNTER; IT WOULD BE CORRECT EVEN WITHOUT HANDSHAKE, BUT KEEPER WON'T SEND WITHOUT ONE
+
+        u64 node_lcounter = __atomic_load_n(&node->lcounter, __ATOMIC_RELAXED);
+        u64 path_rcounter = __atomic_load_n(&path->rcounter, __ATOMIC_RELAXED); // COUNTER DELE, DO ULTIMO PING QUE ELE NOS MANDOU
+
+        // NOT A SYN; HE MUST KNOW OUR COUNTER
+        // NOTE: CONSIDERAR CLOCK SKELS E INTERVALOS ENTRE PINGS
+        if (ABS_DIFF(node_lcounter, p_lcounter) > 2)
+            // HE DOESNT KNOW MY COUNTER
+            return PSTATS_I_PING_LCOUNTER_MISMATCH;
+
+        if (path_rcounter == COUNTER_CONNECTING)
+            // SOMOS UM CLIENTE SE CONECTANDO, E ELE NOS ENVIOU UM PING
+            return PSTATS_I_PING_WHILE_CONNECTING;
+
+        if (path_rcounter >= COUNTER_CONNECTING) {
+            // THE PATH IS SYNCED WITH HIS COUNTER
+
+            if (p_rcounter == path_rcounter)
+                // REPEATED (LAST)
+                return PSTATS_I_PING_RCOUNTER_REPEATED;
+
+            if (p_rcounter < path_rcounter)
+                // REPEATED (OLD)
+                return PSTATS_I_PING_RCOUNTER_OLD;
+
+            if (p_rcounter > (path_rcounter + 65536))
+                // PARA QUE TENHAMOS PERDIDO TANTOS PINGS DELE, ERA PARA TERMOS RESETADO...
+                return PSTATS_I_PING_RCOUNTER_BAD;
+
+            if (p_rcounter != (path_rcounter + 1))
+                // ALGUNS FORAM PERDIDOS
+                __atomic_add_fetch(&path->pstats[PSTATS_I_PING_MISSED].count, p_rcounter - (path_rcounter + 1), __ATOMIC_RELAXED);
+
+            // SAVE HIS SEQ
+            if (!__atomic_compare_exchange_n(&path->rcounter, &path_rcounter, p_rcounter, 0, __ATOMIC_SEQ_CST, __ATOMIC_RELAXED))
+                // ANOTHER ACK HAPPENED SIMULTANEOUSLY, AND THIS ONE WILL BE DISCARDED
+                return PSTATS_I_PING_RACED;
+
+        } else {
+            // path->rcounter ==
+            //      a) COUNTER_LISTENING (DESDE O KEEPER - START)
+            //      b) COUNTER_ACCEPTING (AQUI MESMO, RACED)
+            u64 path_rcounter_listening = COUNTER_LISTENING;
+
+            if (__atomic_compare_exchange_n(&path->rcounter, &path_rcounter_listening, COUNTER_ACCEPTING, 0, __ATOMIC_ACQUIRE, __ATOMIC_RELAXED)) {
+    // a)            WE ARE THE SERVER, AND THIS IS THE FIRST PING THE CLIENT SENT WITH OUR COUNTER
+                // DISCOVER THE CLIENT PATH
+                    in_discover(path, iskb, &path->skel);
+                // DISCOVER THE CLIENT COUNTER
+                    __atomic_store_n(&node->rcounter, p_rcounter, __ATOMIC_RELAXED);
+                // START SENDING PINGS
+                    __atomic_store_n(&path->rcounter, p_rcounter, __ATOMIC_RELEASE);
+            } else
+    // b)            RACED COM OUTRO ACCEPT
+                return PSTATS_I_PING_RACED;
+        }
+
+        u64x8 K[K_LEN];
+
+        learn(node, ping->rnd, K);
+
+        // FAZ ISSO PRIMEIRO ANTES DE LIBERAR O PATH PARA ENVIAR
+        // NOTE: A CADA INTERVALO SAO ENVIADOS PINGS POR TODOS OS PATHS,
+        //       ENTAO PODE ACABAR TENDO RACE CONDITION AQUI.
+        // POR PRECAUCAO O IDEAL É TER MAIS ENTRADAS NA ARRAY DO QUE PROCESSADORES/THREADS
+        const uint o = __atomic_add_fetch(&node->oCycle, 1, __ATOMIC_ACQUIRE) % O_PAIRS_DYNAMIC;
+                                           node->oVersions[o] = BE8(ping->ver);
+                                    memcpy(node->oKeys[o], K, sizeof(K));
+                         __atomic_store_n(&node->oIndex,   o,          __ATOMIC_RELAXED);
+                         __atomic_store_n(&node->rcounter, p_rcounter, __ATOMIC_RELEASE);
+
+        skel = &path->skel;
+
+    } elif (__atomic_load_n(&path->rcounter, __ATOMIC_SEQ_CST) == COUNTER_LISTENING) {
+        // SYN
+
+#if 0// TODO:
+        uint synCtr;
+        do {
+            if ((synCtr = __atomic_load_n(&path->synCtr, __ATOMIC_RELAXED)) == 0)
+                return TOO_MANY_SYNS;
+        } while (!__atomic_compare_exchange_n(&path->synCtr, synCtr, synCtr - 1, 0, __ATOMIC_SEQ_CST, __ATOMIC_RELAXED);
+#endif
+
+        // a cada keeper interval:
+        // __atomic_add_n(&path->synCtr, path->synLimit - __atomic_load_n(&path->synCtr, __ATOMIC_RELAXED), __ATOMIC_RELAXED);
+
+        // NESTE CASO, LEARN O PATH EM UM PACOTE TEMPORARIO
+        // NESTE CASO, NAO APRENDE KEYS E NEM COUNTERS
+        in_discover(path, iskb, &skel_);
+
+        skel = &skel_;
+
+    } else
+        // SYN
+        return PSTATS_I_PING_SYN_NOT_LISTENING;
+
+    ASSERT(skel->x.src  == BE16(nodeSelf));
+    ASSERT(skel->x.dst  == BE16(path->nid));
+    ASSERT(skel->x.path == BE8(path->pid));
+
+    // AGORA ENVIA O PONG
+    uint s;
+
+    skb_s* const oskb = alloc_skb(64 + sizeof(pkt_s) + sizeof(u64) + PONG_SIZE + 64, GFP_ATOMIC);
+
+    if (oskb) {
+
+        // TODO: USA O SKB_DATA ALIGNED
+        u64* const pong = SKB_DATA(oskb) + 64 + sizeof(pkt_s) + sizeof(u64);
+
+        for_count (i, sizeof(PONG_SIZE) / sizeof(*pong))
+            pong[i] = random64(p_rcounter);
+
+        pkt_encapsulate(node, O_PAIR_PING, p_rcounter, skel, oskb, pong, PONG_SIZE);
+
+        oskb->ip_summed = CHECKSUM_NONE;
+
+        if (dev_queue_xmit(oskb))
+                s = PSTATS_O_PONG_FAILED;
+        else s = PSTATS_O_PONG_OK;
+    }   else s = PSTATS_O_PONG_SKB_FAILED;
+
+    // NOTE: WE WILL INFORM THE TOTAL SIZE SENT THROUGHT THE PHYSICAL INTERFACE
+    atomic_add(&path->pstats[s].bytes, skel->hsize + sizeof(u64) + PONG_SIZE);
+    atomic_inc(&path->pstats[s].count);
+
+    return PSTATS_I_PING_GOOD;
+}
+
+static noinline int in_pp (node_s* const node, skb_s* const iskb, const pkt_s* const pkt, const uint size, const u64 p_lcounter, const u64 p_rcounter) {
 
     path_s* const path = &node->paths[BE8(pkt->x.path)];
 
-    if (size == PONG_SIZE) {
+    if (size == PONG_SIZE)
+        return in_pp_pong(node, path, p_lcounter, p_rcounter);
 
-        if (p_rcounter <= COUNTER_CONNECTING)
-            // HIS COUNTER IS INVALID
-            return PSTATS_I_PONG_RCOUNTER_INVALID;
-
-        // PONGS TEM QUE SER DENTRO DO INTERVALO
-        if (!__compare_exchange64_cst(&path->lcounter, p_lcounter, get_jiffies_64()))
-            // O RACE PODE TER ACONTECIDO JUNTO COM OUTRO RECEIVE, OU O KEEPER ACABA DE AVANCAR
-            return PSTATS_I_PONG_LCOUNTER_MISMATCH;
-
-        // SAVED O HORARIO EM QUE RECEBEU O PONG PARA O LCOUNTER ATUAL
-
-        // PATH->RCOUNTER IS RESPONSIBILITY OF THE PING, NOT THE PONG;
-        // BUT IF THIS PONG IS THE SYN-ACK, THIS IS WHERE THE CLIENT DISCOVERS THE SERVER COUNTER,
-        // AND THEN STOPS SENDING SYN
-        __compare_exchange64_cst(&path->rcounter, COUNTER_CONNECTING, p_rcounter);
-
-        // SAVE REMOTE COUNTER
-        // NOTE: HERE WE RACE WITH ABOVE; THE KEEPEER MAY HAVE READ AN INVALID node->rcounter
-        // BUT THAT WOULD MEAN WE RECEIED A PONG AFTER A KEEPER INTERVAL
-        __atomic_store_n(&node->rcounter, p_rcounter, __ATOMIC_RELAXED);
-
-        return PSTATS_I_PONG_GOOD;
-    }
-
-    if (size == PING_SIZE) {
-
-        ping_s* const ping = PTR(pkt->p);
-
-        pkt_s* skel; pkt_s skel_;
-
-        if (p_rcounter <= COUNTER_CONNECTING)
-            // HIS COUNTER IS INVALID
-            // CANNOT BECAME LISTENING/DISCOVERING/CONNECTING
-            return PSTATS_I_PING_RCOUNTER_INVALID;
-
-        if (p_lcounter != COUNTER_SYN) { // NOTE: THE SIGN HE SENT IS FROM THE NODE->LCOUNTER; IT WOULD BE CORRECT EVEN WITHOUT HANDSHAKE, BUT KEEPER WON'T SEND WITHOUT ONE
-
-            u64 node_lcounter = __atomic_load_n(&node->lcounter, __ATOMIC_RELAXED);
-            u64 path_rcounter = __atomic_load_n(&path->rcounter, __ATOMIC_RELAXED); // COUNTER DELE, DO ULTIMO PING QUE ELE NOS MANDOU
-
-            // NOT A SYN; HE MUST KNOW OUR COUNTER
-            // NOTE: CONSIDERAR CLOCK SKELS E INTERVALOS ENTRE PINGS
-            if (ABS_DIFF(node_lcounter, p_lcounter) > 2)
-                // HE DOESNT KNOW MY COUNTER
-                return PSTATS_I_PING_LCOUNTER_MISMATCH;
-
-            if (path_rcounter == COUNTER_CONNECTING)
-                // SOMOS UM CLIENTE SE CONECTANDO, E ELE NOS ENVIOU UM PING
-                return PSTATS_I_PING_WHILE_CONNECTING;
-
-            if (path_rcounter >= COUNTER_CONNECTING) {
-                // THE PATH IS SYNCED WITH HIS COUNTER
-
-                if (p_rcounter == path_rcounter)
-                    // REPEATED (LAST)
-                    return PSTATS_I_PING_RCOUNTER_REPEATED;
-
-                if (p_rcounter < path_rcounter)
-                    // REPEATED (OLD)
-                    return PSTATS_I_PING_RCOUNTER_OLD;
-
-                if (p_rcounter > (path_rcounter + 65536))
-                    // PARA QUE TENHAMOS PERDIDO TANTOS PINGS DELE, ERA PARA TERMOS RESETADO...
-                    return PSTATS_I_PING_RCOUNTER_BAD;
-
-                if (p_rcounter != (path_rcounter + 1))
-                    // ALGUNS FORAM PERDIDOS
-                    __atomic_add_fetch(&path->pstats[PSTATS_I_PING_MISSED].count, p_rcounter - (path_rcounter + 1), __ATOMIC_RELAXED);
-
-                // SAVE HIS SEQ
-                if (!__atomic_compare_exchange_n(&path->rcounter, &path_rcounter, p_rcounter, 0, __ATOMIC_SEQ_CST, __ATOMIC_RELAXED))
-                    // ANOTHER ACK HAPPENED SIMULTANEOUSLY, AND THIS ONE WILL BE DISCARDED
-                    return PSTATS_I_PING_RACED;
-
-            } else {
-                // path->rcounter ==
-                //      a) COUNTER_LISTENING (DESDE O KEEPER - START)
-                //      b) COUNTER_ACCEPTING (AQUI MESMO, RACED)
-                u64 path_rcounter_listening = COUNTER_LISTENING;
-
-                if (__atomic_compare_exchange_n(&path->rcounter, &path_rcounter_listening, COUNTER_ACCEPTING, 0, __ATOMIC_ACQUIRE, __ATOMIC_RELAXED)) {
-      // a)            WE ARE THE SERVER, AND THIS IS THE FIRST PING THE CLIENT SENT WITH OUR COUNTER
-                    // DISCOVER THE CLIENT PATH
-                        in_discover(path, iskb, &path->skel);
-                    // DISCOVER THE CLIENT COUNTER
-                        __atomic_store_n(&node->rcounter, p_rcounter, __ATOMIC_RELAXED);
-                    // START SENDING PINGS
-                        __atomic_store_n(&path->rcounter, p_rcounter, __ATOMIC_RELEASE);
-                } else
-      // b)            RACED COM OUTRO ACCEPT
-                    return PSTATS_I_PING_RACED;
-            }
-
-            u64x8 K[K_LEN];
-
-            learn(node, ping->rnd, K);
-
-            // FAZ ISSO PRIMEIRO ANTES DE LIBERAR O PATH PARA ENVIAR
-            // NOTE: A CADA INTERVALO SAO ENVIADOS PINGS POR TODOS OS PATHS,
-            //       ENTAO PODE ACABAR TENDO RACE CONDITION AQUI.
-            // POR PRECAUCAO O IDEAL É TER MAIS ENTRADAS NA ARRAY DO QUE PROCESSADORES/THREADS
-            const uint o = __atomic_add_fetch(&node->oCycle, 1, __ATOMIC_ACQUIRE) % O_PAIRS_DYNAMIC;
-                                               node->oVersions[o] = BE8(ping->ver);
-                                        memcpy(node->oKeys[o], K, sizeof(K));
-                             __atomic_store_n(&node->oIndex,   o,          __ATOMIC_RELAXED);
-                             __atomic_store_n(&node->rcounter, p_rcounter, __ATOMIC_RELEASE);
-
-            skel = &path->skel;
-
-        } elif (__atomic_load_n(&path->rcounter, __ATOMIC_SEQ_CST) == COUNTER_LISTENING) {
-            // SYN
-
-#if 0// TODO:
-            uint synCtr;
-            do {
-                if ((synCtr = __atomic_load_n(&path->synCtr, __ATOMIC_RELAXED)) == 0)
-                    return TOO_MANY_SYNS;
-            } while (!__atomic_compare_exchange_n(&path->synCtr, synCtr, synCtr - 1, 0, __ATOMIC_SEQ_CST, __ATOMIC_RELAXED);
-#endif
-
-            // a cada keeper interval:
-            // __atomic_add_n(&path->synCtr, path->synLimit - __atomic_load_n(&path->synCtr, __ATOMIC_RELAXED), __ATOMIC_RELAXED);
-
-            // NESTE CASO, LEARN O PATH EM UM PACOTE TEMPORARIO
-            // NESTE CASO, NAO APRENDE KEYS E NEM COUNTERS
-            in_discover(path, iskb, &skel_);
-
-            skel = &skel_;
-
-        } else
-            // SYN
-            return PSTATS_I_PING_SYN_NOT_LISTENING;
-
-        ASSERT(skel->x.src  == BE16(nodeSelf));
-        ASSERT(skel->x.dst  == BE16(path->nid));
-        ASSERT(skel->x.path == BE8(path->pid));
-
-        // AGORA ENVIA O PONG
-        uint s;
-
-        skb_s* const oskb = alloc_skb(64 + sizeof(pkt_s) + sizeof(u64) + PONG_SIZE + 64, GFP_ATOMIC);
-
-        if (oskb) {
-
-            // TODO: USA O SKB_DATA ALIGNED
-            u64* const pong = SKB_DATA(oskb) + 64 + sizeof(pkt_s) + sizeof(u64);
-
-            for_count (i, sizeof(PONG_SIZE) / sizeof(*pong))
-                pong[i] = random64(p_rcounter);
-
-            pkt_encapsulate(node, O_PAIR_PING, p_rcounter, skel, oskb, pong, PONG_SIZE);
-
-            oskb->ip_summed = CHECKSUM_NONE;
-
-            if (dev_queue_xmit(oskb))
-                 s = PSTATS_O_PONG_FAILED;
-            else s = PSTATS_O_PONG_OK;
-        }   else s = PSTATS_O_PONG_SKB_FAILED;
-
-        // NOTE: WE WILL INFORM THE TOTAL SIZE SENT THROUGHT THE PHYSICAL INTERFACE
-        atomic_add(&path->pstats[s].bytes, skel->hsize + sizeof(u64) + PONG_SIZE);
-        atomic_inc(&path->pstats[s].count);
-
-        return PSTATS_I_PING_GOOD;
-    }
+    if (size == PING_SIZE)
+        return in_pp_ping(node, path, iskb, PTR(pkt->p), p_lcounter, p_rcounter);
 
     return PSTATS_I_NOT_PING_OR_PONG;
 }
