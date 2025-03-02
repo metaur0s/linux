@@ -76,6 +76,8 @@
 #include "pkt.h"
 #include "stats.h"
 #include "nodes.h"
+#include "dhcp.h"
+#include "cmd.h"
 
 //
 static inline u64   swap64 (const u64 x) { const uint q = popcount64(x); return (x >> q) | (x << (64 - q)); }
@@ -130,7 +132,6 @@ int in (skb_s* const skb);
 #include "stats.c"
 #include "dev.c"
 #include "cmd.c"
-#include "vect.c"
 
 /*
 

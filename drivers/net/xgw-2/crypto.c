@@ -4,13 +4,13 @@
 //
 #define PKT_SEED(pkt) \
     BE64( (pkt)->x.info \
-        ^ (pkt)->x.seed )
+        ^ (pkt)->x.sctr )
 
 // QUANTAS PALAVRAS TEM, CONSIDERANDO INCOMPLETAS COMO INTEIRAS
 #define PKT_Q(size) ((size) + sizeof(u64)) / sizeof(u64)
 #define PKT_P(pkt, size) (PTR((pkt)->p) + (size) % sizeof(u64))
 
-//
+// NOTE: TEM QUE FAZER APOS TER SETADO O PKT->X.SCTR
 #define pkt_encrypt(node, o, pkt, size, rcounter) encrypt((node)->oKeys[o], PKT_P(pkt, size), PKT_P(pkt, size) + PKT_Q(size), PKT_SEED(pkt), (rcounter))
 #define pkt_decrypt(node, i, pkt, size)           decrypt((node)->iKeys[i], PKT_P(pkt, size), PKT_P(pkt, size) + PKT_Q(size), PKT_SEED(pkt), BE64((pkt)->x.sign))
 

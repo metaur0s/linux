@@ -1,17 +1,13 @@
 
-struct ping_s {
-    u64 rnd [K_LEN] [K_WORDS];
-    u8 ver; // SENDER'S IKEYS INDEX BEING REGISTERED
-    u8 _ [7];
-    u64 ctr; // SENDER'S COUNTER
+#define PING_SIZE 520
+#define PONG_SIZE 64
+
+union ping_s {
+    struct {
+        u64 rnd [K_LEN] [K_WORDS];
+        u8 ver; // SENDER'S IKEYS INDEX BEING REGISTERED
+        u8 _ [7];
+    }; u64 w[(K_LEN * K_WORDS) + 1];
 };
 
-#define PONG_RANDOMS_N 8
-
-struct pong_s {
-    u64 rnd [PONG_RANDOMS_N];
-    u64 ctr; // SENDER'S COUNTER
-};
-
-BUILD_ASSERT(sizeof(ping_s) == 528);
-BUILD_ASSERT(sizeof(pong_s) == 72);
+BUILD_ASSERT(sizeof(ping_s) == PING_SIZE);

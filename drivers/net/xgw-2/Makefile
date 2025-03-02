@@ -14,8 +14,8 @@ CFLAGS_xgw.o += -Wno-error=unused-variable
 CFLAGS_xgw.o += -Wno-error=date-time
 CFLAGS_xgw.o += -Wno-type-limits
 CFLAGS_xgw.o += -Wno-unused-parameter
-
 CFLAGS_xgw.o += -Wno-sign-compare
+CFLAGS_xgw.o += -Wno-c23-extensions
 
 CFLAGS_xgw.o += -mpopcnt
 

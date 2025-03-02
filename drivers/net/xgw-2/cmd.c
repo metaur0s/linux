@@ -643,8 +643,11 @@ static ssize_t __cold_as_ice __optimize_size cmd (struct file *file, const char 
                     (node->info & N_SECRET  ) ? " SECRET"  : ""
             );
 
-            printk("XGW: %s: IKEYS PING %016llX %016llX %016llX %016llX %016llX %016llX %016llX %016llX\n", node->name, _PRINT_KEYS(node->iKeys[I_PAIR_PING]));
-            printk("XGW: %s: OKEYS PING %016llX %016llX %016llX %016llX %016llX %016llX %016llX %016llX\n", node->name, _PRINT_KEYS(node->oKeys[O_PAIR_PING]));
+            for_count (k, K_LEN)
+                printk("XGW: %s: IKEYS PING %016llX %016llX %016llX %016llX %016llX %016llX %016llX %016llX\n", node->name, _PRINT_KEYS(node->iKeys[I_PAIR_PING][k]));
+
+            for_count (k, K_LEN)
+                printk("XGW: %s: OKEYS PING %016llX %016llX %016llX %016llX %016llX %016llX %016llX %016llX\n", node->name, _PRINT_KEYS(node->oKeys[O_PAIR_PING][k]));
 
         } break;
 
@@ -875,8 +878,8 @@ static ssize_t __cold_as_ice __optimize_size cmd (struct file *file, const char 
                 node->conns[cid] = cid % PATHS_N;
 
             // NO DYNAMIC KEYS CREATED YET
-            { const u64 R = random64(SUFFIX_ULL(CONFIG_XGW_RANDOM_INIT_IPAIRS)); for_count (i, I_PAIRS_DYNAMIC) for_count (k, KEYS_N) node->iKeys[i][k] += R; }
-            { const u64 R = random64(SUFFIX_ULL(CONFIG_XGW_RANDOM_INIT_OPAIRS)); for_count (o, O_PAIRS_DYNAMIC) for_count (k, KEYS_N) node->oKeys[o][k] += R; }
+            { const u64x8 r = { random64(SUFFIX_ULL(CONFIG_XGW_RANDOM_INIT_IPAIRS)), }; for_count (i, I_PAIRS_DYNAMIC) for_count (k, K_LEN) node->iKeys[i][k] += r; }
+            { const u64x8 r = { random64(SUFFIX_ULL(CONFIG_XGW_RANDOM_INIT_OPAIRS)), }; for_count (o, O_PAIRS_DYNAMIC) for_count (k, K_LEN) node->oKeys[o][k] += r; }
 
             // START ON PATHS
             for_count (pid, PATHS_N) {

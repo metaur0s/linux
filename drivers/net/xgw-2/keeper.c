@@ -287,19 +287,17 @@ static void keeper (struct timer_list* const timer) {
                 if ((path->_skb = skb)) {
 
                     // TODO: AQUI PELO MENOS PODEMOS ALINHAR - PTR(((uintptr_t)SKB_DATA(skb) + sizeof(u64) - 1) % sizeof(u64))
-                    u64* const ping = SKB_DATA(skb) + 64 + sizeof(pkt_s) + sizeof(u64);
+                    ping_s* const ping = SKB_DATA(skb) + 64 + sizeof(pkt_s) + sizeof(u64);
 
                     // A CADA PING A INPUT KEY MAIS ANTIGA É EXPIRADA
                     const uint i = node->iCycle = ((uint)node->iCycle + 1) % I_PAIRS_DYNAMIC;
 
-                    for_count (i, PING_WORDS_N) {
-                        ping[i] += random64(SUFFIX_ULL(CONFIG_XGW_RANDOM_PING));
-                    }   ping[P__CTR]  = BE64(node->lcounter);
-                        ping[P__VER] &= BE64(0xFFFFFFFFFFFFFF00ULL);
-                        ping[P__VER] |= BE64(i);
+                    for_count (i, PING_SIZE / sizeof(*ping->w)) {
+                        ping->w[i] = random64(SUFFIX_ULL(CONFIG_XGW_RANDOM_PING));
+                    }   ping->ver = BE8(i);
 
                     // SEM ATOMICITY/BARRIER POR QUE O PEER SO VAI REFERENCIAR ESSE NOSSO INPUT INDEX QUANDO ELE RECEBER
-                    learn(node, ping, node->iKeys[i]);
+                    learn(node, ping->rnd, node->iKeys[i]);
 
                     // BUILD THE PING FROM THE SKEL
                     pkt_encapsulate(node, O_PAIR_PING, // ELE VAI MANDAR SYN ATÉ RECEBER O PRIMEIRO PING, O QUAL MARCARA O RCOUNTER

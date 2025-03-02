@@ -144,13 +144,11 @@ static inline int __compare_exchange64_cst (volatile u64* const where, u64 old, 
     return __atomic_compare_exchange_n(where, &old, new, 0, __ATOMIC_SEQ_CST, __ATOMIC_RELAXED);
 }
 
-static noinline int __optimize_size in_pp (node_s* const node, skb_s* const iskb, const pkt_s* const pkt, const uint size, const u64 p_lcounter) {
+static noinline int __optimize_size in_pp (node_s* const node, skb_s* const iskb, const pkt_s* const pkt, const uint size, const u64 p_lcounter, const u64 p_rcounter) {
 
     path_s* const path = &node->paths[BE8(pkt->x.path)];
 
-    if (size == sizeof(pong_s)) {
-
-        const u64 p_rcounter = BE64(((pong_s*)(pkt->p))->ctr);
+    if (size == PONG_SIZE) {
 
         if (p_rcounter <= COUNTER_CONNECTING)
             // HIS COUNTER IS INVALID
@@ -176,13 +174,11 @@ static noinline int __optimize_size in_pp (node_s* const node, skb_s* const iskb
         return PSTATS_I_PONG_GOOD;
     }
 
-    if (size == sizeof(ping_s)) {
+    if (size == PING_SIZE) {
 
         ping_s* const ping = PTR(pkt->p);
 
         pkt_s* skel; pkt_s skel_;
-
-        const u64 p_rcounter = BE64(ping->ctr);
 
         if (p_rcounter <= COUNTER_CONNECTING)
             // HIS COUNTER IS INVALID
@@ -294,18 +290,17 @@ static noinline int __optimize_size in_pp (node_s* const node, skb_s* const iskb
         // AGORA ENVIA O PONG
         uint s;
 
-        skb_s* const oskb = alloc_skb(64 + sizeof(pkt_s) + sizeof(u64) + sizeof(pong_s) + 64, GFP_ATOMIC);
+        skb_s* const oskb = alloc_skb(64 + sizeof(pkt_s) + sizeof(u64) + PONG_SIZE + 64, GFP_ATOMIC);
 
         if (oskb) {
 
             // TODO: USA O SKB_DATA ALIGNED
-            pong_s* const pong = SKB_DATA(oskb) + 64 + sizeof(pkt_s) + sizeof(u64);
+            u64* const pong = SKB_DATA(oskb) + 64 + sizeof(pkt_s) + sizeof(u64);
 
-            for_count (i, sizeof(pong->rnd) / sizeof(u64)) {
-                pong->rnd[i] = random64(p_rcounter);
-            }   pong->ctr = BE64(__atomic_load_n(&node->lcounter, __ATOMIC_RELAXED));
+            for_count (i, sizeof(PONG_SIZE) / sizeof(*pong))
+                pong[i] = random64(p_rcounter);
 
-            pkt_encapsulate(node, O_PAIR_PING, p_rcounter, skel, oskb, pong, sizeof(pong_s));
+            pkt_encapsulate(node, O_PAIR_PING, p_rcounter, skel, oskb, pong, PONG_SIZE);
 
             oskb->ip_summed = CHECKSUM_NONE;
 
@@ -474,11 +469,12 @@ _is_xgw:
     const uint i = BE8(pkt->x.version);
 
     // PRIVACY
+    const u64 p_rcounter = BE64(pkt->x.sctr);
     const u64 p_lcounter = pkt_decrypt(node, i, pkt, size);
 
     if (i == I_PAIR_PING)
         // PING/PONG
-        ret_path(in_pp(node, skb, pkt, size, p_lcounter));
+        ret_path(in_pp(node, skb, pkt, size, p_lcounter, p_rcounter));
 
     // NORMAL PACKET
 

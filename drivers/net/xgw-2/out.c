@@ -129,9 +129,12 @@ static void pkt_encapsulate (const node_s* const node, const uint o, const u64 r
     const enum H_TYPE type = pkt->type;
 
     //
+    pkt->p[0] = random64(SUFFIX_ULL(CONFIG_XGW_RANDOM_ENCRYPT_ALIGN));
+    pkt->p[1] = random64(SUFFIX_ULL(CONFIG_XGW_RANDOM_ENCRYPT_ALIGN));
+
+    //
     pkt->x.dsize   = BE16(size);
-    pkt->x.seed   += random64(SUFFIX_ULL(CONFIG_XGW_RANDOM_ENCRYPT_SEED));
-    pkt->p[0]     += random64(SUFFIX_ULL(CONFIG_XGW_RANDOM_ENCRYPT_ALIGN));
+    pkt->x.sctr    = BE64(__atomic_load_n(&node->lcounter, __ATOMIC_RELAXED));
     pkt->x.version = BE8(node->oVersions[o]);
     pkt->x.sign    = BE64(pkt_encrypt(node, o, pkt, size, rcounter));
 
