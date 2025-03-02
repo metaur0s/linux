@@ -469,8 +469,9 @@ _is_xgw:
     const uint i = BE8(pkt->x.version);
 
     // PRIVACY
-    const u64 p_rcounter = BE64(pkt->x.sctr);
-    const u64 p_lcounter = pkt_decrypt(node, i, pkt, size);
+    const u64 p_rcounter = BE64(pkt->x.scounter);
+          u64 p_lcounter = BE64(pkt->x.dcounter);
+              p_lcounter = pkt_decrypt(node, i, pkt, size, p_lcounter);
 
     if (i == I_PAIR_PING)
         // PING/PONG
