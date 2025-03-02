@@ -86,16 +86,16 @@ static inline u64 decrypt (const u64x8 _K[K_LEN], u64* restrict ptr, u64* restri
 // MUST NOT EXPOSE SECRETS
 static noinline void learn (const node_s* const node, const u64 ping[K_LEN][K_WORDS], u64x8 K[K_LEN]) {
 
+    // DINAMICO ALEATORIO
+    for_count (k, K_LEN)
+        for_count (w, K_WORDS)
+            K[k][w] = BE64(ping[k][w]);
+
     //
-    // NOTE: VAI CONTINUAR MUDANDO ESSA VARIAVEL E AFETANDO CADA K[k] LIDO DO PING
     u64x8 v = node->learn0;
 
-    // DINAMICO ALEATORIO
-    for_count (k, K_LEN) {
-        for_count (w, K_WORDS)
-            v[w] += BE64(ping[k][w]);
-        K[k] = v;
-    }
+    for_count (k, K_LEN)
+        v = K[k] += K[k] * v;
 
     // REDUCE IT TO A SINGLE WORD
     u64 s = v[0] + v[1] + v[2] + v[3] +
