@@ -91,7 +91,7 @@ struct hdr_x_s { // WIRE
             u16 dsize; // SIZE OF THE PAYLOAD (WIRE) OR HEADER (RUNTIME)
         };  u64 info;
     };
-    u64 seed; // RANDOM SEED
+    u64 session; // PATH SESSION
     u64 sign; // DESTINATION COUNTER (ENCRYPTED)
 };
 
