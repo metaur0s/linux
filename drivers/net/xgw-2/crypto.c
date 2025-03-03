@@ -7,9 +7,9 @@
 
 #define _PKT_SEED BE64(pkt->x.info ^ pkt->x.seed)
 
-// NOTE: TEM QUE FAZER APOS TER SETADO O PKT->X.SCTR
+// NOTE: TEM QUE FAZER APOS TER SETADO O PKT INFO E SEED
 #define pkt_encrypt(node, o, pkt, size, rcounter) encrypt(node->oKeys[o], _PKT_START, _PKT_END, _PKT_SEED, rcounter)
-#define pkt_decrypt(node, i, pkt, size, lcounter) decrypt(node->iKeys[i], _PKT_START, _PKT_END, _PKT_SEED, lcounter)
+#define pkt_decrypt(node, i, pkt, size, sign)     decrypt(node->iKeys[i], _PKT_START, _PKT_END, _PKT_SEED, sign)
 
 // AUTHENTICITY AND INTEGRITY
 // - HOST IDS
