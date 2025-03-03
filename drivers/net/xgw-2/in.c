@@ -144,7 +144,9 @@ static inline int __compare_exchange64_cst (volatile u64* const where, u64 old, 
     return __atomic_compare_exchange_n(where, &old, new, 0, __ATOMIC_SEQ_CST, __ATOMIC_RELAXED);
 }
 
-static inline int in_pp_pong (node_s* const node, path_s* const path, const u64 p_lcounter, const u64 p_rcounter) {
+static inline int in_pp_pong (node_s* const node, path_s* const path, const pong_s* const pong, const u64 p_lcounter) {
+
+    const u64 p_rcounter = BE64(pong->scounter);
 
     if (p_rcounter <= COUNTER_CONNECTING)
         // HIS COUNTER IS INVALID
@@ -170,9 +172,11 @@ static inline int in_pp_pong (node_s* const node, path_s* const path, const u64 
     return PSTATS_I_PONG_GOOD;
 }
 
-static inline int in_pp_ping (node_s* const node, path_s* const path, const skb_s* const iskb, const ping_s* const ping, const u64 p_lcounter, const u64 p_rcounter) {
+static inline int in_pp_ping (node_s* const node, path_s* const path, const ping_s* const ping, const u64 p_lcounter, const skb_s* const iskb) {
 
     pkt_s* skel; pkt_s skel_;
+
+    const u64 p_rcounter = BE64(ping->scounter);
 
     if (p_rcounter <= COUNTER_CONNECTING)
         // HIS COUNTER IS INVALID
@@ -280,9 +284,11 @@ static inline int in_pp_ping (node_s* const node, path_s* const path, const skb_
     if (oskb) {
 
         // TODO: USA O SKB_DATA ALIGNED
-        u64* const pong = SKB_DATA(oskb) + 64 + PKT_SIZE + PKT_ALIGN_SIZE;
+        pong_s* const pong = SKB_DATA(oskb) + 64 + PKT_SIZE + PKT_ALIGN_SIZE;
 
-        random64_n(pong, PONG_SIZE / sizeof(u64), p_rcounter);
+        random64_n(PTR(pong), PONG_RANDOMS_N, p_rcounter);
+
+        pong->scounter = __atomic_load_n(&node->lcounter, __ATOMIC_RELAXED);
 
         // TODO: O ALIGN COM RANDOM TEM QUE SER COLOCADO FORA DO ENCAPSULATE, POIS NO CASO DO PING/PONG NAO VAMOS USAR
         pkt_encapsulate(node, O_KEY_PING, p_rcounter, skel, oskb, pong, PONG_SIZE);
@@ -301,15 +307,15 @@ static inline int in_pp_ping (node_s* const node, path_s* const path, const skb_
     return PSTATS_I_PING_GOOD;
 }
 
-static noinline int in_pp (node_s* const node, skb_s* const iskb, const pkt_s* const pkt, const uint size, const u64 p_lcounter, const u64 p_rcounter) {
+static noinline int in_pp (node_s* const node, skb_s* const iskb, const pkt_s* const pkt, const uint size, const u64 p_lcounter) {
 
     path_s* const path = &node->paths[BE8(pkt->x.path)];
 
     if (size == PONG_SIZE)
-        return in_pp_pong(node, path, p_lcounter, p_rcounter);
+        return in_pp_pong(node, path, PTR(pkt->p), p_lcounter);
 
     if (size == PING_SIZE)
-        return in_pp_ping(node, path, iskb, PTR(pkt->p), p_lcounter, p_rcounter);
+        return in_pp_ping(node, path, PTR(pkt->p), p_lcounter, iskb);
 
     return PSTATS_I_NOT_PING_OR_PONG;
 }
@@ -419,7 +425,11 @@ _is_xgw:
     pkt_s* const pkt = ptr - sizeof(pkt_s);
 
     //
-    const uint nid = BE16(pkt->x.src);
+    const uint nid  = BE16(pkt->x.src);
+    const uint pid  = BE8 (pkt->x.path);
+    const uint size = BE16(pkt->x.dsize);
+    const uint i    = BE8 (pkt->x.version);
+    const u64 sign  = BE64(pkt->x.sign);
 
     ASSERT(nid < NODES_N);
 
@@ -444,18 +454,11 @@ _is_xgw:
     if (!(node->dev->flags & IFF_UP))
         ret_dev(NSTATS_I_DOWN);
 
-    const uint pid = BE8(pkt->x.path);
-
     if (pid >= PATHS_N)
         ret_node(NSTATS_I_PATH_INVALID);
 
     if (!(__atomic_load_n(&node->ipaths, __ATOMIC_SEQ_CST) & IPATH(pid)))
         ret_path(PSTATS_I_DISABLED);
-
-    const uint size      = BE16(pkt->x.dsize);
-    const uint i         = BE8 (pkt->x.version);
-    const u64 p_rcounter = BE64(pkt->x.scounter);
-          u64 p_lcounter = BE64(pkt->x.dcounter);
 
     if (size < XGW_PAYLOAD_MIN)
         ret_path(PSTATS_I_SIZE_SMALL);
@@ -464,11 +467,11 @@ _is_xgw:
         ret_path(PSTATS_I_SIZE_TRUNCATED);
 
     //
-    p_lcounter = pkt_decrypt(node, i, pkt, size, p_lcounter);
+    const u64 p_lcounter = pkt_decrypt(node, i, pkt, size, sign);
 
     if (i == I_KEY_PING)
         // PING/PONG
-        ret_path(in_pp(node, skb, pkt, size, p_lcounter, p_rcounter));
+        ret_path(in_pp(node, skb, pkt, size, p_lcounter));
 
     // NORMAL PACKET
 

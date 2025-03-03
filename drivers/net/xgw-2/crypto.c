@@ -1,9 +1,15 @@
 
 // !!!!!! TODO: XGW TO XGW REDIRECT WITHOUT GOING THROUGH IP STACK
 
+//
+#define _PKT_START PTR(pkt) + PKT_SIZE + size % sizeof(u64)
+#define _PKT_END   PTR(pkt) + PKT_SIZE + PKT_ALIGN_SIZE + size
+
+#define _PKT_SEED BE64(pkt->x.info ^ pkt->x.seed)
+
 // NOTE: TEM QUE FAZER APOS TER SETADO O PKT->X.SCTR
-#define pkt_encrypt(node, o, pkt, size, rcounter) encrypt(node->oKeys[o], PTR(pkt) + PKT_SIZE + size % sizeof(u64), PTR(pkt) + PKT_SIZE + PKT_ALIGN_SIZE + size, BE64(pkt->x.info ^ pkt->x.scounter), rcounter)
-#define pkt_decrypt(node, i, pkt, size, lcounter) decrypt(node->iKeys[i], PTR(pkt) + PKT_SIZE + size % sizeof(u64), PTR(pkt) + PKT_SIZE + PKT_ALIGN_SIZE + size, BE64(pkt->x.info ^ pkt->x.scounter), lcounter)
+#define pkt_encrypt(node, o, pkt, size, rcounter) encrypt(node->oKeys[o], _PKT_START, _PKT_END, _PKT_SEED, rcounter)
+#define pkt_decrypt(node, i, pkt, size, lcounter) decrypt(node->iKeys[i], _PKT_START, _PKT_END, _PKT_SEED, lcounter)
 
 // AUTHENTICITY AND INTEGRITY
 // - HOST IDS

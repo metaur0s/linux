@@ -293,10 +293,11 @@ static void keeper (struct timer_list* const timer) {
                     const uint i = node->iCycle = ((uint)node->iCycle + 1) % I_KEYS_DYNAMIC;
 
                     //
-                    random64_n(PTR(ping), PING_SIZE / sizeof(u64), SUFFIX_ULL(CONFIG_XGW_RANDOM_PING));
+                    random64_n(PTR(ping), PING_RANDOMS_N, SUFFIX_ULL(CONFIG_XGW_RANDOM_PING));
 
                     // OVERWRITE WITH THE VERSION
                     ping->ver = BE8(i);
+                    ping->scounter = BE64(node->lcounter);
 
                     // SEM ATOMICITY/BARRIER POR QUE O PEER SO VAI REFERENCIAR ESSE NOSSO INPUT INDEX QUANDO ELE RECEBER
                     learn(node, ping->rnd, node->iKeys[i]);

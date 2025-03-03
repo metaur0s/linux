@@ -91,8 +91,8 @@ struct hdr_x_s { // WIRE
             u16 dsize; // SIZE OF THE PAYLOAD (WIRE) OR HEADER (RUNTIME)
         };  u64 info;
     };
-    u64 scounter; // SOURCE COUNTER
-    u64 dcounter; // DESTINATION COUNTER (ENCRYPTED)
+    u64 seed; // RANDOM SEED
+    u64 sign; // DESTINATION COUNTER (ENCRYPTED)
 };
 
 //
