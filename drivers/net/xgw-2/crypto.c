@@ -229,7 +229,7 @@ static void secret_derivate_from_password (u64 S[SECRET_KEYS_N][K_LEN], const u8
            (S[p][k] * p) ^
            (S[p][k] * k);
 
-    // INITIAL KEYS, PER INTERVAL
+    // THE NON-REPEATED PART IS ON THE START OF THE BUFFER
     u64 A = S[0][0], B = S[0][1], C = S[0][2], D = S[0][3],
         E = S[0][4], F = S[0][5], G = S[0][6], H = S[0][7];
 
