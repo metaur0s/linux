@@ -27,8 +27,8 @@
 static inline u64 encrypt (const u64 K[K_LEN], u64* restrict ptr, u64* restrict const lmt, u64 x) {
 
     // INITIAL KEYS, PER INTERVAL
-    u64 A = K[0], B = K[1], C = K[2], D = K[3],
-        E = K[4], F = K[5], G = K[6], H = K[7];
+    u64 A = K[ 0], B = K[ 8], C = K[16], D = K[24],
+        E = K[32], F = K[40], G = K[48], H = K[56];
 
     loop {
 
@@ -59,8 +59,8 @@ static inline u64 encrypt (const u64 K[K_LEN], u64* restrict ptr, u64* restrict 
 static inline u64 decrypt (const u64 K[K_LEN], u64* restrict ptr, u64* restrict const lmt, u64 x) {
 
     // INITIAL KEYS, PER INTERVAL
-    u64 A = K[0], B = K[1], C = K[2], D = K[3],
-        E = K[4], F = K[5], G = K[6], H = K[7];
+    u64 A = K[ 0], B = K[ 8], C = K[16], D = K[24],
+        E = K[32], F = K[40], G = K[48], H = K[56];
 
     loop {
 
