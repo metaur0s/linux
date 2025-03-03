@@ -1,9 +1,6 @@
 
-// HOW MANY VECTORS
-#define K_LEN 8
-
-// HOW MANY WORDS IN A VECTOR
-#define K_WORDS 8
+// HOW MANY WORDS IN A PAIR
+#define K_LEN2 64
 
 #define SECRET_PAIRS_N 2048
 

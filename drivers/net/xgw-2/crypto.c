@@ -13,19 +13,28 @@
 // - DATA
 
 // NAO FAZ UM SWAP FINAL POIS O VALOR É EXPOSTO K[4] ISSO SERIA INUTIL
-#define ENC(x) (  swap64(  swap64(  swap64(  swap64(  swap64(  swap64(  swap64((x) + K[0][0]) + K[0][1]) + K[0][2]) + K[0][3]) + K[0][4]) + K[0][5]) + K[0][6]) + K[0][7])
-#define DEC(x) (unswap64(unswap64(unswap64(unswap64(unswap64(unswap64(unswap64((x) - K[0][7]) - K[0][6]) - K[0][5]) - K[0][4]) - K[0][3]) - K[0][2]) - K[0][1]) - K[0][0])
+#define ENC(x) (  swap64(  swap64(  swap64(  swap64(  swap64(  swap64(  swap64((x) + A) + B) + C) + D) + E) + F) + G) + H)
+#define DEC(x) (unswap64(unswap64(unswap64(unswap64(unswap64(unswap64(unswap64((x) - H) - G) - F) - E) - D) - C) - B) - A)
 
-static inline u64 __avx encrypt (const u64x8 _K[K_LEN], u64* restrict ptr, u64* restrict const lmt, u64 x, const u64 sign) {
+static inline u64 encrypt (const u64 K[K_LEN2], u64* restrict ptr, u64* restrict const lmt, u64 x, const u64 sign) {
 
     // INITIAL KEYS, PER INTERVAL
-    u64x8 K[K_LEN] = { _K[0], _K[1], _K[2], _K[3], _K[4], _K[5], _K[6], _K[7] };
+    u64 A = K[0], B = K[1], C = K[2], D = K[3],
+        E = K[4], F = K[5], G = K[6], H = K[7];
 
     loop {
 
         // AVALANCHE OF X THROUGH KEYS
-        K[7] += K[6] += K[5] += K[4] += K[3] += K[2] += K[1] += K[0] += x;
-        K[0] += K[6] += K[2] += K[4] += K[7] += K[3] += K[1] += K[5];
+        H += G += F += E += D += C += B += A += x;
+
+        A += K[C % K_LEN2] * H;
+        B += K[E % K_LEN2] * G;
+        C += K[D % K_LEN2] * F;
+        D += K[A % K_LEN2] * E;
+        E += K[H % K_LEN2] * D;
+        F += K[G % K_LEN2] * C;
+        G += K[F % K_LEN2] * B;
+        H += K[B % K_LEN2] * A;
 
         if (ptr != lmt)
             // READ THE ORIGINAL VALUE
@@ -45,16 +54,25 @@ static inline u64 __avx encrypt (const u64x8 _K[K_LEN], u64* restrict ptr, u64* 
     }
 }
 
-static inline u64 __avx decrypt (const u64x8 _K[K_LEN], u64* restrict ptr, u64* restrict const lmt, u64 x, const u64 sign) {
+static inline u64 decrypt (const u64 K[K_LEN2], u64* restrict ptr, u64* restrict const lmt, u64 x, const u64 sign) {
 
     // INITIAL KEYS, PER INTERVAL
-    u64x8 K[K_LEN] = { _K[0], _K[1], _K[2], _K[3], _K[4], _K[5], _K[6], _K[7] };
+    u64 A = K[0], B = K[1], C = K[2], D = K[3],
+        E = K[4], F = K[5], G = K[6], H = K[7];
 
     loop {
 
         // AVALANCHE OF X THROUGH KEYS
-        K[7] += K[6] += K[5] += K[4] += K[3] += K[2] += K[1] += K[0] += x;
-        K[0] += K[6] += K[2] += K[4] += K[7] += K[3] += K[1] += K[5];
+        H += G += F += E += D += C += B += A += x;
+
+        A += K[C % K_LEN2] * H;
+        B += K[E % K_LEN2] * G;
+        C += K[D % K_LEN2] * F;
+        D += K[A % K_LEN2] * E;
+        E += K[H % K_LEN2] * D;
+        F += K[G % K_LEN2] * C;
+        G += K[F % K_LEN2] * B;
+        H += K[B % K_LEN2] * A;
 
         if (ptr != lmt)
             // READ THE ENCRYPTED VALUE
@@ -75,48 +93,37 @@ static inline u64 __avx decrypt (const u64x8 _K[K_LEN], u64* restrict ptr, u64* 
 }
 
 // MUST NOT EXPOSE SECRETS
-static noinline void __avx learn (const node_s* const node, const u64 rnd[K_LEN][K_WORDS], u64x8 K[K_LEN]) {
+static noinline void learn (const node_s* const node, const u64 R[K_LEN2], u64 K[K_LEN2]) {
 
-    // DINAMICO ALEATORIO
-    // LOAD THE UNALIGNED, BIG ENDIAN WORDS
-    for_count (k, K_LEN)
-        for_count (w, K_WORDS)
-            K[k][w] = BE64(rnd[k][w]);
+    // TRANSFORMER
+    u64 t = 0;
 
-    // REDUCE IT TO A SINGLE VECTOR
-    u64x8 v = { 0, 0, 0, 0, 0, 0, 0, 0 };
+    // LOAD DINAMICO ALEATORIO
+    for_count (k, K_LEN2)
+        K[k] = t = swap64(BE64(R[k])) + t;
 
-    for_count (k, K_LEN)
-        v += K[k];
+    t += t >> 32;
+    t += t >> 16;
 
-    // REDUCE IT TO A SINGLE WORD
-    u64 s = v[0] + v[1] + v[2] + v[3] +
-            v[4] + v[5] + v[6] + v[7];
+    // MERGE WITH CONSTANTE, DINAMICAMENTE ESCOLHIDO
+    const u64* const restrict S = node->secret[t % SECRET_PAIRS_N];
 
-    // HASH IT AS AN INDEX
-    s += s >> 32;
-    s += s >> 16;
-    s %= SECRET_PAIRS_N;
-
-    // CONSTANTE, DINAMICAMENTE ESCOLHIDO
-    const u64x8* const restrict S = node->secret[s];
-
-    for_count (k, K_LEN)
-        K[k] += S[k];
+    for_count (k, K_LEN2)
+        K[k] = t = swap64(K[k] + S[k]) + t;
 }
 
 // CONSTANT KEYS, FOR PING/PONG
 // TODO: SO REFAZER ISSO SE TIVER MUDADO O SECRET (BY PASSWORD), O NODE ID OU O SELF ID
 // TODO: COLD FUNCTION
 // MUST PROVE THE PING WILL GENERATE THE SAME KEYS
-static noinline void __avx reset_node_ping_keys (node_s* const node, const uint self, const uint peer) {
+static noinline void reset_node_ping_keys (node_s* const node, const uint self, const uint peer) {
 
     ASSERT(self < NODES_N);
     ASSERT(peer < NODES_N);
     ASSERT(self != peer);
 
-    u64x8* restrict Kx;
-    u64x8* restrict Ky;
+    u64* restrict Kx; u64 x;
+    u64* restrict Ky; u64 y;
 
     // CADA LADO USA UM PAR
     if (self > peer) {
@@ -128,34 +135,33 @@ static noinline void __avx reset_node_ping_keys (node_s* const node, const uint 
     }
 
     // MESMO QUE USE O MESMO PASSWORD ENTRE VARIOS NODES, NAO DEIXA QUE O PING KEYS SEJA O MESMO
-    u64x8 x = { 1, 1, 1, 1, 1, 1, 1, 1 }; // MAIOR NODE ID
-    u64x8 y = { 1, 1, 1, 1, 1, 1, 1, 1 }; // MENOR NODE ID
-
-    if (self > peer)
-        { x *= self; y *= peer; }
-    else
-        { x *= peer; y *= self; }
-
-    for_count (k, K_LEN) Kx[k] = x;
-    for_count (k, K_LEN) Ky[k] = y;
-
-    for_count (s, SECRET_PAIRS_N) {
-        for_count (k, K_LEN) {
-            x += node->secret[s][k];
-            x += x * x[k % K_WORDS];
-        }   x += x * x[s % K_WORDS];
+    if (self > peer) {
+        x = self;
+        y = peer;
+    } else {
+        x = peer;
+        y = self;
     }
 
+    for_count (k, K_LEN2) Kx[k] = x;
+    for_count (k, K_LEN2) Ky[k] = y;
+
     for_count (s, SECRET_PAIRS_N) {
-        for_count (k, K_LEN) {
-            y += node->secret[s][k];
-            y += y * y[k % K_WORDS];
-        }   y += y * y[s % K_WORDS];
+
+        for_count (k, K_LEN2) {
+            x += Kx[k] += x ^ node->secret[s][k];
+            x += Kx[k] += x * node->secret[s][x % K_LEN2];
+        }
+
+        for_count (k, K_LEN2) {
+            y += Ky[k] += y ^ node->secret[s][k];
+            y += Ky[k] += y * node->secret[s][y % K_LEN2];
+        }
     }
 }
 
 // TODO: COLD FUNCTION
-static noinline void __avx secret_derivate (node_s* const node, const u8* const restrict password, uint size) {
+static noinline void secret_derivate (node_s* const node, const u8* const restrict password, uint size) {
 
     ASSERT(size >= PASSWORD_SIZE_MIN);
     ASSERT(size <= PASSWORD_SIZE_MAX);

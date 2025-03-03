@@ -5,6 +5,7 @@ CFLAGS_xgw.o += -Wfatal-errors
 CFLAGS_xgw.o += -Werror
 CFLAGS_xgw.o += -Wall
 CFLAGS_xgw.o += -Wextra
+CFLAGS_xgw.o += -Wunused-label
 CFLAGS_xgw.o += -Wno-declaration-after-statement
 CFLAGS_xgw.o += -Wno-missing-declarations
 CFLAGS_xgw.o += -Wno-missing-prototypes
@@ -56,10 +57,6 @@ endif
 ifneq ($(CONFIG_XGW_BMI2),)
 CFLAGS_xgw.o += -mbmi2
 endif
-
-#ifneq ($(CONFIG_XGW_FXSR),)
-#CFLAGS_xgw.o += -mfxsr
-#endif
 
 # -moutline-atomics
 # -mno-outline-atomics

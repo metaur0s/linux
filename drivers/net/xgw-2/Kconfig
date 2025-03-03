@@ -5,30 +5,6 @@ menuconfig XGW
 
 if XGW
 
-    config    XGW_SSE2
-        bool "XGW_SSE2"
-        default n
-
-    config    XGW_SSE3
-        bool "XGW_SSE3"
-        default n
-
-    config    XGW_SSE4A
-        bool "XGW_SSE4A"
-        default n
-
-    config    XGW_SSE4_1
-        bool "XGW_SSE4_1"
-        default n
-
-    config    XGW_SSE4_2
-        bool "XGW_SSE4_2"
-        default n
-
-    config    XGW_SSSE3
-        bool "XGW_SSSE3"
-        default n
-
     config    XGW_ABM
         bool "XGW_ABM"
         default n
@@ -45,10 +21,6 @@ if XGW
         bool "XGW_BMI2"
         default n
 
-    config    XGW_FXSR
-        bool "XGW_FXSR"
-        default n
-
     config    XGW_FMA
         bool "XGW_FMA"
         default n
@@ -63,18 +35,6 @@ if XGW
 
     config    XGW_PCLMUL
         bool "XGW_PCLMUL"
-        default n
-
-    config    XGW_AVX
-        bool "XGW_AVX"
-        default n
-
-    config    XGW_AVX2
-        bool "XGW_AVX2"
-        default n
-
-    config    XGW_AVX512F
-        bool "XGW_AVX512F"
         default n
 
     config    XGW_ASSERT

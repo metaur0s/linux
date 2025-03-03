@@ -111,7 +111,6 @@ static netdev_tx_t out (skb_s* const skb, net_device_s* const dev);
 static void __cold_as_ice __optimize_size stats_print (void);
 static void __cold_as_ice __optimize_size dev_setup (net_device_s* const dev);
 static void keeper (struct timer_list* const timer);
-static inline u64 __u64x8_sum_reduced (const u64x8 V[], const uint n);
 
 // EXPOSED TO KERNEL
 // net/core/dev.c WILL USE US

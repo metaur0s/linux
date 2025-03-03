@@ -262,11 +262,11 @@ struct node_s { // DEIXA TUDO NO MESMO CACHE LINE PARA A ITERACAO DO KEEPER
 // ---------------------- NODE_SIZE_INIT -----------------------------
     char _ [384]; // 512 - ((1209984 - (1048576+131072+8640+64)) % 512)
 // 8640 + 64 -- KEEPER/OUT READ, IN WRITE
-    u64x8 oKeys [O_PAIRS_ALL] [K_LEN];
+    u64 oKeys [O_PAIRS_ALL] [K_LEN2];
 // 131072 -- IN READ, KEEPER WRITE
-    u64x8 iKeys [I_PAIRS_ALL] [K_LEN];
+    u64 iKeys [I_PAIRS_ALL] [K_LEN2];
 // 1048576 -- RO
-    u64x8 secret [SECRET_PAIRS_N] [K_LEN]; // TODO: PARA SER DINAMICO, TERA QUE RESETAR TAMBEM O node->paths[*].pstats
+    u64 secret [SECRET_PAIRS_N] [K_LEN2]; // TODO: PARA SER DINAMICO, TERA QUE RESETAR TAMBEM O node->paths[*].pstats
 };
 
 BUILD_ASSERT(sizeof(((node_s*)NULL)->pstats)
