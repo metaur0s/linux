@@ -141,10 +141,11 @@ static void learn (const u64 S[SECRET_KEYS_N][K_LEN], const u64 R[K_LEN], u64 K[
     // DYNAMICALY CHOOSE CONSTANT SECRET
     const u64* const restrict s = S[t % SECRET_KEYS_N];
 
-    // THE SECRET WORD IS AFFECTED BY THE TRANSFORM
-    // THE TRANSFORM IS AFFECTED BY THE SECRET WORD
-    // THE KEY WORD IS AFFECTED BY THE TRANSFORM
+    // MERGE
     for_count (k, K_LEN)
+        // THE SECRET WORD IS AFFECTED BY THE TRANSFORM
+        // THE TRANSFORM IS AFFECTED BY THE SECRET WORD
+        // THE KEY WORD IS AFFECTED BY THE TRANSFORM
         K[k] += t += s[k] * (popcount(t) + 1);
 }
 
