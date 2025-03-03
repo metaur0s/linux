@@ -124,14 +124,14 @@ static inline u64 decrypt (const u64 K[K_LEN], u64* restrict ptr, u64* restrict 
 
 // NOTE: MUST NOT EXPOSE SECRET
 // USING SECRET S, APPLY RANDOM R, AND DERIVE KEY K
-static noinline void learn (const u64 S[SECRET_KEYS_N][K_LEN], const u64 R[K_LEN], u64 K[K_LEN]) {
+static inline void learn (const u64 S[SECRET_KEYS_N][K_LEN], const u64 R[K_LEN], u64 K[K_LEN]) {
 
     // TRANSFORMER
     u64 t = 0;
 
     // LOAD DINAMIC RANDOM
     for_count (k, K_LEN)
-        t = K[k] = swap64(BE64(R[k]) + t);
+        t += K[k] = BE64(R[k]);
 
     // FOR INDEXING
     t += t >> 32;
@@ -142,7 +142,7 @@ static noinline void learn (const u64 S[SECRET_KEYS_N][K_LEN], const u64 R[K_LEN
 
     // MERGE
     for_count (k, K_LEN)
-        t = K[k] = swap64(swap64(K[k] + s[k]) + t);
+        K[k] += t += s[k] * (popcount(t) + 1);
 }
 
 // CONSTANT KEYS, FOR PING/PONG
