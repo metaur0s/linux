@@ -10,15 +10,47 @@
 // AUTHENTICITY, INTEGRITY AND PRIVACY
 // - DATA
 
+/* NOTE: QUALQUER ALTERAÇÃO EM UM BIT DO INFO OU DO SCOUNTER TEM QUE RESULTAR EM ALGO DIFERENTE AQUI
+
+def compute (a, b):
+    #return ((a + b) ^ a) + b
+    #return (((a + b) ^ (a * b)) + a) ^ b
+    return ((a + b) * a) + b
+
+for a in (0xAABBCC0000, 0xAABBCC0001, 0xAABBCCDD00, 0xAABBCCDDEE, 0xAABBCCDDFF):
+    for b in (0xAABBCC0000, 0xAABBCC0001, 0xAABBCCDD00, 0xAABBCCDDEE, 0xAABBCCDDFF):
+        cksum = compute(a, b)
+        assert cksum != compute(a + 1, b)
+        assert cksum != compute(a - 1, b)
+        assert cksum != compute(a ^ 1, b)
+        assert cksum != compute(a    , b + 1)
+        assert cksum != compute(a    , b - 1)
+        assert cksum != compute(a    , b ^ 1)
+        assert cksum != compute(a + 1, b + 1)
+        assert cksum != compute(a - 1, b - 1)
+        assert cksum != compute(a ^ 1, b ^ 1)
+        assert cksum != compute(a + 1, b - 1)
+        assert cksum != compute(a + 1, b ^ 1)
+        assert cksum != compute(a - 1, b + 1)
+        assert cksum != compute(a - 1, b ^ 1)
+        assert cksum != compute(a ^ 1, b + 1)
+        assert cksum != compute(a ^ 1, b - 1)
+*/
+static inline u64 _PKT_SEED (const u64 a, const u64 b) {
+
+    return ((a + b) * a) + b;
+}
+
+// TODO: O SCOUNTER IDENTIFICA O MEU I SENDO ENSINADO
+// TODO: O DCOUNTER IDENTIFICA O MEU O SENDO USADO
+
 //
 #define _PKT_START PTR(pkt) + PKT_SIZE + size % sizeof(u64)
 #define _PKT_END   PTR(pkt) + PKT_SIZE + PKT_ALIGN_SIZE + size
 
-#define _PKT_SEED BE64(pkt->x.info ^ pkt->x.scounter)
-
 // NOTE: TEM QUE FAZER APOS TER SETADO O PKT INFO E SCOUNTER
-#define pkt_encrypt(node, o, pkt, size, dcounter) ((dcounter) ^ encrypt(node->oKeys[o], _PKT_START, _PKT_END, _PKT_SEED))
-#define pkt_decrypt(node, i, pkt, size, hash)     ((hash)     ^ decrypt(node->iKeys[i], _PKT_START, _PKT_END, _PKT_SEED))
+#define pkt_encrypt(node, o, pkt, size, dcounter) ((dcounter) ^ encrypt(node->oKeys[o], _PKT_START, _PKT_END, _PKT_SEED(BE64(pkt->x.info), BE64(pkt->x.scounter))))
+#define pkt_decrypt(node, i, pkt, size, hash)     ((hash)     ^ decrypt(node->iKeys[i], _PKT_START, _PKT_END, _PKT_SEED(BE64(pkt->x.info), BE64(pkt->x.scounter))))
 
 // NAO FAZ UM SWAP FINAL POIS O VALOR É EXPOSTO K[4] ISSO SERIA INUTIL
 #define ENC(x) (  swap64(  swap64(  swap64(  swap64(  swap64(  swap64(  swap64((x) + A) + B) + C) + D) + E) + F) + G) + H)
@@ -97,17 +129,16 @@ static noinline void learn (const node_s* const node, const u64 R[K_LEN], u64 K[
     u64 t = 0;
 
     // LOAD DINAMICO ALEATORIO
-    for_count (k, K_LEN)
-        K[k] = t = swap64(BE64(R[k])) + t;
-
-    t += t >> 32;
-    t += t >> 16;
+    for_count (k, K_LEN) {
+        t += K[k] = BE64(R[k]);
+    }   t += t >> 32;
+        t += t >> 16;
 
     // MERGE WITH CONSTANTE, DINAMICAMENTE ESCOLHIDO
     const u64* const restrict S = node->secret[t % SECRET_KEYS_N];
 
     for_count (k, K_LEN)
-        K[k] = t = swap64(K[k] + S[k]) + t;
+        t = K[k] = swap64(swap64(K[k] + S[k]) + t);
 }
 
 // CONSTANT KEYS, FOR PING/PONG
