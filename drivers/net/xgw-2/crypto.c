@@ -216,22 +216,20 @@ static void secret_derivate_from_password (u64 S[SECRET_KEYS_N][K_LEN], const u8
 
 #if 1
     // EM LOCAL ENDIAN
-    for_count (p, SECRET_KEYS_N)
+    for_count (s, SECRET_KEYS_N)
         for_count (k, K_LEN)
-            S[p][k] =
-       BE64(S[p][k]);
+            S[s][k] =
+       BE64(S[s][k]);
 #endif
-
-    // NAO DEIXA SER APENAS UMA REPETICAO
-    for_count (p, SECRET_KEYS_N)
-        for_count (k, K_LEN)
-            S[p][k] +=
-           (S[p][k] * p) ^
-           (S[p][k] * k);
 
     // THE NON-REPEATED PART IS ON THE START OF THE BUFFER
     u64 A = S[0][0], B = S[0][1], C = S[0][2], D = S[0][3],
         E = S[0][4], F = S[0][5], G = S[0][6], H = S[0][7];
+
+    // NAO DEIXA SER APENAS UMA REPETICAO
+    for_count (s, SECRET_KEYS_N)
+        for_count (k, K_LEN)
+            A += B += C += D += E += F += G += H += S[s][k] = ENC(S[s][k]);
 
     for_count (c, PASSWORD_ROUNDS) {
         for_count (s, SECRET_KEYS_N) {
