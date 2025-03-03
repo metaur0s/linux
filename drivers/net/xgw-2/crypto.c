@@ -33,7 +33,8 @@ static inline u64 encrypt (const u64 K[K_LEN], u64* restrict ptr, u64* restrict 
     loop {
 
         // AVALANCHE OF X THROUGH KEYS
-        H += G += F += E += D += C += B += A += x;
+        D += C += B += A += x;
+        H += G += F += E += x;
 
         A += K[C % K_LEN] * H;
         B += K[E % K_LEN] * G;
@@ -65,7 +66,8 @@ static inline u64 decrypt (const u64 K[K_LEN], u64* restrict ptr, u64* restrict 
     loop {
 
         // AVALANCHE OF X THROUGH KEYS
-        H += G += F += E += D += C += B += A += x;
+        D += C += B += A += x;
+        H += G += F += E += x;
 
         A += K[C % K_LEN] * H;
         B += K[E % K_LEN] * G;
