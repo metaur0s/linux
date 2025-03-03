@@ -129,10 +129,12 @@ static noinline void learn (const u64 secret[SECRET_KEYS_N][K_LEN], const u64 R[
     u64 t = 0;
 
     // LOAD DINAMICO ALEATORIO
-    for_count (k, K_LEN) {
-        t += K[k] = BE64(R[k]);
-    }   t += t >> 32;
-        t += t >> 16;
+    for_count (k, K_LEN)
+        t = K[k] = swap64(swap64(BE64(R[k])) + t);
+
+    // FOR INDEXING
+    t += t >> 32;
+    t += t >> 16;
 
     // MERGE WITH CONSTANTE, DINAMICAMENTE ESCOLHIDO
     const u64* const restrict S = secret[t % SECRET_KEYS_N];
