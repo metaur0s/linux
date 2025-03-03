@@ -133,3 +133,17 @@ typedef struct net_device_ops net_device_ops_s;
 #define acquire_from_to(ptr, old, new) __atomic_compare_exchange_n(ptr, old, new, 0, __ATOMIC_ACQUIRE, __ATOMIC_RELAXED)
 
 typedef u64 u64x8 __attribute__ ((vector_size(8 * sizeof(u64))));
+
+#if defined(CONFIG_XGW_AVX)
+#define __avx __attribute__((target("avx")))
+#elif defined(CONFIG_XGW_AVX2)
+#define __avx __attribute__((target("avx2")))
+#elif defined(CONFIG_XGW_AVX512F)
+#define __avx __attribute__((target("avx512f")))
+#elif defined(CONFIG_XGW_SSE3)
+#define __avx __attribute__((target("sse3")))
+#elif defined(CONFIG_XGW_SSE2)
+#define __avx __attribute__((target("sse2")))
+#else
+#define __avx
+#endif

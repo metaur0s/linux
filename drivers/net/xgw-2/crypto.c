@@ -16,7 +16,7 @@
 #define ENC(x) (  swap64(  swap64(  swap64(  swap64(  swap64(  swap64(  swap64((x) + K[0][0]) + K[0][1]) + K[0][2]) + K[0][3]) + K[0][4]) + K[0][5]) + K[0][6]) + K[0][7])
 #define DEC(x) (unswap64(unswap64(unswap64(unswap64(unswap64(unswap64(unswap64((x) - K[0][7]) - K[0][6]) - K[0][5]) - K[0][4]) - K[0][3]) - K[0][2]) - K[0][1]) - K[0][0])
 
-static inline u64 encrypt (const u64x8 _K[K_LEN], u64* restrict ptr, u64* restrict const lmt, u64 x, const u64 sign) {
+static inline u64 __avx encrypt (const u64x8 _K[K_LEN], u64* restrict ptr, u64* restrict const lmt, u64 x, const u64 sign) {
 
     // INITIAL KEYS, PER INTERVAL
     u64x8 K[K_LEN] = { _K[0], _K[1], _K[2], _K[3], _K[4], _K[5], _K[6], _K[7] };
@@ -45,7 +45,7 @@ static inline u64 encrypt (const u64x8 _K[K_LEN], u64* restrict ptr, u64* restri
     }
 }
 
-static inline u64 decrypt (const u64x8 _K[K_LEN], u64* restrict ptr, u64* restrict const lmt, u64 x, const u64 sign) {
+static inline u64 __avx decrypt (const u64x8 _K[K_LEN], u64* restrict ptr, u64* restrict const lmt, u64 x, const u64 sign) {
 
     // INITIAL KEYS, PER INTERVAL
     u64x8 K[K_LEN] = { _K[0], _K[1], _K[2], _K[3], _K[4], _K[5], _K[6], _K[7] };
@@ -75,7 +75,7 @@ static inline u64 decrypt (const u64x8 _K[K_LEN], u64* restrict ptr, u64* restri
 }
 
 // MUST NOT EXPOSE SECRETS
-static noinline void learn (const node_s* const node, const u64 rnd[K_LEN][K_WORDS], u64x8 K[K_LEN]) {
+static noinline void __avx learn (const node_s* const node, const u64 rnd[K_LEN][K_WORDS], u64x8 K[K_LEN]) {
 
     // DINAMICO ALEATORIO
     // LOAD THE UNALIGNED, BIG ENDIAN WORDS
@@ -109,7 +109,7 @@ static noinline void learn (const node_s* const node, const u64 rnd[K_LEN][K_WOR
 // TODO: SO REFAZER ISSO SE TIVER MUDADO O SECRET (BY PASSWORD), O NODE ID OU O SELF ID
 // TODO: COLD FUNCTION
 // MUST PROVE THE PING WILL GENERATE THE SAME KEYS
-static noinline void reset_node_ping_keys (node_s* const node, const uint self, const uint peer) {
+static noinline void __avx reset_node_ping_keys (node_s* const node, const uint self, const uint peer) {
 
     ASSERT(self < NODES_N);
     ASSERT(peer < NODES_N);
@@ -155,7 +155,7 @@ static noinline void reset_node_ping_keys (node_s* const node, const uint self, 
 }
 
 // TODO: COLD FUNCTION
-static noinline void secret_derivate (node_s* const node, const u8* const restrict password, uint size) {
+static noinline void __avx secret_derivate (node_s* const node, const u8* const restrict password, uint size) {
 
     ASSERT(size >= PASSWORD_SIZE_MIN);
     ASSERT(size <= PASSWORD_SIZE_MAX);
