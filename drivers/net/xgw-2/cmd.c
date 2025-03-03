@@ -25,15 +25,15 @@ static inline uint gid_of_nid (const uint nid) {
     (uint)BE16((a)[0]), (uint)BE16((a)[1]), (uint)BE16((a)[2]), (uint)BE16((a)[3]), \
     (uint)BE16((a)[4]), (uint)BE16((a)[5]), (uint)BE16((a)[6]), (uint)BE16((a)[7])
 
-#define _PRINT_KEYS(K) \
-    (uintll)((K)[0]), \
-    (uintll)((K)[1]), \
-    (uintll)((K)[2]), \
-    (uintll)((K)[3]), \
-    (uintll)((K)[4]), \
-    (uintll)((K)[5]), \
-    (uintll)((K)[6]), \
-    (uintll)((K)[7])
+#define _PRINT_KEYS(K, i) \
+    (uintll)((K)[i + 0]), \
+    (uintll)((K)[i + 1]), \
+    (uintll)((K)[i + 2]), \
+    (uintll)((K)[i + 3]), \
+    (uintll)((K)[i + 4]), \
+    (uintll)((K)[i + 5]), \
+    (uintll)((K)[i + 6]), \
+    (uintll)((K)[i + 7])
 
 #define _PRINT_SINCE(since) ((get_jiffies_64() - (since))/HZ)
 
@@ -643,11 +643,11 @@ static ssize_t __cold_as_ice __optimize_size cmd (struct file *file, const char 
                     (node->info & N_SECRET  ) ? " SECRET"  : ""
             );
 
-            for_count (k, K_LEN)
-                printk("XGW: %s: IKEYS PING %016llX %016llX %016llX %016llX %016llX %016llX %016llX %016llX\n", node->name, _PRINT_KEYS(node->iKeys[I_PAIR_PING][k]));
+            for_count (i, K_LEN / 8)
+                printk("XGW: %s: IKEYS PING %016llX %016llX %016llX %016llX %016llX %016llX %016llX %016llX\n", node->name, _PRINT_KEYS(node->iKeys[I_KEY_PING], i));
 
-            for_count (k, K_LEN)
-                printk("XGW: %s: OKEYS PING %016llX %016llX %016llX %016llX %016llX %016llX %016llX %016llX\n", node->name, _PRINT_KEYS(node->oKeys[O_PAIR_PING][k]));
+            for_count (i, K_LEN / 8)
+                printk("XGW: %s: OKEYS PING %016llX %016llX %016llX %016llX %016llX %016llX %016llX %016llX\n", node->name, _PRINT_KEYS(node->oKeys[O_KEY_PING], i));
 
         } break;
 
@@ -816,7 +816,7 @@ static ssize_t __cold_as_ice __optimize_size cmd (struct file *file, const char 
             node->dev = xgw;
 
             //
-            node->oVersions[O_PAIR_PING] = I_PAIR_PING;
+            node->oVersions[O_KEY_PING] = I_KEY_PING;
 
             nodes_set_off(nid, node);
 
@@ -878,8 +878,8 @@ static ssize_t __cold_as_ice __optimize_size cmd (struct file *file, const char 
                 node->conns[cid] = cid % PATHS_N;
 
             // NO DYNAMIC KEYS CREATED YET
-            { u64x8 r; random64_n((u64*)&r, K_WORDS, SUFFIX_ULL(CONFIG_XGW_RANDOM_INIT_IPAIRS)); for_count (i, I_PAIRS_DYNAMIC) for_count (k, K_LEN) node->iKeys[i][k] += r; }
-            { u64x8 r; random64_n((u64*)&r, K_WORDS, SUFFIX_ULL(CONFIG_XGW_RANDOM_INIT_OPAIRS)); for_count (o, O_PAIRS_DYNAMIC) for_count (k, K_LEN) node->oKeys[o][k] += r; }
+            random64_n((u64*)&node->iKeys, I_KEYS_DYNAMIC * K_LEN, SUFFIX_ULL(CONFIG_XGW_RANDOM_INIT_IPAIRS));
+            random64_n((u64*)&node->oKeys, O_KEYS_DYNAMIC * K_LEN, SUFFIX_ULL(CONFIG_XGW_RANDOM_INIT_OPAIRS));
 
             // START ON PATHS
             for_count (pid, PATHS_N) {

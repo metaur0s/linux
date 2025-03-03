@@ -255,7 +255,7 @@ static inline int in_pp_ping (node_s* const node, path_s* const path, const skb_
                 return PSTATS_I_PING_RACED;
         }
 
-        u64x8 K[K_LEN];
+        u64 K[K_LEN];
 
         learn(node, ping->rnd, K);
 
@@ -263,7 +263,7 @@ static inline int in_pp_ping (node_s* const node, path_s* const path, const skb_
         // NOTE: A CADA INTERVALO SAO ENVIADOS PINGS POR TODOS OS PATHS,
         //       ENTAO PODE ACABAR TENDO RACE CONDITION AQUI.
         // POR PRECAUCAO O IDEAL É TER MAIS ENTRADAS NA ARRAY DO QUE PROCESSADORES/THREADS
-        const uint o = __atomic_add_fetch(&node->oCycle, 1, __ATOMIC_ACQUIRE) % O_PAIRS_DYNAMIC;
+        const uint o = __atomic_add_fetch(&node->oCycle, 1, __ATOMIC_ACQUIRE) % O_KEYS_DYNAMIC;
                                            node->oVersions[o] = BE8(ping->ver);
                                     memcpy(node->oKeys[o], K, sizeof(K));
                          __atomic_store_n(&node->oIndex,   o,          __ATOMIC_RELAXED);
@@ -285,7 +285,7 @@ static inline int in_pp_ping (node_s* const node, path_s* const path, const skb_
         random64_n(pong, PONG_SIZE / sizeof(u64), p_rcounter);
 
         // TODO: O ALIGN COM RANDOM TEM QUE SER COLOCADO FORA DO ENCAPSULATE, POIS NO CASO DO PING/PONG NAO VAMOS USAR
-        pkt_encapsulate(node, O_PAIR_PING, p_rcounter, skel, oskb, pong, PONG_SIZE);
+        pkt_encapsulate(node, O_KEY_PING, p_rcounter, skel, oskb, pong, PONG_SIZE);
 
         oskb->ip_summed = CHECKSUM_NONE;
 
@@ -466,7 +466,7 @@ _is_xgw:
     //
     p_lcounter = pkt_decrypt(node, i, pkt, size, p_lcounter);
 
-    if (i == I_PAIR_PING)
+    if (i == I_KEY_PING)
         // PING/PONG
         ret_path(in_pp(node, skb, pkt, size, p_lcounter, p_rcounter));
 

@@ -3,7 +3,7 @@
 #define PONG_SIZE 64
 
 struct ping_s {
-    u64 rnd [K_LEN2];
+    u64 rnd [K_LEN];
     u8 ver; // SENDER'S IKEYS INDEX BEING REGISTERED
     u8 _ [7];
 };

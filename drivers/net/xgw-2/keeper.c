@@ -44,7 +44,7 @@ static void keeper (struct timer_list* const timer) {
         ASSERT((node->opaths & (node->kpaths * OPATH_0)) == node->opaths);
         ASSERT((node->ipaths & (node->kpaths * IPATH_0)) == node->ipaths);
 
-        ASSERT(node->oVersions[O_PAIR_PING] == I_PAIR_PING);
+        ASSERT(node->oVersions[O_KEY_PING] == I_KEY_PING);
 
         __atomic_add_fetch(&node->rcounter, 1, __ATOMIC_SEQ_CST); // O OUT USA ISSO PARA ENVIAR
         __atomic_add_fetch(&node->lcounter, 1, __ATOMIC_SEQ_CST); // O IN USA ISSO PARA RECEBER
@@ -290,7 +290,7 @@ static void keeper (struct timer_list* const timer) {
                     ping_s* const ping = SKB_DATA(skb) + 64 + PKT_SIZE + PKT_ALIGN_SIZE;
 
                     // A CADA PING A INPUT KEY MAIS ANTIGA É EXPIRADA
-                    const uint i = node->iCycle = ((uint)node->iCycle + 1) % I_PAIRS_DYNAMIC;
+                    const uint i = node->iCycle = ((uint)node->iCycle + 1) % I_KEYS_DYNAMIC;
 
                     //
                     random64_n(PTR(ping), PING_SIZE / sizeof(u64), SUFFIX_ULL(CONFIG_XGW_RANDOM_PING));
@@ -302,7 +302,7 @@ static void keeper (struct timer_list* const timer) {
                     learn(node, ping->rnd, node->iKeys[i]);
 
                     // BUILD THE PING FROM THE SKEL
-                    pkt_encapsulate(node, O_PAIR_PING, // ELE VAI MANDAR SYN ATÉ RECEBER O PRIMEIRO PING, O QUAL MARCARA O RCOUNTER
+                    pkt_encapsulate(node, O_KEY_PING, // ELE VAI MANDAR SYN ATÉ RECEBER O PRIMEIRO PING, O QUAL MARCARA O RCOUNTER
                         __atomic_load_n(&path->rcounter, __ATOMIC_RELAXED) == COUNTER_CONNECTING ? COUNTER_SYN :
                         __atomic_load_n(&node->rcounter, __ATOMIC_RELAXED), // TODO: SO PODE MARCAR O path->rcounter *APOS* ATUALIZAR O node->rcounter
                         &path->skel, skb, ping, PING_SIZE
