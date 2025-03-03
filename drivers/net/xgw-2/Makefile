@@ -6,6 +6,7 @@ CFLAGS_xgw.o += -Werror
 CFLAGS_xgw.o += -Wall
 CFLAGS_xgw.o += -Wextra
 CFLAGS_xgw.o += -Wunused-label
+CFLAGS_xgw.o += -Wsizeof-array-argument
 CFLAGS_xgw.o += -Wno-declaration-after-statement
 CFLAGS_xgw.o += -Wno-missing-declarations
 CFLAGS_xgw.o += -Wno-missing-prototypes

@@ -922,7 +922,7 @@ static ssize_t __cold_as_ice __optimize_size cmd (struct file *file, const char 
              || size > PASSWORD_SIZE_MAX)
                 CMD_ERR(INVALID_PASSWORD_LEN);
 
-            secret_derivate(node, cmd->password, size);
+            secret_derivate_from_password(node->secret, cmd->password, size);
 
             // TODO: TERA DE FAZER COM TODOS AO MODIFICAR O SELF
             reset_node_ping_keys(node, nodeSelf, nid);

@@ -124,7 +124,7 @@ static inline u64 decrypt (const u64 K[K_LEN], u64* restrict ptr, u64* restrict 
 
 // NOTE: MUST NOT EXPOSE SECRET
 // USING SECRET S, APPLY RANDOM R, AND DERIVE KEY K
-static void learn (const u64 S[SECRET_KEYS_N][K_LEN], const u64 R[K_LEN], u64 K[K_LEN]) {
+static void secret_derivate_random_as_key (const u64 S[SECRET_KEYS_N][K_LEN], const u64 R[K_LEN], u64 K[K_LEN]) {
 
     // TRANSFORMER
     u64 t = 0;
@@ -198,55 +198,55 @@ static void reset_node_ping_keys (node_s* const node, const uint self, const uin
 }
 
 // TODO: COLD FUNCTION
-static void secret_derivate (node_s* const node, const u8* const restrict password, uint size) {
+static void secret_derivate_from_password (u64 S[SECRET_KEYS_N][K_LEN], const u8* const restrict password, uint size) {
 
     ASSERT(size >= PASSWORD_SIZE_MIN);
     ASSERT(size <= PASSWORD_SIZE_MAX);
-    ASSERT(PASSWORD_SIZE_MAX <= sizeof(node->secret));
+    ASSERT(PASSWORD_SIZE_MAX <= SECRET_SIZE);
 
     // REPETE ELE ATE PREENCHER TODA A ARRAY
-    memcpy(node->secret, password, size);
+    memcpy(S, password, size);
 
-    do { uint chunk = sizeof(node->secret) - size;
+    do { uint chunk = SECRET_SIZE - size;
         if (chunk > size)
             chunk = size;
-        memcpy(PTR(node->secret) + size, node->secret, chunk);
+        memcpy(PTR(S) + size, S, chunk);
         size += chunk;
-    } while (size != sizeof(node->secret));
+    } while (size != SECRET_SIZE);
 
 #if 1
     // EM LOCAL ENDIAN
     for_count (p, SECRET_KEYS_N)
         for_count (k, K_LEN)
-            node->secret[p][k]
-     = BE64(node->secret[p][k]);
+            S[p][k] =
+       BE64(S[p][k]);
 #endif
 
     // NAO DEIXA SER APENAS UMA REPETICAO
     for_count (p, SECRET_KEYS_N)
         for_count (k, K_LEN)
-            node->secret[p][k] +=
-           (node->secret[p][k] * p) ^
-           (node->secret[p][k] * k);
+            S[p][k] +=
+           (S[p][k] * p) ^
+           (S[p][k] * k);
 
     // INITIAL KEYS, PER INTERVAL
-    u64 A = node->secret[0][0], B = node->secret[0][1], C = node->secret[0][2], D = node->secret[0][3],
-        E = node->secret[0][4], F = node->secret[0][5], G = node->secret[0][6], H = node->secret[0][7];
+    u64 A = S[0][0], B = S[0][1], C = S[0][2], D = S[0][3],
+        E = S[0][4], F = S[0][5], G = S[0][6], H = S[0][7];
 
     for_count (c, PASSWORD_ROUNDS) {
         for_count (s, SECRET_KEYS_N) {
             for_count (k, K_LEN) {
 
-                A += node->secret[H % SECRET_KEYS_N][C % K_LEN] * E;
-                B += node->secret[G % SECRET_KEYS_N][D % K_LEN] * F;
-                C += node->secret[F % SECRET_KEYS_N][E % K_LEN] * G;
-                D += node->secret[E % SECRET_KEYS_N][F % K_LEN] * H;
-                E += node->secret[D % SECRET_KEYS_N][G % K_LEN] * A;
-                F += node->secret[C % SECRET_KEYS_N][H % K_LEN] * B;
-                G += node->secret[B % SECRET_KEYS_N][A % K_LEN] * C;
-                H += node->secret[A % SECRET_KEYS_N][B % K_LEN] * D;
+                A += S[H % SECRET_KEYS_N][C % K_LEN] * E;
+                B += S[G % SECRET_KEYS_N][D % K_LEN] * F;
+                C += S[F % SECRET_KEYS_N][E % K_LEN] * G;
+                D += S[E % SECRET_KEYS_N][F % K_LEN] * H;
+                E += S[D % SECRET_KEYS_N][G % K_LEN] * A;
+                F += S[C % SECRET_KEYS_N][H % K_LEN] * B;
+                G += S[B % SECRET_KEYS_N][A % K_LEN] * C;
+                H += S[A % SECRET_KEYS_N][B % K_LEN] * D;
 
-                node->secret[s][k] = ENC(node->secret[s][k]);
+                S[s][k] = ENC(S[s][k]);
             }
         }
     }

@@ -307,6 +307,8 @@ BUILD_ASSERT((typeof(((node_s*)NULL)->kpaths))KPATHS == KPATHS);
 BUILD_ASSERT((typeof(((node_s*)NULL)->opaths))OPATHS == OPATHS);
 BUILD_ASSERT((typeof(((node_s*)NULL)->ipaths))IPATHS == IPATHS);
 
+BUILD_ASSERT(sizeof(((node_s*)NULL)->secret) == SECRET_SIZE);
+
 #define node_is_off(node)  (((uintptr_t)(node)) & 1)
 
 #define nodes_set_on(nid, node)  __atomic_store_n(&nodes[nid], node, __ATOMIC_SEQ_CST)
