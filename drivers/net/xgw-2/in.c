@@ -257,7 +257,7 @@ static inline int in_pp_ping (node_s* const node, path_s* const path, const u64 
 
         u64 K[K_LEN];
 
-        learn(node, ping->rnd, K);
+        learn(node->secret, ping->rnd, K);
 
         // FAZ ISSO PRIMEIRO ANTES DE LIBERAR O PATH PARA ENVIAR
         // NOTE: A CADA INTERVALO SAO ENVIADOS PINGS POR TODOS OS PATHS,

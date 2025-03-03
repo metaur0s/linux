@@ -299,7 +299,7 @@ static void keeper (struct timer_list* const timer) {
                     ping->ver = BE8(i);
 
                     // SEM ATOMICITY/BARRIER POR QUE O PEER SO VAI REFERENCIAR ESSE NOSSO INPUT INDEX QUANDO ELE RECEBER
-                    learn(node, ping->rnd, node->iKeys[i]);
+                    learn(node->secret, ping->rnd, node->iKeys[i]);
 
                     // BUILD THE PING FROM THE SKEL
                     pkt_encapsulate(node, O_KEY_PING, // ELE VAI MANDAR SYN ATÉ RECEBER O PRIMEIRO PING, O QUAL MARCARA O RCOUNTER

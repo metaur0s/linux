@@ -123,7 +123,7 @@ static inline u64 decrypt (const u64 K[K_LEN], u64* restrict ptr, u64* restrict 
 }
 
 // MUST NOT EXPOSE SECRETS
-static noinline void learn (const node_s* const node, const u64 R[K_LEN], u64 K[K_LEN]) {
+static noinline void learn (const u64 secret[SECRET_KEYS_N][K_LEN], const u64 R[K_LEN], u64 K[K_LEN]) {
 
     // TRANSFORMER
     u64 t = 0;
@@ -135,7 +135,7 @@ static noinline void learn (const node_s* const node, const u64 R[K_LEN], u64 K[
         t += t >> 16;
 
     // MERGE WITH CONSTANTE, DINAMICAMENTE ESCOLHIDO
-    const u64* const restrict S = node->secret[t % SECRET_KEYS_N];
+    const u64* const restrict S = secret[t % SECRET_KEYS_N];
 
     for_count (k, K_LEN)
         t = K[k] = swap64(swap64(K[k] + S[k]) + t);
