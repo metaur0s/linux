@@ -91,8 +91,8 @@ struct hdr_x_s { // WIRE
             u16 dsize; // SIZE OF THE PAYLOAD (WIRE) OR HEADER (RUNTIME)
         };  u64 info;
     };
-    u64 session; // PATH SESSION
-    u64 sign; // DESTINATION COUNTER (ENCRYPTED)
+    u64 scounter; // SENDER'S LCOUNTER
+    u64 dcounter; // SENDER'S RCOUNTER (MASKED BY HASH)
 };
 
 //
@@ -299,9 +299,9 @@ struct pkt_s {
             u8  _path;
             u8  _reserved;
             u16 hsize;
-        // SEED
+        // SCOUNTER
             net_device_s* phys;
-        // SIGN
+        // DCOUNTER
             u8 type;
             u8 msize;          // skb->mac_len
             u8 moffset;        // PTR(pkt) + path->moffset -> SKB_MAC(skb)

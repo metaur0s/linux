@@ -166,7 +166,7 @@ struct path_s {
     char name [PATH_NAME_SIZE];
     u16 sPorts [PATH_PORTS_N]; // EM BIG ENDIAN
     u16 dPorts [PATH_PORTS_N];
-// 112 -- RO - IN
+// 112 -- IN READ, OUT READ, IN WRITE (ON RECEIVE PING, WHILE OUT IS DISABLED)
     pkt_s skel;
 // 64 -- KEEPER
     u32 rtts [PATH_RTTS_N];

@@ -19,7 +19,7 @@ BUILD_ASSERT(IPPROTO_UDP != ETH_P_IPV6);
 BUILD_ASSERT(IPPROTO_TCP != ETH_P_IP);
 BUILD_ASSERT(IPPROTO_TCP != ETH_P_IPV6);
 
-static noinline void __optimize_size in_discover (const path_s* const path, const skb_s* const skb, pkt_s* const skel) {
+static inline void in_discover (const path_s* const path, const skb_s* const skb, pkt_s* const skel) {
 
     ASSERT(path->info & P_SERVER);
 
@@ -144,9 +144,7 @@ static inline int __compare_exchange64_cst (volatile u64* const where, u64 old, 
     return __atomic_compare_exchange_n(where, &old, new, 0, __ATOMIC_SEQ_CST, __ATOMIC_RELAXED);
 }
 
-static inline int in_pp_pong (node_s* const node, path_s* const path, const pong_s* const pong, const u64 p_lcounter) {
-
-    const u64 p_rcounter = BE64(pong->scounter);
+static inline int in_pp_pong (node_s* const node, path_s* const path, const u64 p_lcounter, const u64 p_rcounter) {
 
     if (p_rcounter <= COUNTER_CONNECTING)
         // HIS COUNTER IS INVALID
@@ -172,11 +170,9 @@ static inline int in_pp_pong (node_s* const node, path_s* const path, const pong
     return PSTATS_I_PONG_GOOD;
 }
 
-static inline int in_pp_ping (node_s* const node, path_s* const path, const ping_s* const ping, const u64 p_lcounter, const skb_s* const iskb) {
+static inline int in_pp_ping (node_s* const node, path_s* const path, const u64 p_lcounter, const u64 p_rcounter , const skb_s* const iskb, const ping_s* const ping) {
 
     pkt_s* skel; pkt_s skel_;
-
-    const u64 p_rcounter = BE64(ping->scounter);
 
     if (p_rcounter <= COUNTER_CONNECTING)
         // HIS COUNTER IS INVALID
@@ -284,11 +280,9 @@ static inline int in_pp_ping (node_s* const node, path_s* const path, const ping
     if (oskb) {
 
         // TODO: USA O SKB_DATA ALIGNED
-        pong_s* const pong = SKB_DATA(oskb) + 64 + PKT_SIZE + PKT_ALIGN_SIZE;
+        void* const pong = SKB_DATA(oskb) + 64 + PKT_SIZE + PKT_ALIGN_SIZE;
 
-        random64_n(PTR(pong), PONG_RANDOMS_N, p_rcounter);
-
-        pong->scounter = __atomic_load_n(&node->lcounter, __ATOMIC_RELAXED);
+        random64_n(pong, PONG_RANDOMS_N, p_rcounter);
 
         // TODO: O ALIGN COM RANDOM TEM QUE SER COLOCADO FORA DO ENCAPSULATE, POIS NO CASO DO PING/PONG NAO VAMOS USAR
         pkt_encapsulate(node, O_KEY_PING, p_rcounter, skel, oskb, pong, PONG_SIZE);
@@ -307,15 +301,15 @@ static inline int in_pp_ping (node_s* const node, path_s* const path, const ping
     return PSTATS_I_PING_GOOD;
 }
 
-static noinline int in_pp (node_s* const node, skb_s* const iskb, const pkt_s* const pkt, const uint size, const u64 p_lcounter) {
+static noinline int in_pp (node_s* const node, skb_s* const iskb, const pkt_s* const pkt, const uint size, const u64 p_lcounter, const u64 p_rcounter) {
 
     path_s* const path = &node->paths[BE8(pkt->x.path)];
 
     if (size == PONG_SIZE)
-        return in_pp_pong(node, path, PTR(pkt->p), p_lcounter);
+        return in_pp_pong(node, path, p_lcounter, p_rcounter);
 
     if (size == PING_SIZE)
-        return in_pp_ping(node, path, PTR(pkt->p), p_lcounter, iskb);
+        return in_pp_ping(node, path, p_lcounter, p_rcounter, iskb, PTR(pkt->p));
 
     return PSTATS_I_NOT_PING_OR_PONG;
 }
@@ -424,12 +418,12 @@ _is_xgw:
     // AGORA SABE ONDE COMECA O PKT
     pkt_s* const pkt = ptr - sizeof(pkt_s);
 
-    //
-    const uint nid  = BE16(pkt->x.src);
-    const uint pid  = BE8 (pkt->x.path);
-    const uint size = BE16(pkt->x.dsize);
-    const uint i    = BE8 (pkt->x.version);
-    const u64 sign  = BE64(pkt->x.sign);
+    const uint nid        = BE16 (pkt->x.src);
+    const uint pid        = BE8  (pkt->x.path);
+    const uint size       = BE16 (pkt->x.dsize);
+    const uint i          = BE8  (pkt->x.version);
+    const u64  p_rcounter = BE64 (pkt->x.scounter);
+    const u64  hash       = BE64 (pkt->x.dcounter);
 
     ASSERT(nid < NODES_N);
 
@@ -467,11 +461,11 @@ _is_xgw:
         ret_path(PSTATS_I_SIZE_TRUNCATED);
 
     //
-    const u64 p_lcounter = pkt_decrypt(node, i, pkt, size, sign);
+    const u64 p_lcounter = pkt_decrypt(node, i, pkt, size, hash);
 
     if (i == I_KEY_PING)
         // PING/PONG
-        ret_path(in_pp(node, skb, pkt, size, p_lcounter));
+        ret_path(in_pp(node, skb, pkt, size, p_lcounter, p_rcounter));
 
     // NORMAL PACKET
 

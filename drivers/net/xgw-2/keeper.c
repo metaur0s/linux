@@ -297,7 +297,6 @@ static void keeper (struct timer_list* const timer) {
 
                     // OVERWRITE WITH THE VERSION
                     ping->ver = BE8(i);
-                    ping->scounter = BE64(node->lcounter);
 
                     // SEM ATOMICITY/BARRIER POR QUE O PEER SO VAI REFERENCIAR ESSE NOSSO INPUT INDEX QUANDO ELE RECEBER
                     learn(node, ping->rnd, node->iKeys[i]);

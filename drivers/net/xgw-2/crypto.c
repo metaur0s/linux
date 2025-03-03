@@ -1,28 +1,30 @@
 
 // !!!!!! TODO: XGW TO XGW REDIRECT WITHOUT GOING THROUGH IP STACK
 
+// AUTHENTICITY AND INTEGRITY
+// - SRC HOST ID
+// - DST HOST ID
+// - PATH ID
+// - RECEIVER IN SLOT
+// - DATA SIZE
+// AUTHENTICITY, INTEGRITY AND PRIVACY
+// - DATA
+
 //
 #define _PKT_START PTR(pkt) + PKT_SIZE + size % sizeof(u64)
 #define _PKT_END   PTR(pkt) + PKT_SIZE + PKT_ALIGN_SIZE + size
 
-#define _PKT_SEED BE64(pkt->x.info ^ pkt->x.seed)
+#define _PKT_SEED BE64(pkt->x.info ^ pkt->x.scounter)
 
-// NOTE: TEM QUE FAZER APOS TER SETADO O PKT INFO E SEED
-#define pkt_encrypt(node, o, pkt, size, rcounter) encrypt(node->oKeys[o], _PKT_START, _PKT_END, _PKT_SEED, rcounter)
-#define pkt_decrypt(node, i, pkt, size, sign)     decrypt(node->iKeys[i], _PKT_START, _PKT_END, _PKT_SEED, sign)
-
-// AUTHENTICITY AND INTEGRITY
-// - HOST IDS
-// - PATH ID
-// - LEARN IN/OUT SLOT
-// AUTHENTICITY, INTEGRITY AND PRIVACY
-// - DATA
+// NOTE: TEM QUE FAZER APOS TER SETADO O PKT INFO E SCOUNTER
+#define pkt_encrypt(node, o, pkt, size, dcounter) ((dcounter) ^ encrypt(node->oKeys[o], _PKT_START, _PKT_END, _PKT_SEED))
+#define pkt_decrypt(node, i, pkt, size, hash)     ((hash)     ^ decrypt(node->iKeys[i], _PKT_START, _PKT_END, _PKT_SEED))
 
 // NAO FAZ UM SWAP FINAL POIS O VALOR É EXPOSTO K[4] ISSO SERIA INUTIL
 #define ENC(x) (  swap64(  swap64(  swap64(  swap64(  swap64(  swap64(  swap64((x) + A) + B) + C) + D) + E) + F) + G) + H)
 #define DEC(x) (unswap64(unswap64(unswap64(unswap64(unswap64(unswap64(unswap64((x) - H) - G) - F) - E) - D) - C) - B) - A)
 
-static inline u64 encrypt (const u64 K[K_LEN], u64* restrict ptr, u64* restrict const lmt, u64 x, const u64 sign) {
+static inline u64 encrypt (const u64 K[K_LEN], u64* restrict ptr, u64* restrict const lmt, u64 x) {
 
     // INITIAL KEYS, PER INTERVAL
     u64 A = K[0], B = K[1], C = K[2], D = K[3],
@@ -42,25 +44,19 @@ static inline u64 encrypt (const u64 K[K_LEN], u64* restrict ptr, u64* restrict 
         G += K[F % K_LEN] * B;
         H += K[B % K_LEN] * A;
 
-        if (ptr != lmt)
-            // READ THE ORIGINAL VALUE
-            x = BE64(*ptr);
-        else // USE THE ORIGINAL SIGN
-            x = sign;
-
-        // ENCRYPT
-        const u64 e = ENC(x);
-
         if (ptr == lmt)
-            // RETURN THE ENCRYPTED SIGN
-            return e;
+            // RETURN THE HASH
+            return ((((((A + B) ^ C) + D) ^ E) + F) ^ G) + H;
+
+        // READ THE ORIGINAL VALUE
+        x = BE64(*ptr);
 
         // WRITE THE ENCRYPTED VALUE
-        *ptr++ = BE64(e);
+        *ptr++ = BE64(ENC(x));
     }
 }
 
-static inline u64 decrypt (const u64 K[K_LEN], u64* restrict ptr, u64* restrict const lmt, u64 x, const u64 sign) {
+static inline u64 decrypt (const u64 K[K_LEN], u64* restrict ptr, u64* restrict const lmt, u64 x) {
 
     // INITIAL KEYS, PER INTERVAL
     u64 A = K[0], B = K[1], C = K[2], D = K[3],
@@ -80,18 +76,12 @@ static inline u64 decrypt (const u64 K[K_LEN], u64* restrict ptr, u64* restrict 
         G += K[F % K_LEN] * B;
         H += K[B % K_LEN] * A;
 
-        if (ptr != lmt)
-            // READ THE ENCRYPTED VALUE
-            x = BE64(*ptr);
-        else // USE THE ENCRYPTED SIGN
-            x = sign;
-
-        // DECRYPT
-        x = DEC(x);
-
         if (ptr == lmt)
-            // RETURN THE ORIGINAL SIGN
-            return x;
+            // RETURN THE HASH
+            return ((((((A + B) ^ C) + D) ^ E) + F) ^ G) + H;
+
+        // DECRYPT THE VALUE
+        x = DEC(BE64(*ptr));
 
         // WRITE THE ORIGINAL VALUE
         *ptr++ = BE64(x);
