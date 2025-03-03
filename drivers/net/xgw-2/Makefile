@@ -1,4 +1,6 @@
 
+CFLAGS_REMOVE_xgw.o += -Wno-unused-label
+
 CFLAGS_xgw.o += -Wfatal-errors
 CFLAGS_xgw.o += -Werror
 CFLAGS_xgw.o += -Wall
