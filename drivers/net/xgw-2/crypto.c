@@ -124,14 +124,15 @@ static inline u64 decrypt (const u64 K[K_LEN], u64* restrict ptr, u64* restrict 
 
 // NOTE: MUST NOT EXPOSE SECRET
 // USING SECRET S, APPLY RANDOM R, AND DERIVE KEY K
-static inline void learn (const u64 S[SECRET_KEYS_N][K_LEN], const u64 R[K_LEN], u64 K[K_LEN]) {
+static void learn (const u64 S[SECRET_KEYS_N][K_LEN], const u64 R[K_LEN], u64 K[K_LEN]) {
 
     // TRANSFORMER
     u64 t = 0;
 
     // LOAD DINAMIC RANDOM
     for_count (k, K_LEN)
-        t += K[k] = BE64(R[k]);
+        // EACH WORD IS AFFECTED BY PREVIOUS ONES
+        K[k] = t += BE64(R[k]) * (popcount(t) + 1);
 
     // FOR INDEXING
     t += t >> 32;
@@ -151,7 +152,7 @@ static inline void learn (const u64 S[SECRET_KEYS_N][K_LEN], const u64 R[K_LEN],
 // TODO: SO REFAZER ISSO SE TIVER MUDADO O SECRET (BY PASSWORD), O NODE ID OU O SELF ID
 // TODO: COLD FUNCTION
 // MUST PROVE THE PING WILL GENERATE THE SAME KEYS
-static noinline void reset_node_ping_keys (node_s* const node, const uint self, const uint peer) {
+static void reset_node_ping_keys (node_s* const node, const uint self, const uint peer) {
 
     ASSERT(self < NODES_N);
     ASSERT(peer < NODES_N);
@@ -196,7 +197,7 @@ static noinline void reset_node_ping_keys (node_s* const node, const uint self, 
 }
 
 // TODO: COLD FUNCTION
-static noinline void secret_derivate (node_s* const node, const u8* const restrict password, uint size) {
+static void secret_derivate (node_s* const node, const u8* const restrict password, uint size) {
 
     ASSERT(size >= PASSWORD_SIZE_MIN);
     ASSERT(size <= PASSWORD_SIZE_MAX);
