@@ -60,7 +60,7 @@ static inline u64* _PKT_END (const pkt_s* const pkt, const uint size)
 #define ENC(x) (  swap64(  swap64(  swap64(  swap64(  swap64(  swap64(  swap64((x) + A) + B) + C) + D) + E) + F) + G) + H)
 #define DEC(x) (unswap64(unswap64(unswap64(unswap64(unswap64(unswap64(unswap64((x) - H) - G) - F) - E) - D) - C) - B) - A)
 
-static inline u64 encrypt (const u64 K[K_LEN], u64* restrict ptr, u64* restrict const lmt, u64 x) {
+static inline u64 encrypt (const u64 K[K_LEN], u64* restrict pos, u64* restrict const end, u64 x) {
 
     // INITIAL KEYS, PER INTERVAL
     u64 A = K[0], B = K[1], C = K[2], D = K[3],
@@ -80,19 +80,19 @@ static inline u64 encrypt (const u64 K[K_LEN], u64* restrict ptr, u64* restrict 
         G += K[F % K_LEN] * B;
         H += K[B % K_LEN] * A;
 
-        if (ptr == lmt)
+        if (pos == end)
             // RETURN THE HASH
             return A + B + C + D + E + F + G + H;
 
         // READ THE ORIGINAL VALUE
-        x = BE64(*ptr);
+        x = BE64(*pos);
 
         // WRITE THE ENCRYPTED VALUE
-        *ptr++ = BE64(ENC(x));
+        *pos++ = BE64(ENC(x));
     }
 }
 
-static inline u64 decrypt (const u64 K[K_LEN], u64* restrict ptr, u64* restrict const lmt, u64 x) {
+static inline u64 decrypt (const u64 K[K_LEN], u64* restrict pos, u64* restrict const end, u64 x) {
 
     // INITIAL KEYS, PER INTERVAL
     u64 A = K[0], B = K[1], C = K[2], D = K[3],
@@ -112,15 +112,15 @@ static inline u64 decrypt (const u64 K[K_LEN], u64* restrict ptr, u64* restrict 
         G += K[F % K_LEN] * B;
         H += K[B % K_LEN] * A;
 
-        if (ptr == lmt)
+        if (pos == end)
             // RETURN THE HASH
             return A + B + C + D + E + F + G + H;
 
         // DECRYPT THE VALUE
-        x = DEC(BE64(*ptr));
+        x = DEC(BE64(*pos));
 
         // WRITE THE ORIGINAL VALUE
-        *ptr++ = BE64(x);
+        *pos++ = BE64(x);
     }
 }
 
