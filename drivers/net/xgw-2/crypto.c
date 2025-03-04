@@ -145,15 +145,18 @@ static void secret_derivate_random_as_key (const u64 S[SECRET_KEYS_N][K_LEN], co
             swap64(swap64(swap64(swap64(swap64(swap64(swap64(swap64(swap64(K[k] + S[k]) + H) + G) + F) + E) + D) + C) + B) + A);
 }
 
-// CONSTANT KEYS, FOR PING/PONG
-// TODO: SO REFAZER ISSO SE TIVER MUDADO O SECRET (BY PASSWORD), O NODE ID OU O SELF ID
-// TODO: COLD FUNCTION
-// MUST PROVE THE PING WILL GENERATE THE SAME KEYS
+// GENERATE CONSTANT PING/PONG KEYS
+// REFAZER ISSO AO ALTERAR:
+//  -- SELF ID
+//  -- NODE ID
+//  -- SECRET (PASSWORD)
+// * MUST NOT EXPOSE SECRET.
+// * MUST PROVE SENDER/RECEIVER HOST IDS.
+// * MUST PROVE THE PING WILL GENERATE THE SAME KEYS.
 // --
-// WILL GENERATE TWO KEYS.
-// A NODE WILL USE THEM FOR IN/OUT
-// IT'S PEER WILL USE THEM FOR OUT/IN
-// --
+// WILL GENERATE TWO KEYS:
+//      NODE HIGHER WILL USE THEM AS IN/OUT,
+//      NODE LOWER WILL USE THEM AS OUT/IN
 static void reset_node_ping_keys (node_s* const node, const uint self, const uint peer) {
 
     ASSERT(self < NODES_N);
@@ -166,11 +169,11 @@ static void reset_node_ping_keys (node_s* const node, const uint self, const uin
     if (a > b) {
         a ^= (b ^= (a ^= b)); // SWAP THEM, SO WE ALWAYS HAVE THE SAME A AND B
         // CADA LADO USA OS MESMOS PING/PONG, POREM INVERTIDOS
-        AK = node->oKeys[O_KEY_PING];
-        BK = node->iKeys[I_KEY_PING];
-    } else {
         AK = node->iKeys[I_KEY_PING];
         BK = node->oKeys[O_KEY_PING];
+    } else {
+        AK = node->oKeys[O_KEY_PING];
+        BK = node->iKeys[I_KEY_PING];
     }
 
     // INITIALIZE THE KEYS
