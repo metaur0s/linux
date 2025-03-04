@@ -7,14 +7,23 @@
 
 static inline void __prefetch_k (const u64 K[K_LEN]) {
 
-    __builtin_prefetch(&K[(0 * CACHE_LINE_SIZE) / sizeof(*K)], 0, 3);
-    __builtin_prefetch(&K[(1 * CACHE_LINE_SIZE) / sizeof(*K)], 0, 3);
-    __builtin_prefetch(&K[(2 * CACHE_LINE_SIZE) / sizeof(*K)], 0, 3);
-    __builtin_prefetch(&K[(3 * CACHE_LINE_SIZE) / sizeof(*K)], 0, 3);
-    __builtin_prefetch(&K[(4 * CACHE_LINE_SIZE) / sizeof(*K)], 0, 3);
-    __builtin_prefetch(&K[(5 * CACHE_LINE_SIZE) / sizeof(*K)], 0, 3);
-    __builtin_prefetch(&K[(6 * CACHE_LINE_SIZE) / sizeof(*K)], 0, 3);
-    __builtin_prefetch(&K[(7 * CACHE_LINE_SIZE) / sizeof(*K)], 0, 3);
+    __builtin_prefetch(&K[(0 * CACHE_LINE_SIZE) / sizeof(K[0])], 0, 3);
+#if (K_SIZE / CACHE_LINE_SIZE) > 1
+    __builtin_prefetch(&K[(1 * CACHE_LINE_SIZE) / sizeof(K[0])], 0, 3);
+#if (K_SIZE / CACHE_LINE_SIZE) > 2
+    __builtin_prefetch(&K[(2 * CACHE_LINE_SIZE) / sizeof(K[0])], 0, 3);
+    __builtin_prefetch(&K[(3 * CACHE_LINE_SIZE) / sizeof(K[0])], 0, 3);
+#if (K_SIZE / CACHE_LINE_SIZE) > 4
+    __builtin_prefetch(&K[(4 * CACHE_LINE_SIZE) / sizeof(K[0])], 0, 3);
+    __builtin_prefetch(&K[(5 * CACHE_LINE_SIZE) / sizeof(K[0])], 0, 3);
+    __builtin_prefetch(&K[(6 * CACHE_LINE_SIZE) / sizeof(K[0])], 0, 3);
+    __builtin_prefetch(&K[(7 * CACHE_LINE_SIZE) / sizeof(K[0])], 0, 3);
+#if (K_SIZE / CACHE_LINE_SIZE) > 8
+#error
+#endif
+#endif
+#endif
+#endif
 }
 
 static inline u64 encrypt (const u64 K[K_LEN], u64* restrict pos, u64* restrict const end, u64 x) {
