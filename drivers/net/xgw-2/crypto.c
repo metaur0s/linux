@@ -124,32 +124,25 @@ static inline u64 decrypt (const u64 K[K_LEN], u64* restrict pos, u64* restrict 
     }
 }
 
-// NOTE: MUST NOT EXPOSE SECRET
 // USING SECRET S, APPLY RANDOM R, AND DERIVE KEY K
 static void secret_derivate_random_as_key (const u64 S[SECRET_KEYS_N][K_LEN], const u64 R[K_LEN], u64 K[K_LEN]) {
 
     // TRANSFORMER
-    u64 t = 0xCCACD791822AD416ULL;
+    u64 A = 0xAE2A134212DD6AEEULL, B = 0x2CD7FAE5AB5C2DF0ULL, C = 0x30015620CA42573EULL, D = 0x24F5318E88AF90ADULL,
+        E = 0x42105E379B508E9DULL, F = 0x45B173FCA98E53FBULL, G = 0x6F725D1874FB2ECBULL, H = 0x36A485858CB60FC9ULL;
 
     // LOAD DYNAMIC RANDOM
     for_count (k, K_LEN)
-        // EACH WORD IS AFFECTED BY PREVIOUS ONES
-        // ACCUMULATE OF ALL THEM
-        K[k] = t += (BE64(R[k]) + t) * (popcount(t) + 1);
-
-    // USE ALL THE BITS
-    t += t >> 32;
-    t += t >> 16;
+        A += B += C += D += E += F += G += H += K[k] =
+            swap64(swap64(swap64(swap64(swap64(swap64(swap64(swap64(BE64(R[k]) + H) + G) + F) + E) + D) + C) + B) + A);
 
     // DYNAMICALY CHOOSE CONSTANT SECRET
-    const u64* const restrict s = S[t % SECRET_KEYS_N];
+    const u64* const restrict s = S[(((((((A + B) ^ C) + D) ^ E) + F) ^ G) + H) % SECRET_KEYS_N];
 
     // MERGE
     for_count (k, K_LEN)
-        // THE SECRET WORD IS AFFECTED BY THE TRANSFORM
-        // THE TRANSFORM IS AFFECTED BY THE SECRET WORD
-        // THE KEY WORD IS AFFECTED BY THE TRANSFORM
-        K[k] += t += (s[k] + t) * (popcount(t) + 1);
+        A += B += C += D += E += F += G += H += K[k] =
+            swap64(swap64(swap64(swap64(swap64(swap64(swap64(swap64((K[k] ^ S[k]) + H) + G) + F) + E) + D) + C) + B) + A);
 }
 
 // CONSTANT KEYS, FOR PING/PONG
@@ -228,15 +221,17 @@ static void secret_derivate_from_password (u64 S[SECRET_KEYS_N][K_LEN], const u8
        BE64(S[s][k]);
 #endif
 
-    // THE NON-REPEATED PART IS ON THE START OF THE BUFFER
-    u64 A = S[0][0], B = S[0][1], C = S[0][2], D = S[0][3],
-        E = S[0][4], F = S[0][5], G = S[0][6], H = S[0][7];
+    //
+    u64 A = 0x47092E83C59147FBULL, B = 0x6B80F1DD47505E84ULL, C = 0x8ACB8D82EBE013B0ULL, D = 0xEF7D87567DABC6DDULL,
+        E = 0x879E9AF60BA2284DULL, F = 0x16CC54BBE05DA85FULL, G = 0x76A45CC8348064B5ULL, H = 0x03781F048D90B044ULL;
 
     // NAO DEIXA SER APENAS UMA REPETICAO
     for_count (s, SECRET_KEYS_N)
         for_count (k, K_LEN)
-            A += B += C += D += E += F += G += H += S[s][k] = ENC(S[s][k]);
+            A += B += C += D += E += F += G += H += S[s][k] =
+                swap64(swap64(swap64(swap64(swap64(swap64(swap64(swap64(S[s][k] + H) + G) + F) + E) + D) + C) + B) + A);
 
+    // SHUFFLE
     for_count (c, PASSWORD_ROUNDS) {
         for_count (s, SECRET_KEYS_N) {
             for_count (k, K_LEN) {
@@ -250,7 +245,7 @@ static void secret_derivate_from_password (u64 S[SECRET_KEYS_N][K_LEN], const u8
                 G += S[B % SECRET_KEYS_N][A % K_LEN] * C;
                 H += S[A % SECRET_KEYS_N][B % K_LEN] * D;
 
-                S[s][k] = ENC(S[s][k]);
+                S[s][k] = swap64(swap64(swap64(swap64(swap64(swap64(swap64(swap64(S[s][k] + H) + G) + F) + E) + D) + C) + B) + A);
             }
         }
     }
