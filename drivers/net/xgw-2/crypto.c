@@ -5,7 +5,8 @@
 #define ENC(x) (  swap64(  swap64(  swap64(  swap64(  swap64(  swap64(  swap64((x) + A) + B) + C) + D) + E) + F) + G) + H)
 #define DEC(x) (unswap64(unswap64(unswap64(unswap64(unswap64(unswap64(unswap64((x) - H) - G) - F) - E) - D) - C) - B) - A)
 
-static inline void __prefetch_k (const u64 K[K_LEN]) {
+// TRY TO KEEP IN ALL CACHES AS WE DEAL WITH MULTIPLE PACKETS
+static inline void __crypt_prefetch_k (const u64 K[K_LEN]) {
 
     __builtin_prefetch(&K[(0 * CACHE_LINE_SIZE) / sizeof(K[0])], 0, 3);
 #if (K_SIZE / CACHE_LINE_SIZE) > 1
@@ -26,12 +27,34 @@ static inline void __prefetch_k (const u64 K[K_LEN]) {
 #endif
 }
 
+//
+static inline void __crypt_prefetch_k_once (const u64 K[K_LEN]) {
+
+    __builtin_prefetch(&K[(0 * CACHE_LINE_SIZE) / sizeof(K[0])], 0, 0);
+#if (K_SIZE / CACHE_LINE_SIZE) > 1
+    __builtin_prefetch(&K[(1 * CACHE_LINE_SIZE) / sizeof(K[0])], 0, 0);
+#if (K_SIZE / CACHE_LINE_SIZE) > 2
+    __builtin_prefetch(&K[(2 * CACHE_LINE_SIZE) / sizeof(K[0])], 0, 0);
+    __builtin_prefetch(&K[(3 * CACHE_LINE_SIZE) / sizeof(K[0])], 0, 0);
+#if (K_SIZE / CACHE_LINE_SIZE) > 4
+    __builtin_prefetch(&K[(4 * CACHE_LINE_SIZE) / sizeof(K[0])], 0, 0);
+    __builtin_prefetch(&K[(5 * CACHE_LINE_SIZE) / sizeof(K[0])], 0, 0);
+    __builtin_prefetch(&K[(6 * CACHE_LINE_SIZE) / sizeof(K[0])], 0, 0);
+    __builtin_prefetch(&K[(7 * CACHE_LINE_SIZE) / sizeof(K[0])], 0, 0);
+#if (K_SIZE / CACHE_LINE_SIZE) > 8
+#error
+#endif
+#endif
+#endif
+#endif
+}
+
 static inline u64 encrypt (const u64 K[K_LEN], u64* restrict pos, u64* restrict const end, u64 x) {
 
     ASSERT(end >= &pos[PKT_ALIGN_SIZE]);
     ASSERT(end <= &pos[PKT_ALIGN_SIZE + XGW_PAYLOAD_MAX]);
 
-    __prefetch_k(K);
+    __crypt_prefetch_k(K);
 
     // INITIAL KEYS, PER INTERVAL
     u64 A = 0xD03D605BF5FD9241ULL, B = 0x3A688E2046C195EBULL, C = 0x545121D4D803E72BULL, D = 0xE1CB328227DCE32BULL,
@@ -68,7 +91,7 @@ static inline u64 decrypt (const u64 K[K_LEN], u64* restrict pos, u64* restrict 
     ASSERT(end >= &pos[PKT_ALIGN_SIZE]);
     ASSERT(end <= &pos[PKT_ALIGN_SIZE + XGW_PAYLOAD_MAX]);
 
-    __prefetch_k(K);
+    __crypt_prefetch_k(K);
 
     // INITIAL KEYS, PER INTERVAL
     u64 A = 0xD03D605BF5FD9241ULL, B = 0x3A688E2046C195EBULL, C = 0x545121D4D803E72BULL, D = 0xE1CB328227DCE32BULL,
@@ -115,10 +138,13 @@ static void secret_derivate_random_as_key (const u64 S[SECRET_KEYS_N][K_LEN], co
     // DYNAMICALY CHOOSE CONSTANT SECRET
     const u64* const restrict s = S[(((((((A + B) ^ C) + D) ^ E) + F) ^ G) + H) % SECRET_KEYS_N];
 
+    //
+    __crypt_prefetch_k_once(s);
+
     // MERGE
     for_count (k, K_LEN)
         A += B += C += D += E += F += G += H += K[k] =
-            swap64(swap64(swap64(swap64(swap64(swap64(swap64(swap64(swap64(K[k] + S[k]) + H) + G) + F) + E) + D) + C) + B) + A);
+            swap64(swap64(swap64(swap64(swap64(swap64(swap64(swap64(swap64(K[k] + s[k]) + H) + G) + F) + E) + D) + C) + B) + A);
 }
 
 // GENERATE CONSTANT PING/PONG KEYS
@@ -161,10 +187,15 @@ static void reset_node_ping_keys (node_s* const node, const uint self, const uin
     u64 A = 0xAFEE0C56092DF220ULL, B = 0x8BD98EC995251C3CULL, C = 0x9A3943E82D8DD4D2ULL, D = 0x501FBD1644159395ULL,
         E = 0x02E12A80B229ADF5ULL, F = 0x52DC3014C0C6A1BAULL, G = 0x89DEA1B4941E360CULL, H = 0xC1B7B1DD4CA86D42ULL;
 
-    for_count (s, SECRET_KEYS_N) {
-        for_count (k, K_LEN) A += B += C += D += E += F += G += H += AK[k] = swap64(swap64(swap64(swap64(swap64(swap64(swap64(swap64(swap64(AK[k] + node->secret[s][k]) + H) + G) + F) + E) + D) + C) + B) + A);
-        for_count (k, K_LEN) A += B += C += D += E += F += G += H += BK[k] = swap64(swap64(swap64(swap64(swap64(swap64(swap64(swap64(swap64(BK[k] + node->secret[s][k]) + H) + G) + F) + E) + D) + C) + B) + A);
-    }
+    const u64* s = node->secret;
+    const u64* end = &s[SECRET_KEYS_N];
+
+    do { __crypt_prefetch_k_once(s);
+
+        for_count (k, K_LEN) A += B += C += D += E += F += G += H += AK[k] = swap64(swap64(swap64(swap64(swap64(swap64(swap64(swap64(swap64(AK[k] + s[k]) + H) + G) + F) + E) + D) + C) + B) + A);
+        for_count (k, K_LEN) A += B += C += D += E += F += G += H += BK[k] = swap64(swap64(swap64(swap64(swap64(swap64(swap64(swap64(swap64(BK[k] + s[k]) + H) + G) + F) + E) + D) + C) + B) + A);
+
+    } while (++s != end);
 }
 
 // REPETE ELE ATE PREENCHER TODA A ARRAY
