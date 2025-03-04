@@ -174,23 +174,23 @@ static void reset_node_ping_keys (node_s* const node, const uint self, const uin
         Kpong = node->oKeys[O_KEY_PING];
     }
 
-    u64 t;
-
     // MESMO QUE USE O MESMO PASSWORD ENTRE VARIOS NODES, NAO DEIXA QUE O PING KEYS SEJA O MESMO
-    if (self > peer)
-        t = (self << 16) | peer;
-    else
-        t = (peer << 16) | self;
+    u64 i = 0x0001000100010001ULL * self;
+    u64 o = 0x0001000100010001ULL * peer;
 
-    // FILL THE WHOLE WORD WITH THEM
-    t *= 0x0000000100000001ULL;
+    // OS PONTEIROS JÁ ESTÃO INVERTIDOS.
+    // O RESTO TEM QUE SER TUDO IGUAL
+    if (i > o)
+        i ^= o ^= i ^= o;
 
-    for_count (k, K_LEN) Kping[k] = t += 0xA601E857DF7f6A12ULL;
-    for_count (k, K_LEN) Kpong[k] = t += 0xF0778A61A03b4480ULL;
+    // INITIALIZE THE KEYS
+    for_count (k, K_LEN) Kping[k] = i += 0xA601E857DF7F6A12ULL;
+    for_count (k, K_LEN) Kpong[k] = o += 0xF0778A61A03B4480ULL;
 
+    // NOW MERGE WITH THE ENTIRE SECRET
     for_count (s, SECRET_KEYS_N) {
-        for_count (k, K_LEN) Kping[k] += t += node->secret[s][k];
-        for_count (k, K_LEN) Kpong[k] += t += node->secret[s][k];
+        for_count (k, K_LEN) Kping[k] += i += node->secret[s][k];
+        for_count (k, K_LEN) Kpong[k] += o += node->secret[s][k];
     }
 }
 
