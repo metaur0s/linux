@@ -95,9 +95,9 @@ typedef struct net_device_ops net_device_ops_s;
 #define BE32(x) (x)
 #define BE64(x) (x)
 #else
-#define BE16(x) ((u16)__builtin_bswap16((u16)(x)))
-#define BE32(x) ((u32)__builtin_bswap32((u32)(x)))
-#define BE64(x) ((u64)__builtin_bswap64((u64)(x)))
+#define BE16 __builtin_bswap16
+#define BE32 __builtin_bswap32
+#define BE64 __builtin_bswap64
 #endif
 
 // ALIGNDING FOR CACHE-LINE SIZE

@@ -220,7 +220,7 @@ static void secret_derivate_from_password (u64 S[SECRET_KEYS_N][K_LEN], const u8
 
     copy_and_fill(S, SECRET_SIZE, password, size);
 
-#if 1
+#ifndef __BIG_ENDIAN
     // EM LOCAL ENDIAN
     for_count (s, SECRET_KEYS_N)
         for_count (k, K_LEN)
