@@ -7,6 +7,9 @@
 
 static inline u64 encrypt (const u64 K[K_LEN], u64* restrict pos, u64* restrict const end, u64 x) {
 
+    ASSERT(pos <= (end - 2));
+    ASSERT(end <= (pos + 65536/sizeof(*pos)));
+
     // INITIAL KEYS, PER INTERVAL
     u64 A = K[0], B = K[1], C = K[2], D = K[3],
         E = K[4], F = K[5], G = K[6], H = K[7];
@@ -38,6 +41,9 @@ static inline u64 encrypt (const u64 K[K_LEN], u64* restrict pos, u64* restrict 
 }
 
 static inline u64 decrypt (const u64 K[K_LEN], u64* restrict pos, u64* restrict const end, u64 x) {
+
+    ASSERT(pos <= (end - 2));
+    ASSERT(end <= (pos + 65536/sizeof(*pos)));
 
     // INITIAL KEYS, PER INTERVAL
     u64 A = K[0], B = K[1], C = K[2], D = K[3],
@@ -216,7 +222,8 @@ static void secret_derivate_from_password (u64 S[SECRET_KEYS_N][K_LEN], const u8
 def compute (a, b):
     #return ((a + b) ^ a) + b
     #return (((a + b) ^ (a * b)) + a) ^ b
-    return ((a + b) * a) + b
+    #return ((a + b) * a) + b
+    return (((a + b) * a) + b) ^ a
 
 for a in (0xAABBCC0000, 0xAABBCC0001, 0xAABBCCDD00, 0xAABBCCDDEE, 0xAABBCCDDFF):
     for b in (0xAABBCC0000, 0xAABBCC0001, 0xAABBCCDD00, 0xAABBCCDDEE, 0xAABBCCDDFF):
@@ -242,7 +249,7 @@ static inline u64 _PKT_SEED (const pkt_s* const pkt) {
     const u64 a = BE64(pkt->x.info);
     const u64 b = BE64(pkt->x.scounter);
 
-    return ((a + b) * a) + b;
+    return (((a + b) * a) + b) ^ a;
 }
 
 // A IDÉIA É ASSUMIR QUE O SIZE É SEMPRE MULTIPLO DE 64-BITS.
