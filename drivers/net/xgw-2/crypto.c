@@ -246,7 +246,7 @@ static void secret_derivate_from_password (u64 S[SECRET_KEYS_N][K_LEN], const u8
 
     // SHUFFLE
     for_count (c, PASSWORD_ROUNDS) {
-        for_count (s, SECRET_KEYS_N) {
+        for_count (s, SECRET_KEYS_N) { __crypt_prefetch_k_once(S[s]);
             for_count (k, K_LEN) {
 
                 A += S[H % SECRET_KEYS_N][C % K_LEN] * E;
