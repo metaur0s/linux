@@ -19,7 +19,7 @@ static unsigned int max_entries, table_size;
 static void wg_ratelimiter_gc_entries(struct work_struct *);
 static DECLARE_DEFERRABLE_WORK(gc_work, wg_ratelimiter_gc_entries);
 static struct hlist_head *table_v4;
-#if IS_ENABLED(CONFIG_IPV6)
+#ifdef CONFIG_WIREGUARD_IP6
 static struct hlist_head *table_v6;
 #endif
 
@@ -66,7 +66,7 @@ static void wg_ratelimiter_gc_entries(struct work_struct *work)
 			    now - entry->last_time_ns > NSEC_PER_SEC)
 				entry_uninit(entry);
 		}
-#if IS_ENABLED(CONFIG_IPV6)
+#ifdef CONFIG_WIREGUARD_IP6
 		hlist_for_each_entry_safe(entry, temp, &table_v6[i], hash) {
 			if (unlikely(!work) ||
 			    now - entry->last_time_ns > NSEC_PER_SEC)
@@ -97,7 +97,7 @@ bool wg_ratelimiter_allow(struct sk_buff *skb, struct net *net)
 		bucket = &table_v4[hsiphash_2u32(net_word, ip, &key) &
 				   (table_size - 1)];
 	}
-#if IS_ENABLED(CONFIG_IPV6)
+#ifdef CONFIG_WIREGUARD_IP6
 	else if (skb->protocol == htons(ETH_P_IPV6)) {
 		/* Only use 64 bits, so as to ratelimit the whole /64. */
 		memcpy(&ip, &ipv6_hdr(skb)->saddr, sizeof(ip));
@@ -180,7 +180,7 @@ int wg_ratelimiter_init(void)
 	if (unlikely(!table_v4))
 		goto err_kmemcache;
 
-#if IS_ENABLED(CONFIG_IPV6)
+#ifdef CONFIG_WIREGUARD_IP6
 	table_v6 = kvcalloc(table_size, sizeof(*table_v6), GFP_KERNEL);
 	if (unlikely(!table_v6)) {
 		kvfree(table_v4);
@@ -212,7 +212,7 @@ void wg_ratelimiter_uninit(void)
 	wg_ratelimiter_gc_entries(NULL);
 	rcu_barrier();
 	kvfree(table_v4);
-#if IS_ENABLED(CONFIG_IPV6)
+#ifdef CONFIG_WIREGUARD_IP6
 	kvfree(table_v6);
 #endif
 	kmem_cache_destroy(entry_cache);

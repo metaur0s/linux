@@ -5671,6 +5671,10 @@ static inline int nf_ingress(struct sk_buff *skb, struct packet_type **pt_prev,
 	return 0;
 }
 
+#ifdef CONFIG_XGW
+extern int xgw_dev_in (struct sk_buff*);
+#endif
+	
 static int __netif_receive_skb_core(struct sk_buff **pskb, bool pfmemalloc,
 				    struct packet_type **ppt_prev)
 {
@@ -5686,7 +5690,6 @@ static int __netif_receive_skb_core(struct sk_buff **pskb, bool pfmemalloc,
 
 	trace_netif_receive_skb(skb);
 
-	orig_dev = skb->dev;
 
 	skb_reset_network_header(skb);
 #if !defined(CONFIG_DEBUG_NET)
@@ -5698,6 +5701,20 @@ static int __netif_receive_skb_core(struct sk_buff **pskb, bool pfmemalloc,
 		skb_reset_transport_header(skb);
 #endif
 	skb_reset_mac_len(skb);
+
+	// NOTE: OLHA A MUDANCA QUE FIZEMOS AQUI
+	// PRIMEIRO TEM QUE DAR O skb_reset_network_header(), skb_reset_transport_header(), skb_reset_mac_len()
+	// E SO SETAR O orig_dev DEPOIS DISSO AQUI
+	//   (NO CASO DO DROP, CONFIRMAR QUE NAO USA O orig_dev)
+	// TODO: FIXME: DESCOBRIR O QUE CAUSA TANTOS SKBS NAO LINEARES AQUI
+#ifdef CONFIG_XGW
+#if 0
+	if (skb->dev->flags & IFF_XGW)
+#endif
+		if (xgw_dev_in(skb))
+			goto drop;
+#endif
+	orig_dev = skb->dev;
 
 	pt_prev = NULL;
 
@@ -5720,11 +5737,17 @@ another_round:
 		}
 	}
 
-	if (eth_type_vlan(skb->protocol)) {
+#ifndef CONFIG_VLAN_PASS
+    switch (skb->protocol) { // eth_type_vlan
+        case htons(ETH_P_8021Q):
+        case htons(ETH_P_8021AD):
+#ifndef CONFIG_VLAN_DROP
 		skb = skb_vlan_untag(skb);
 		if (unlikely(!skb))
+#endif
 			goto out;
-	}
+    }
+#endif
 
 	if (skb_skip_tc_classify(skb))
 		goto skip_classify;
@@ -5767,6 +5790,7 @@ skip_classify:
 	if (pfmemalloc && !skb_pfmemalloc_protocol(skb))
 		goto drop;
 
+#ifdef CONFIG_VLAN
 	if (skb_vlan_tag_present(skb)) {
 		if (pt_prev) {
 			ret = deliver_skb(skb, pt_prev, orig_dev);
@@ -5777,6 +5801,7 @@ skip_classify:
 		else if (unlikely(!skb))
 			goto out;
 	}
+#endif
 
 	rx_handler = rcu_dereference(skb->dev->rx_handler);
 	if (rx_handler) {
@@ -5800,6 +5825,7 @@ skip_classify:
 		}
 	}
 
+#ifdef CONFIG_VLAN
 	if (unlikely(skb_vlan_tag_present(skb)) && !netdev_uses_dsa(skb->dev)) {
 check_vlan_id:
 		if (skb_vlan_tag_get_id(skb)) {
@@ -5836,6 +5862,7 @@ check_vlan_id:
 		 */
 		__vlan_hwaccel_clear_tag(skb);
 	}
+#endif
 
 	type = skb->protocol;
 

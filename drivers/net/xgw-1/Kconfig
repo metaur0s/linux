@@ -1,0 +1,132 @@
+
+menuconfig XGW
+    bool  "XGW"
+    default n
+
+if XGW
+
+    config    XGW_ASSERT
+        bool "XGW_ASSERT"
+        default n
+
+    config    XGW_NMAP
+        bool "XGW_NMAP"
+        default n
+
+    config    XGW_DEBUG
+        bool "XGW_DEBUG"
+        default n
+
+if XGW_DEBUG
+
+    config    XGW_DEBUG_IDROP
+        bool "XGW_DEBUG_IDROP"
+        default n
+
+    config    XGW_DEBUG_ODROP
+        bool "XGW_DEBUG_ODROP"
+        default n
+
+endif
+
+    config    XGW_GATEWAY
+        bool "XGW_GATEWAY"
+        default n
+
+    config    XGW_GATEWAY_TCP_PROXY
+        bool "XGW_GATEWAY_TCP_PROXY"
+        depends on XGW_GATEWAY
+        default n
+
+    config   XGW_GATEWAY_TCP_PROXY_PORT
+        int "XGW_GATEWAY_TCP_PROXY_PORT"
+        depends on XGW_GATEWAY_TCP_PROXY
+        default 80
+
+    config    XGW_RDRAND
+        bool "XGW_RDRAND"
+        default n
+
+    config    XGW_BEEP
+        bool "XGW_BEEP"
+        default n
+
+    config   XGW_BEEP_BASE
+        int "XGW_BEEP_BASE"
+        default 2000
+        depends on XGW_BEEP
+
+    config   XGW_BEEP_MAX
+        int "XGW_BEEP_MAX"
+        default 2500
+        depends on XGW_BEEP
+
+    config XGW_CONNS_MIN
+      int "XGW_CONNS_MIN"
+        default 1
+
+    config XGW_CONNS_MAX
+      int "XGW_CONNS_MAX"
+        default 524288
+
+    config XGW_RANDOM_INIT_IPAIRS
+      hex "XGW_RANDOM_INIT_IPAIRS"
+        default 0x7f8e60fe040b73a1
+
+    config XGW_RANDOM_INIT_OPAIRS
+      hex "XGW_RANDOM_INIT_OPAIRS"
+        default 0xbd86b79f3de791dc
+
+    config XGW_RANDOM_ENCRYPT_SEED
+      hex "XGW_RANDOM_ENCRYPT_SEED"
+        default 0xb9f3acba3f6efdcf
+
+    config XGW_RANDOM_ENCRYPT_ALIGN
+      hex "XGW_RANDOM_ENCRYPT_ALIGN"
+        default 0x625185f5756462d8
+
+    config XGW_RANDOM_PING
+      hex "XGW_RANDOM_PING"
+        default 0x59114f654f2185ad
+
+    config XGW_ITER_X_ADD
+      hex "XGW_ITER_X_ADD"
+        default 0x7dd15b2541258e21
+
+    config XGW_ITER_X_MASK
+      hex "XGW_ITER_X_MASK"
+        default 0x03dee57e21b29778
+
+    config XGW_ITER_KEY_ADD_0
+      hex "XGW_ITER_KEY_ADD_0"
+        default 0x6a1574c070136dbf
+
+    config XGW_ITER_KEY_ADD_1
+      hex "XGW_ITER_KEY_ADD_1"
+        default 0x5cbcf578be1729da
+
+    config XGW_ITER_KEY_ADD_2
+      hex "XGW_ITER_KEY_ADD_2"
+        default 0x47b9b6242285ace6
+
+    config XGW_ITER_KEY_ADD_3
+      hex "XGW_ITER_KEY_ADD_3"
+        default 0x8666c295a8a39271
+
+    config XGW_ITER_KEY_ADD_4
+      hex "XGW_ITER_KEY_ADD_4"
+        default 0xd7d2f52cb5312659
+
+    config XGW_ITER_KEY_ADD_5
+      hex "XGW_ITER_KEY_ADD_5"
+        default 0x6740ecf6e02a3d90
+
+    config XGW_ITER_KEY_ADD_6
+      hex "XGW_ITER_KEY_ADD_6"
+        default 0xc93d95b312e46b5b
+
+    config XGW_ITER_KEY_ADD_7
+      hex "XGW_ITER_KEY_ADD_7"
+        default 0x5b208970d1f5449b
+
+endif

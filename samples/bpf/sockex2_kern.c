@@ -34,7 +34,6 @@ static inline int proto_ports_offset(__u64 proto)
 	case IPPROTO_DCCP:
 	case IPPROTO_ESP:
 	case IPPROTO_SCTP:
-	case IPPROTO_UDPLITE:
 		return 0;
 	case IPPROTO_AH:
 		return 4;
