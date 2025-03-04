@@ -142,7 +142,7 @@ static void secret_derivate_random_as_key (const u64 S[SECRET_KEYS_N][K_LEN], co
     // MERGE
     for_count (k, K_LEN)
         A += B += C += D += E += F += G += H += K[k] =
-            swap64(swap64(swap64(swap64(swap64(swap64(swap64(swap64((K[k] ^ S[k]) + H) + G) + F) + E) + D) + C) + B) + A);
+            swap64(swap64(swap64(swap64(swap64(swap64(swap64(swap64(swap64(K[k] + S[k]) + H) + G) + F) + E) + D) + C) + B) + A);
 }
 
 // CONSTANT KEYS, FOR PING/PONG
@@ -179,9 +179,12 @@ static void reset_node_ping_keys (node_s* const node, const uint self, const uin
     for_count (k, K_LEN) BK[k] = b += 0xF0778A61A03B4480ULL;
 
     // NOW MERGE WITH THE ENTIRE SECRET
+    u64 A = 0xAFEE0C56092DF220ULL, B = 0x8BD98EC995251C3CULL, C = 0x9A3943E82D8DD4D2ULL, D = 0x501FBD1644159395ULL,
+        E = 0x02E12A80B229ADF5ULL, F = 0x52DC3014C0C6A1BAULL, G = 0x89DEA1B4941E360CULL, H = 0xC1B7B1DD4CA86D42ULL;
+
     for_count (s, SECRET_KEYS_N) {
-        for_count (k, K_LEN) AK[k] += a += node->secret[s][k];
-        for_count (k, K_LEN) BK[k] += b += node->secret[s][k];
+        for_count (k, K_LEN) A += B += C += D += E += F += G += H += AK[k] = swap64(swap64(swap64(swap64(swap64(swap64(swap64(swap64(swap64(AK[k] + node->secret[s][k]) + H) + G) + F) + E) + D) + C) + B) + A);
+        for_count (k, K_LEN) A += B += C += D += E += F += G += H += BK[k] = swap64(swap64(swap64(swap64(swap64(swap64(swap64(swap64(swap64(BK[k] + node->secret[s][k]) + H) + G) + F) + E) + D) + C) + B) + A);
     }
 }
 
