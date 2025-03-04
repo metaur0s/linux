@@ -5,14 +5,28 @@
 #define ENC(x) (  swap64(  swap64(  swap64(  swap64(  swap64(  swap64(  swap64((x) + A) + B) + C) + D) + E) + F) + G) + H)
 #define DEC(x) (unswap64(unswap64(unswap64(unswap64(unswap64(unswap64(unswap64((x) - H) - G) - F) - E) - D) - C) - B) - A)
 
+static inline void __prefetch_k (const u64 K[K_LEN]) {
+
+    __builtin_prefetch(&K[(0 * CACHE_LINE_SIZE) / sizeof(*K)], 0, 3);
+    __builtin_prefetch(&K[(1 * CACHE_LINE_SIZE) / sizeof(*K)], 0, 3);
+    __builtin_prefetch(&K[(2 * CACHE_LINE_SIZE) / sizeof(*K)], 0, 3);
+    __builtin_prefetch(&K[(3 * CACHE_LINE_SIZE) / sizeof(*K)], 0, 3);
+    __builtin_prefetch(&K[(4 * CACHE_LINE_SIZE) / sizeof(*K)], 0, 3);
+    __builtin_prefetch(&K[(5 * CACHE_LINE_SIZE) / sizeof(*K)], 0, 3);
+    __builtin_prefetch(&K[(6 * CACHE_LINE_SIZE) / sizeof(*K)], 0, 3);
+    __builtin_prefetch(&K[(7 * CACHE_LINE_SIZE) / sizeof(*K)], 0, 3);
+}
+
 static inline u64 encrypt (const u64 K[K_LEN], u64* restrict pos, u64* restrict const end, u64 x) {
 
-    ASSERT(end >= (pos +  PKT_ALIGN_SIZE                   /sizeof(*pos)));
-    ASSERT(end <= (pos + (PKT_ALIGN_SIZE + XGW_PAYLOAD_MAX)/sizeof(*pos)));
+    ASSERT(end >= &pos[PKT_ALIGN_SIZE]);
+    ASSERT(end <= &pos[PKT_ALIGN_SIZE + XGW_PAYLOAD_MAX]);
+
+    __prefetch_k(K);
 
     // INITIAL KEYS, PER INTERVAL
-    u64 A = K[0], B = K[1], C = K[2], D = K[3],
-        E = K[4], F = K[5], G = K[6], H = K[7];
+    u64 A = 0xD03D605BF5FD9241ULL, B = 0x3A688E2046C195EBULL, C = 0x545121D4D803E72BULL, D = 0xE1CB328227DCE32BULL,
+        E = 0xBE988D423E5B9FCAULL, F = 0x4F0C1191DFD5C797ULL, G = 0x18EF7F5564D9A4EEULL, H = 0xB238CC5007C62530ULL;
 
     loop {
 
@@ -42,12 +56,14 @@ static inline u64 encrypt (const u64 K[K_LEN], u64* restrict pos, u64* restrict 
 
 static inline u64 decrypt (const u64 K[K_LEN], u64* restrict pos, u64* restrict const end, u64 x) {
 
-    ASSERT(end >= (pos +  PKT_ALIGN_SIZE                   /sizeof(*pos)));
-    ASSERT(end <= (pos + (PKT_ALIGN_SIZE + XGW_PAYLOAD_MAX)/sizeof(*pos)));
+    ASSERT(end >= &pos[PKT_ALIGN_SIZE]);
+    ASSERT(end <= &pos[PKT_ALIGN_SIZE + XGW_PAYLOAD_MAX]);
+
+    __prefetch_k(K);
 
     // INITIAL KEYS, PER INTERVAL
-    u64 A = K[0], B = K[1], C = K[2], D = K[3],
-        E = K[4], F = K[5], G = K[6], H = K[7];
+    u64 A = 0xD03D605BF5FD9241ULL, B = 0x3A688E2046C195EBULL, C = 0x545121D4D803E72BULL, D = 0xE1CB328227DCE32BULL,
+        E = 0xBE988D423E5B9FCAULL, F = 0x4F0C1191DFD5C797ULL, G = 0x18EF7F5564D9A4EEULL, H = 0xB238CC5007C62530ULL;
 
     loop {
 
