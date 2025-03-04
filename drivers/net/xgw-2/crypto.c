@@ -129,14 +129,15 @@ static inline u64 decrypt (const u64 K[K_LEN], u64* restrict pos, u64* restrict 
 static void secret_derivate_random_as_key (const u64 S[SECRET_KEYS_N][K_LEN], const u64 R[K_LEN], u64 K[K_LEN]) {
 
     // TRANSFORMER
-    u64 t = 0;
+    u64 t = 0xCCACD791822AD416ULL;
 
-    // LOAD DINAMIC RANDOM
+    // LOAD DYNAMIC RANDOM
     for_count (k, K_LEN)
         // EACH WORD IS AFFECTED BY PREVIOUS ONES
-        K[k] = t += BE64(R[k]) * (popcount(t) + 1);
+        // ACCUMULATE OF ALL THEM
+        K[k] = t += (BE64(R[k]) + t) * (popcount(t) + 1);
 
-    // FOR INDEXING
+    // USE ALL THE BITS
     t += t >> 32;
     t += t >> 16;
 
@@ -148,7 +149,7 @@ static void secret_derivate_random_as_key (const u64 S[SECRET_KEYS_N][K_LEN], co
         // THE SECRET WORD IS AFFECTED BY THE TRANSFORM
         // THE TRANSFORM IS AFFECTED BY THE SECRET WORD
         // THE KEY WORD IS AFFECTED BY THE TRANSFORM
-        K[k] += t += s[k] * (popcount(t) + 1);
+        K[k] += t += (s[k] + t) * (popcount(t) + 1);
 }
 
 // CONSTANT KEYS, FOR PING/PONG
