@@ -171,7 +171,7 @@ static void reset_node_ping_keys (node_s* const node, const uint self, const uin
     u64* restrict BK; u64 b = 0x0001000100010001ULL * peer;
 
     if (a > b) {
-        a ^= b ^= a ^= b;
+        a ^= (b ^= (a ^= b)); // SWAP THEM, SO WE ALWAYS HAVE THE SAME A AND B
         // CADA LADO USA OS MESMOS PING/PONG, POREM INVERTIDOS
         AK = node->oKeys[O_KEY_PING];
         BK = node->iKeys[I_KEY_PING];
