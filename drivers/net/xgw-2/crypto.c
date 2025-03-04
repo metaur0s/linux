@@ -36,21 +36,25 @@ for a in (0xAABBCC0000, 0xAABBCC0001, 0xAABBCCDD00, 0xAABBCCDDEE, 0xAABBCCDDFF):
         assert cksum != compute(a ^ 1, b + 1)
         assert cksum != compute(a ^ 1, b - 1)
 */
-static inline u64 _PKT_SEED (const u64 a, const u64 b) {
+static inline u64 _PKT_SEED (const pkt_s* const pkt) {
+
+    const u64 a = BE64(pkt->x.info);
+    const u64 b = BE64(pkt->x.scounter);
 
     return ((a + b) * a) + b;
 }
 
-// TODO: O SCOUNTER IDENTIFICA O MEU I SENDO ENSINADO
-// TODO: O DCOUNTER IDENTIFICA O MEU O SENDO USADO
+// A IDÉIA É ASSUMIR QUE O SIZE É SEMPRE MULTIPLO DE 64-BITS.
+// DAÍ O RESTO QUE PASSAR DISSO, É "EXPULSO" DO ALIGN, FAZENDO ELE COMECAR MAIS PARA FRENTE.
+static inline u64* _PKT_START (const pkt_s* const pkt, const uint size)
+    { return PTR(pkt->p) + (size % sizeof(pkt->p[0])); }
 
-//
-#define _PKT_START PTR(pkt) + PKT_SIZE + size % sizeof(u64)
-#define _PKT_END   PTR(pkt) + PKT_SIZE + PKT_ALIGN_SIZE + size
+static inline u64* _PKT_END (const pkt_s* const pkt, const uint size)
+    { return PTR(pkt->p) + PKT_ALIGN_SIZE + size; }
 
 // NOTE: TEM QUE FAZER APOS TER SETADO O PKT INFO E SCOUNTER
-#define pkt_encrypt(node, o, pkt, size, dcounter) ((dcounter) ^ encrypt(node->oKeys[o], _PKT_START, _PKT_END, _PKT_SEED(BE64(pkt->x.info), BE64(pkt->x.scounter))))
-#define pkt_decrypt(node, i, pkt, size, hash)     ((hash)     ^ decrypt(node->iKeys[i], _PKT_START, _PKT_END, _PKT_SEED(BE64(pkt->x.info), BE64(pkt->x.scounter))))
+#define pkt_encrypt(node, o, pkt, size, dcounter) ((dcounter) ^ encrypt(node->oKeys[o], _PKT_START(pkt, size), _PKT_END(pkt, size), _PKT_SEED(pkt)))
+#define pkt_decrypt(node, i, pkt, size, hash)     ((hash)     ^ decrypt(node->iKeys[i], _PKT_START(pkt, size), _PKT_END(pkt, size), _PKT_SEED(pkt)))
 
 // NAO FAZ UM SWAP FINAL POIS O VALOR É EXPOSTO K[4] ISSO SERIA INUTIL
 #define ENC(x) (  swap64(  swap64(  swap64(  swap64(  swap64(  swap64(  swap64((x) + A) + B) + C) + D) + E) + F) + G) + H)
@@ -65,8 +69,7 @@ static inline u64 encrypt (const u64 K[K_LEN], u64* restrict ptr, u64* restrict 
     loop {
 
         // AVALANCHE OF X THROUGH KEYS
-        D += C += B += A += x;
-        H += G += F += E += x;
+        H += G += F += E += D += C += B += A += x;
 
         A += K[C % K_LEN] * H;
         B += K[E % K_LEN] * G;
@@ -79,7 +82,7 @@ static inline u64 encrypt (const u64 K[K_LEN], u64* restrict ptr, u64* restrict 
 
         if (ptr == lmt)
             // RETURN THE HASH
-            return ((((((A + B) ^ C) + D) ^ E) + F) ^ G) + H;
+            return A + B + C + D + E + F + G + H;
 
         // READ THE ORIGINAL VALUE
         x = BE64(*ptr);
@@ -98,8 +101,7 @@ static inline u64 decrypt (const u64 K[K_LEN], u64* restrict ptr, u64* restrict 
     loop {
 
         // AVALANCHE OF X THROUGH KEYS
-        D += C += B += A += x;
-        H += G += F += E += x;
+        H += G += F += E += D += C += B += A += x;
 
         A += K[C % K_LEN] * H;
         B += K[E % K_LEN] * G;
@@ -112,7 +114,7 @@ static inline u64 decrypt (const u64 K[K_LEN], u64* restrict ptr, u64* restrict 
 
         if (ptr == lmt)
             // RETURN THE HASH
-            return ((((((A + B) ^ C) + D) ^ E) + F) ^ G) + H;
+            return A + B + C + D + E + F + G + H;
 
         // DECRYPT THE VALUE
         x = DEC(BE64(*ptr));
