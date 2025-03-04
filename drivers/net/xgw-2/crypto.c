@@ -47,10 +47,10 @@ static inline u64 _PKT_SEED (const pkt_s* const pkt) {
 // A IDÉIA É ASSUMIR QUE O SIZE É SEMPRE MULTIPLO DE 64-BITS.
 // DAÍ O RESTO QUE PASSAR DISSO, É "EXPULSO" DO ALIGN, FAZENDO ELE COMECAR MAIS PARA FRENTE.
 static inline u64* _PKT_START (const pkt_s* const pkt, const uint size)
-    { return PTR(pkt->p) + (size % sizeof(pkt->p[0])); }
+    { return PTR(pkt) + PKT_SIZE + (size % sizeof(pkt->p[0])); }
 
 static inline u64* _PKT_END (const pkt_s* const pkt, const uint size)
-    { return PTR(pkt->p) + PKT_ALIGN_SIZE + size; }
+    { return PTR(pkt) + PKT_SIZE + PKT_ALIGN_SIZE + size; }
 
 // NOTE: TEM QUE FAZER APOS TER SETADO O PKT INFO E SCOUNTER
 #define pkt_encrypt(node, o, pkt, size, dcounter) ((dcounter) ^ encrypt(node->oKeys[o], _PKT_START(pkt, size), _PKT_END(pkt, size), _PKT_SEED(pkt)))
@@ -193,7 +193,7 @@ static void reset_node_ping_keys (node_s* const node, const uint self, const uin
 }
 
 // REPETE ELE ATE PREENCHER TODA A ARRAY
-static void copy_and_fill (void* restrict dst, uint dstSize, const void* const restrict src, uint srcSize) {
+static void copy_and_fill (void* restrict dst, const uint dstSize, const void* const restrict src, uint srcSize) {
 
     ASSERT(dstSize >= srcSize);
 
@@ -212,13 +212,13 @@ static void copy_and_fill (void* restrict dst, uint dstSize, const void* const r
 }
 
 // TODO: COLD FUNCTION
-static void secret_derivate_from_password (u64 S[SECRET_KEYS_N][K_LEN], const u8* const restrict password, uint size) {
+static void secret_derivate_from_password (u64 S[SECRET_KEYS_N][K_LEN], const u8* const restrict password, const uint size) {
 
     ASSERT(size >= PASSWORD_SIZE_MIN);
     ASSERT(size <= PASSWORD_SIZE_MAX);
     ASSERT(PASSWORD_SIZE_MAX <= SECRET_SIZE);
 
-    copy_and_fill(S, password, size);
+    copy_and_fill(S, SECRET_SIZE, password, size);
 
 #if 1
     // EM LOCAL ENDIAN
