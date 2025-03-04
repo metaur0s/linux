@@ -192,6 +192,25 @@ static void reset_node_ping_keys (node_s* const node, const uint self, const uin
     }
 }
 
+// REPETE ELE ATE PREENCHER TODA A ARRAY
+static void copy_and_fill (void* restrict dst, uint dstSize, const void* const restrict src, uint srcSize) {
+
+    ASSERT(dstSize >= srcSize);
+
+    // COPY FROM THE ORIGINAL BUFFER, THE ORIGINAL SIZE
+    memcpy(dst, src, srcSize);
+
+    // RECOPY FROM ITSELF, ITSELF'S SIZE
+    uint chunk;
+
+    while ((chunk = dstSize - srcSize)) {
+        if (chunk > srcSize)
+            chunk = srcSize;
+        memcpy(dst + srcSize, dst, chunk);
+        srcSize += chunk;
+    }
+}
+
 // TODO: COLD FUNCTION
 static void secret_derivate_from_password (u64 S[SECRET_KEYS_N][K_LEN], const u8* const restrict password, uint size) {
 
@@ -199,15 +218,7 @@ static void secret_derivate_from_password (u64 S[SECRET_KEYS_N][K_LEN], const u8
     ASSERT(size <= PASSWORD_SIZE_MAX);
     ASSERT(PASSWORD_SIZE_MAX <= SECRET_SIZE);
 
-    // REPETE ELE ATE PREENCHER TODA A ARRAY
-    memcpy(S, password, size);
-
-    do { uint chunk = SECRET_SIZE - size;
-        if (chunk > size)
-            chunk = size;
-        memcpy(PTR(S) + size, S, chunk);
-        size += chunk;
-    } while (size != SECRET_SIZE);
+    copy_and_fill(S, password, size);
 
 #if 1
     // EM LOCAL ENDIAN
