@@ -156,41 +156,39 @@ static void secret_derivate_random_as_key (const u64 S[SECRET_KEYS_N][K_LEN], co
 // TODO: SO REFAZER ISSO SE TIVER MUDADO O SECRET (BY PASSWORD), O NODE ID OU O SELF ID
 // TODO: COLD FUNCTION
 // MUST PROVE THE PING WILL GENERATE THE SAME KEYS
+// --
+// WILL GENERATE TWO KEYS.
+// A NODE WILL USE THEM FOR IN/OUT
+// IT'S PEER WILL USE THEM FOR OUT/IN
+// --
 static void reset_node_ping_keys (node_s* const node, const uint self, const uint peer) {
 
     ASSERT(self < NODES_N);
     ASSERT(peer < NODES_N);
     ASSERT(self != peer);
 
-    u64* restrict Kping;
-    u64* restrict Kpong;
+    u64* restrict AK; u64 a = 0x0001000100010001ULL * self;
+    u64* restrict BK; u64 b = 0x0001000100010001ULL * peer;
 
-    // CADA LADO USA OS MESMOS PING/PONG, POREM INVERTIDOS
-    if (self > peer) {
-        Kping = node->oKeys[O_KEY_PING];
-        Kpong = node->iKeys[I_KEY_PING];
+    if (a > b) {
+        a ^= b ^= a ^= b;
+        // CADA LADO USA OS MESMOS PING/PONG, POREM INVERTIDOS
+        AK = node->oKeys[O_KEY_PING];
+        BK = node->iKeys[I_KEY_PING];
     } else {
-        Kping = node->iKeys[I_KEY_PING];
-        Kpong = node->oKeys[O_KEY_PING];
+        AK = node->iKeys[I_KEY_PING];
+        BK = node->oKeys[O_KEY_PING];
     }
 
-    // MESMO QUE USE O MESMO PASSWORD ENTRE VARIOS NODES, NAO DEIXA QUE O PING KEYS SEJA O MESMO
-    u64 i = 0x0001000100010001ULL * self;
-    u64 o = 0x0001000100010001ULL * peer;
-
-    // OS PONTEIROS JÁ ESTÃO INVERTIDOS.
-    // O RESTO TEM QUE SER TUDO IGUAL
-    if (i > o)
-        i ^= o ^= i ^= o;
-
     // INITIALIZE THE KEYS
-    for_count (k, K_LEN) Kping[k] = i += 0xA601E857DF7F6A12ULL;
-    for_count (k, K_LEN) Kpong[k] = o += 0xF0778A61A03B4480ULL;
+    // MESMO QUE USE O MESMO PASSWORD ENTRE VARIOS NODES, NAO DEIXA QUE O PING KEYS SEJA O MESMO
+    for_count (k, K_LEN) AK[k] = a += 0xA601E857DF7F6A12ULL;
+    for_count (k, K_LEN) BK[k] = b += 0xF0778A61A03B4480ULL;
 
     // NOW MERGE WITH THE ENTIRE SECRET
     for_count (s, SECRET_KEYS_N) {
-        for_count (k, K_LEN) Kping[k] += i += node->secret[s][k];
-        for_count (k, K_LEN) Kpong[k] += o += node->secret[s][k];
+        for_count (k, K_LEN) AK[k] += a += node->secret[s][k];
+        for_count (k, K_LEN) BK[k] += b += node->secret[s][k];
     }
 }
 
