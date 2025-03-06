@@ -28,6 +28,8 @@ static const struct {
         [NSTATS_O_DATA_NO_PATH          ] = "Out.Data.NoPath",
     }, {
         [PSTATS_I_DATA_GOOD              ] = "In.Data.Good",
+        [PSTATS_I_COUNTER_INVALID        ] = "In.Counter.Invalid",
+        [PSTATS_I_COUNTER_NOT_SYN        ] = "In.Counter.NotSyn",
         [PSTATS_I_DATA_LCOUNTER_MISMATCH ] = "In.Data.LCounter.Bad",
         [PSTATS_I_DATA_IP4_TRUNCATED     ] = "In.Data.IP4.Truncated",
         [PSTATS_I_DATA_IP6_TRUNCATED     ] = "In.Data.IP6.Truncated",

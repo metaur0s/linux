@@ -46,7 +46,7 @@ static inline void __crypt_fetch_data (const u64* const pos, const u64* const en
 #endif
 }
 
-u64 encrypt (const u64 K[K_LEN], u64* restrict pos, u64* restrict const end, u64 x) {
+u64 encrypt (const u64 K[K_LEN], u64* restrict pos, u64* restrict const end, u64 x, const u64 sign) {
 
     ASSERT(end >= &pos[PKT_ALIGN_SIZE]);
     ASSERT(end <= &pos[PKT_ALIGN_SIZE + XGW_PAYLOAD_MAX]);
@@ -57,7 +57,7 @@ u64 encrypt (const u64 K[K_LEN], u64* restrict pos, u64* restrict const end, u64
     u64 A = K[0], B = K[1], C = K[2], D = K[3],
         E = K[4], F = K[5], G = K[6], H = K[7];
 
-    do {
+    loop {
 
         // AVALANCHE OF ORIGINAL THROUGH KEYS
         // DONT LET THE ORIGINAL CONTROL THE ACCUMULATION AND LOOP
@@ -87,19 +87,25 @@ u64 encrypt (const u64 K[K_LEN], u64* restrict pos, u64* restrict const end, u64
             // MIN: 64 / (24 +   32) = 1.14
         } while (x >>= (24 + (x % 32)));
 
-        // READ THE ORIGINAL VALUE
-        x = BE64(*pos);
+        if (pos == end)
+            // USE THE ORIGINAL SIGN
+            x = sign;
+        else // READ THE ORIGINAL VALUE
+            x = BE64(*pos);
+
+        // ENCRYPT IT
+        const u64 e = ENC(x);
+
+        if (pos == end)
+            // RETURN THE ENCRYPTED SIGN
+            return e;
 
         // WRITE THE ENCRYPTED VALUE
-        *pos = BE64(ENC(x));
-
-    } while (++pos != end);
-
-    // FINISHED, RETURN THE CHECKSUM
-    return A + B + C + D + E + F + G + H;
+        *pos++ = BE64(e);
+    }
 }
 
-u64 decrypt (const u64 K[K_LEN], u64* restrict pos, u64* restrict const end, u64 x) {
+u64 decrypt (const u64 K[K_LEN], u64* restrict pos, u64* restrict const end, u64 x, const u64 hash) {
 
     ASSERT(end >= &pos[PKT_ALIGN_SIZE]);
     ASSERT(end <= &pos[PKT_ALIGN_SIZE + XGW_PAYLOAD_MAX]);
@@ -110,7 +116,7 @@ u64 decrypt (const u64 K[K_LEN], u64* restrict pos, u64* restrict const end, u64
     u64 A = K[0], B = K[1], C = K[2], D = K[3],
         E = K[4], F = K[5], G = K[6], H = K[7];
 
-    do {
+    loop {
 
         // AVALANCHE OF ORIGINAL THROUGH KEYS
         x += A + B + C + D + E + F + G + H;
@@ -132,16 +138,22 @@ u64 decrypt (const u64 K[K_LEN], u64* restrict pos, u64* restrict const end, u64
 
         } while (x >>= (24 + (x % 32)));
 
-        // READ THE ENCRYPTED VALUE AND DECRYPT IT
-        x = DEC(BE64(*pos));
+        if (pos == end)
+            // USE THE ENCRYPTED SIGN
+            x = hash;
+        else // READ THE ENCRYPTED VALUE
+            x = BE64(*pos);
+
+        // DECRYPT IT
+        x = DEC(x);
+
+        if (pos == end)
+            // RETURN THE ORIGINAL SIGN
+            return x;
 
         // WRITE THE ORIGINAL VALUE
-        *pos = BE64(x);
-
-    } while(++pos != end);
-
-    // FINISHED, RETURN THE CHECKSUM
-    return A + B + C + D + E + F + G + H;
+        *pos++ = BE64(x);
+    }
 }
 
 // USING SECRET S, APPLY RANDOM R, AND DERIVE KEY K
@@ -239,9 +251,12 @@ static void reset_node_ping_keys (node_s* const node, const uint self, const uin
             // TODO: NO FUTURO, PERMITIR O USUARIO SETAR ISSO
             // ENTAO ACIMA COLOCA NUMA ARRAY synCountersAuto
             // E AQUI COPIA PARA o synCounters
+            //
+            // TODO: ISSO É AO ATIVAR O PATH
+            node->paths[pid].counterSyn = x;
         }
 
-        x += y;
+        x += y += swap64q(x, popcount(y));
     }
 }
 
@@ -350,7 +365,7 @@ for a in (0xAABBCC0000, 0xAABBCC0001, 0xAABBCCDD00, 0xAABBCCDDEE, 0xAABBCCDDFF):
 static inline u64 _PKT_SEED (const pkt_s* const pkt) {
 
     const u64 a = BE64(pkt->x.info);
-    const u64 b = BE64(pkt->x.counter);
+    const u64 b = BE64(pkt->x.seed);
 
     return (((a + b) * a) + b) ^ a;
 }
@@ -361,5 +376,5 @@ static inline u64 _PKT_SEED (const pkt_s* const pkt) {
 #define _PKT_END(pkt, size)   (PTR(pkt) + PKT_SIZE + PKT_ALIGN_SIZE + size)
 
 // NOTE: TEM QUE FAZER APOS TER SETADO O PKT INFO E SCOUNTER
-#define pkt_encrypt(node, o, pkt, size) encrypt(node->oKeys[o], _PKT_START(pkt, size), _PKT_END(pkt, size), _PKT_SEED(pkt))
-#define pkt_decrypt(node, i, pkt, size) decrypt(node->iKeys[i], _PKT_START(pkt, size), _PKT_END(pkt, size), _PKT_SEED(pkt))
+#define pkt_encrypt(node, o, pkt, size, counter) encrypt(node->oKeys[o], _PKT_START(pkt, size), _PKT_END(pkt, size), _PKT_SEED(pkt), counter)
+#define pkt_decrypt(node, i, pkt, size, counter) decrypt(node->iKeys[i], _PKT_START(pkt, size), _PKT_END(pkt, size), _PKT_SEED(pkt), counter)

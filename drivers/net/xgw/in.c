@@ -139,21 +139,43 @@ static inline void in_discover (const path_s* const path, const skb_s* const skb
 // PING DESTINATION'S COUNTER
 #define COUNTER_SYN 0
 
-static inline int in_pp_ping (node_s* const node, path_s* const path, const u64 p_lcounter, const u64 p_rcounter , const skb_s* const iskb, const ping_s* const ping) {
+static inline int in_pp (node_s* const node, path_s* const path, const u64 counter, skb_s* const iskb, const pkt_s* const pkt, const uint size, const u64 p_counter) {
+
+    u64 p_counter_ = p_counter;
+
+    if (size == PONG_SIZE) {
+        // NOTA: O PONG TEM QUE SER ENVIADO COM O COUNTER QUE RECEBEU NO PING, NAO IMPORTA SE SOU CLIENTE OU SERVIDOR.
+        if (__atomic_compare_exchange_n(&path->received, &p_counter_, get_jiffies_64(), 0, __ATOMIC_SEQ_CST, __ATOMIC_RELAXED))
+            // SUCCESS
+            return PSTATS_I_PONG_GOOD;
+        // PONG REPETIDO, OU ATRASADO
+        return PSTATS_I_PONG_COUNTER_MISMATCH;
+    }
+
+    if (size != PING_SIZE)
+        return PSTATS_I_NOT_PING_OR_PONG;
 
     pkt_s* skel; pkt_s skel_;
 
-    if (p_rcounter <= COUNTER_CONNECTING)
+    //if (p_rcounter <= COUNTER_CONNECTING)
         // HIS COUNTER IS INVALID
         // CANNOT BECAME LISTENING/DISCOVERING/CONNECTING
-        return PSTATS_I_PING_RCOUNTER_INVALID;
+        //return PSTATS_I_PING_RCOUNTER_INVALID;
 
-    if (p_lcounter == COUNTER_SYN) {
+    if (path->counter == 0) {
+        // I AM A SERVER, WAITING FOR A SYN
+
+        if (p_session = path->counterSyn) {
+            // THIS PACKET IS NOT A SYN
+            return PSTATS_I_COUNTER_NOT_SYN;
+    }
+
+    if (p_counter == path->counterSyn) {
         // SYN
 
-        if (__atomic_load_n(&path->rcounter, __ATOMIC_SEQ_CST) != COUNTER_LISTENING)
+        if (__atomic_compare_exchange_n(&path->counter, &path->counterSyn, p_counter_, 0, __ATOMIC_SEQ_CST, __ATOMIC_RELAXED))
             // WE RECEIVED A SYN PACKET BUT WE ARE NOT LISTENING
-            return PSTATS_I_PING_SYN_NOT_LISTENING;
+            //return PSTATS_I_PING_SYN_NOT_LISTENING;
 
         // TODO: LIMITAR A QUANTIDADE DE SYNS RECEBIVEIS A CADA KEEPER INTERVAL
 
@@ -270,23 +292,6 @@ static inline int in_pp_ping (node_s* const node, path_s* const path, const u64 
     return PSTATS_I_PING_GOOD;
 }
 
-static inline int in_pp (node_s* const node, path_s* const path, const u64 counter, skb_s* const iskb, const pkt_s* const pkt, const uint size, const u64 p_counter) {
-
-    if (size == PONG_SIZE) {
-        // NOTA: O PONG TEM QUE SER ENVIADO COM O COUNTER QUE RECEBEU NO PING, NAO IMPORTA SE SOU CLIENTE OU SERVIDOR.
-        if (__atomic_compare_exchange_n(&path->received, p_counter, get_jiffies_64(), 0, __ATOMIC_SEQ_CST, __ATOMIC_RELAXED))
-            // SUCCESS
-            return PSTATS_I_PONG_GOOD;
-        // PONG REPETIDO, OU ATRASADO
-        return PSTATS_I_PONG_COUNTER_MISMATCH;
-    }
-
-    if (size == PING_SIZE)
-        return in_pp_ping(node, path, counter, p_counter, iskb, PTR(pkt->p));
-
-    return PSTATS_I_NOT_PING_OR_PONG;
-}
-
 // TODO: FIXME: PROTECT THE REAL SERVER TCP PORTS SO WE DON'T NEED TO BIND TO THE FAKE INTERFACE
 int in (skb_s* const skb) {
 
@@ -391,12 +396,12 @@ _is_xgw:
     // AGORA SABE ONDE COMECA O PKT
     pkt_s* const pkt = ptr - sizeof(pkt_s);
 
-    const uint nid        = BE16 (pkt->x.src);
-    const uint pid        = BE8  (pkt->x.path);
-    const uint size       = BE16 (pkt->x.dsize);
-    const uint i          = BE8  (pkt->x.version);
-    const u64  p_counter  = BE64 (pkt->x.counter);
-    const u64  hash       = BE64 (pkt->x.hash);
+    const uint nid       = BE16 (pkt->x.src);
+    const uint pid       = BE8  (pkt->x.path);
+    const uint size      = BE16 (pkt->x.dsize);
+    const uint i         = BE8  (pkt->x.version);
+    const u64  p_session = BE64 (pkt->x.session);
+    const u64  hash      = BE64 (pkt->x.hash);
 
     ASSERT(nid < NODES_N);
 
@@ -436,6 +441,10 @@ _is_xgw:
     const path_s* const = &node->paths[pid];
 
     const u64 counter = __atomic_load_n(&path->counter, __ATOMIC_RELAXED);
+
+    // NOTE: O COUNTER DO PACOTE NÃO PODE SER UM DE NOSSOS CODIGOS INTERNOS
+    if (p_counter < 16)
+        ret_path(PSTATS_I_COUNTER_INVALID);
 
     if (ABS_DIFF(p_counter, counter) > 2)
         ret_path(PSTATS_I_DATA_LCOUNTER_MISMATCH);

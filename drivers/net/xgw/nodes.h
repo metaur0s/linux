@@ -139,10 +139,10 @@ struct path_s {
     u16 rtt_max; // CONFIG
     u16 rtt_var; // CONFIG
     // --
+    u64 session;
     u64 counter;  // COUNTER, GERADO PELO CLIENTE, MANTIDO LOCALMENTE
     u64 sent;     // QUANDO ENVIEI O PING
     u64 received; // QUANDO RECEBI O PONG
-    u64 reserved64;
     u64 acks;     // KEEPER - HISTORY
     u16 rtt;      // KEEPER WRITE / OUT READ  <<---- VAI TER QUE ENFIAR ESSA PORRA ENTÃO DENTRO DO CACHE LINE DO SKEL, OU NO NODE
     u8  rtt_index;
