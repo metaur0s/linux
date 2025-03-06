@@ -111,7 +111,7 @@ static inline u64 encrypt (const u64 K[K_LEN], u64* restrict pos, u64* restrict 
         // READ THE ORIGINAL VALUE
         const u64 orig = BE64(*pos);
 
-        // AVALANCHE OF X THROUGH KEYS
+        // AVALANCHE OF ORIGINAL THROUGH KEYS
         // DONT LET THE ORIGINAL CONTROL THE ACCUMULATION AND LOOP
         // E FAZ O A AFETAR O H, ETC
         x = (((((((orig + H) ^ G) + F) ^ E) + D) ^ C) + B) ^ A;
@@ -130,17 +130,14 @@ static inline u64 decrypt (const u64 K[K_LEN], u64* restrict pos, u64* restrict 
 
     __builtin_prefetch(pos, 1, 0);
 
-    // INITIAL KEYS, PER INTERVAL
     u64 A = 0xD03D605BF5FD9241ULL, B = 0x3A688E2046C195EBULL, C = 0x545121D4D803E72BULL, D = 0xE1CB328227DCE32BULL,
         E = 0xBE988D423E5B9FCAULL, F = 0x4F0C1191DFD5C797ULL, G = 0x18EF7F5564D9A4EEULL, H = 0xB238CC5007C62530ULL;
 
-    // FORCE THE FIRST ONE TO BE BIG, AND ALSO MUTATE
     u64 x = (1ULL << 63) | 0x23685C08643EDBFBULL;
 
     loop {
 
-        do { // LOOPA DE 1 A 3 VEZES (A MAIORIA 2, AS VEZES 3, DIFICILMENTE 1)
-            // (POIS É MAIS FÁCIL TER UM NO FIM DO QUE NENHUM NO MEIO E FIM)
+        do {
 
             A += B += C += D += E += F += G += H += x;
 
@@ -165,7 +162,7 @@ static inline u64 decrypt (const u64 K[K_LEN], u64* restrict pos, u64* restrict 
         // WRITE THE ORIGINAL VALUE
         *pos++ = BE64(x);
 
-        // AVALANCHE OF X THROUGH KEYS
+        // AVALANCHE OF ORIGINAL THROUGH KEYS
         x = (((((((x + H) ^ G) + F) ^ E) + D) ^ C) + B) ^ A;
     }
 }
