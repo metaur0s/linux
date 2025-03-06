@@ -1,92 +1,27 @@
 
 // !!!!!! TODO: XGW TO XGW REDIRECT WITHOUT GOING THROUGH IP STACK
 
-// TRY TO KEEP IN ALL CACHES AS WE DEAL WITH MULTIPLE PACKETS
-#include <linux/limits.h>
-static inline void __crypt_prefetch_k (const u64 K[K_LEN]) {
-
-    __builtin_prefetch(&K[( 0 * CACHE_LINE_SIZE) / sizeof(K[0])], 0, 3);
-#if (K_SIZE / CACHE_LINE_SIZE) > 1
-    __builtin_prefetch(&K[( 1 * CACHE_LINE_SIZE) / sizeof(K[0])], 0, 3);
-#if (K_SIZE / CACHE_LINE_SIZE) > 2
-    __builtin_prefetch(&K[( 2 * CACHE_LINE_SIZE) / sizeof(K[0])], 0, 3);
-    __builtin_prefetch(&K[( 3 * CACHE_LINE_SIZE) / sizeof(K[0])], 0, 3);
-#if (K_SIZE / CACHE_LINE_SIZE) > 4
-    __builtin_prefetch(&K[( 4 * CACHE_LINE_SIZE) / sizeof(K[0])], 0, 3);
-    __builtin_prefetch(&K[( 5 * CACHE_LINE_SIZE) / sizeof(K[0])], 0, 3);
-    __builtin_prefetch(&K[( 6 * CACHE_LINE_SIZE) / sizeof(K[0])], 0, 3);
-    __builtin_prefetch(&K[( 7 * CACHE_LINE_SIZE) / sizeof(K[0])], 0, 3);
-#if (K_SIZE / CACHE_LINE_SIZE) > 8
-    __builtin_prefetch(&K[( 7 * CACHE_LINE_SIZE) / sizeof(K[0])], 0, 3);
-    __builtin_prefetch(&K[( 8 * CACHE_LINE_SIZE) / sizeof(K[0])], 0, 3);
-    __builtin_prefetch(&K[( 9 * CACHE_LINE_SIZE) / sizeof(K[0])], 0, 3);
-    __builtin_prefetch(&K[(10 * CACHE_LINE_SIZE) / sizeof(K[0])], 0, 3);
-    __builtin_prefetch(&K[(11 * CACHE_LINE_SIZE) / sizeof(K[0])], 0, 3);
-    __builtin_prefetch(&K[(12 * CACHE_LINE_SIZE) / sizeof(K[0])], 0, 3);
-    __builtin_prefetch(&K[(13 * CACHE_LINE_SIZE) / sizeof(K[0])], 0, 3);
-    __builtin_prefetch(&K[(14 * CACHE_LINE_SIZE) / sizeof(K[0])], 0, 3);
-#if (K_SIZE / CACHE_LINE_SIZE) > 16
-#error
-#endif
-#endif
-#endif
-#endif
-#endif
-}
-
-//
-static inline void __crypt_prefetch_k_once (const u64 K[K_LEN]) {
-
-    __builtin_prefetch(&K[( 0 * CACHE_LINE_SIZE) / sizeof(K[0])], 0, 0);
-#if (K_SIZE / CACHE_LINE_SIZE) > 1
-    __builtin_prefetch(&K[( 1 * CACHE_LINE_SIZE) / sizeof(K[0])], 0, 0);
-#if (K_SIZE / CACHE_LINE_SIZE) > 2
-    __builtin_prefetch(&K[( 2 * CACHE_LINE_SIZE) / sizeof(K[0])], 0, 0);
-    __builtin_prefetch(&K[( 3 * CACHE_LINE_SIZE) / sizeof(K[0])], 0, 0);
-#if (K_SIZE / CACHE_LINE_SIZE) > 4
-    __builtin_prefetch(&K[( 4 * CACHE_LINE_SIZE) / sizeof(K[0])], 0, 0);
-    __builtin_prefetch(&K[( 5 * CACHE_LINE_SIZE) / sizeof(K[0])], 0, 0);
-    __builtin_prefetch(&K[( 6 * CACHE_LINE_SIZE) / sizeof(K[0])], 0, 0);
-    __builtin_prefetch(&K[( 7 * CACHE_LINE_SIZE) / sizeof(K[0])], 0, 0);
-#if (K_SIZE / CACHE_LINE_SIZE) > 8
-    __builtin_prefetch(&K[( 7 * CACHE_LINE_SIZE) / sizeof(K[0])], 0, 0);
-    __builtin_prefetch(&K[( 8 * CACHE_LINE_SIZE) / sizeof(K[0])], 0, 0);
-    __builtin_prefetch(&K[( 9 * CACHE_LINE_SIZE) / sizeof(K[0])], 0, 0);
-    __builtin_prefetch(&K[(10 * CACHE_LINE_SIZE) / sizeof(K[0])], 0, 0);
-    __builtin_prefetch(&K[(11 * CACHE_LINE_SIZE) / sizeof(K[0])], 0, 0);
-    __builtin_prefetch(&K[(12 * CACHE_LINE_SIZE) / sizeof(K[0])], 0, 0);
-    __builtin_prefetch(&K[(13 * CACHE_LINE_SIZE) / sizeof(K[0])], 0, 0);
-    __builtin_prefetch(&K[(14 * CACHE_LINE_SIZE) / sizeof(K[0])], 0, 0);
-#if (K_SIZE / CACHE_LINE_SIZE) > 16
-#error
-#endif
-#endif
-#endif
-#endif
-#endif
-}
-
 // NAO FAZ UM SWAP FINAL POIS O VALOR É EXPOSTO K[4] ISSO SERIA INUTIL
 #define ENC(x) (  swap64(  swap64(  swap64(  swap64(  swap64(  swap64(  swap64((x) + A) + B) + C) + D) + E) + F) + G) + H)
 #define DEC(x) (unswap64(unswap64(unswap64(unswap64(unswap64(unswap64(unswap64((x) - H) - G) - F) - E) - D) - C) - B) - A)
 
-static inline u64 encrypt (const u64 K[K_LEN], u64* restrict pos, u64* restrict const end) {
+static inline u64 encrypt (const u64 K[K_LEN], u64* restrict pos, u64* restrict const end, u64 x) {
 
     ASSERT(end >= &pos[PKT_ALIGN_SIZE]);
     ASSERT(end <= &pos[PKT_ALIGN_SIZE + XGW_PAYLOAD_MAX]);
 
-    __crypt_prefetch_k(K);
-
-    __builtin_prefetch(pos, 1, 0);
+    __prefetch_w_temporal_none(pos);
 
     // INITIAL KEYS, PER INTERVAL
-    u64 A = 0xD03D605BF5FD9241ULL, B = 0x3A688E2046C195EBULL, C = 0x545121D4D803E72BULL, D = 0xE1CB328227DCE32BULL,
-        E = 0xBE988D423E5B9FCAULL, F = 0x4F0C1191DFD5C797ULL, G = 0x18EF7F5564D9A4EEULL, H = 0xB238CC5007C62530ULL;
-
-    // FORCE THE FIRST ONE TO BE BIG, AND ALSO MUTATE
-    u64 x = (1ULL << 63) | 0x23685C08643EDBFBULL;
+    u64 A = K[0], B = K[1], C = K[2], D = K[3],
+        E = K[4], F = K[5], G = K[6], H = K[7];
 
     loop {
+
+        // AVALANCHE OF ORIGINAL THROUGH KEYS
+        // DONT LET THE ORIGINAL CONTROL THE ACCUMULATION AND LOOP
+        // E FAZ O A AFETAR O H, ETC
+        x += ((((((A + B) ^ C) + D) ^ E) + F) ^ G) + H;
 
         do { // LOOPA DE 1 A 3 VEZES (A MAIORIA 2, AS VEZES 3, DIFICILMENTE 1)
             // (POIS É MAIS FÁCIL TER UM NO FIM DO QUE NENHUM NO MEIO E FIM)
@@ -112,15 +47,10 @@ static inline u64 encrypt (const u64 K[K_LEN], u64* restrict pos, u64* restrict 
             return A + B + C + D + E + F + G + H;
 
         // READ THE ORIGINAL VALUE
-        const u64 orig = BE64(*pos);
-
-        // AVALANCHE OF ORIGINAL THROUGH KEYS
-        // DONT LET THE ORIGINAL CONTROL THE ACCUMULATION AND LOOP
-        // E FAZ O A AFETAR O H, ETC
-        x = (((((((orig + H) ^ G) + F) ^ E) + D) ^ C) + B) ^ A;
+        x = BE64(*pos);
 
         // WRITE THE ENCRYPTED VALUE
-        *pos++ = BE64(ENC(orig));
+        *pos++ = BE64(ENC(x));
     }
 }
 
@@ -129,18 +59,21 @@ static inline u64 decrypt (const u64 K[K_LEN], u64* restrict pos, u64* restrict 
     ASSERT(end >= &pos[PKT_ALIGN_SIZE]);
     ASSERT(end <= &pos[PKT_ALIGN_SIZE + XGW_PAYLOAD_MAX]);
 
-    __crypt_prefetch_k(K);
+    __prefetch_w_temporal_none(pos);
 
-    __builtin_prefetch(pos, 1, 0);
-
-    u64 A = 0xD03D605BF5FD9241ULL, B = 0x3A688E2046C195EBULL, C = 0x545121D4D803E72BULL, D = 0xE1CB328227DCE32BULL,
-        E = 0xBE988D423E5B9FCAULL, F = 0x4F0C1191DFD5C797ULL, G = 0x18EF7F5564D9A4EEULL, H = 0xB238CC5007C62530ULL;
-
-    u64 x = (1ULL << 63) | 0x23685C08643EDBFBULL;
+    // INITIAL KEYS, PER INTERVAL
+    u64 A = K[0], B = K[1], C = K[2], D = K[3],
+        E = K[4], F = K[5], G = K[6], H = K[7];
 
     loop {
 
-        do {
+        // AVALANCHE OF ORIGINAL THROUGH KEYS
+        // DONT LET THE ORIGINAL CONTROL THE ACCUMULATION AND LOOP
+        // E FAZ O A AFETAR O H, ETC
+        x += ((((((A + B) ^ C) + D) ^ E) + F) ^ G) + H;
+
+        do { // LOOPA DE 1 A 3 VEZES (A MAIORIA 2, AS VEZES 3, DIFICILMENTE 1)
+            // (POIS É MAIS FÁCIL TER UM NO FIM DO QUE NENHUM NO MEIO E FIM)
 
             A += B += C += D += E += F += G += H += x;
 
@@ -153,6 +86,9 @@ static inline u64 decrypt (const u64 K[K_LEN], u64* restrict pos, u64* restrict 
             G += K[B % K_LEN];
             H += K[A % K_LEN];
 
+            // MAX: 64 / (24 + (0 * 8)/8) = 2.66
+            // AVG: 64 / (24 + (4 * 8)/8) = 2.28
+            // MIN: 64 / (24 + (8 * 8)/8) = 2
         } while (x >>= (24 + (x % 8)));
 
         // IF FINISHED, RETURN THE HASH
@@ -164,45 +100,43 @@ static inline u64 decrypt (const u64 K[K_LEN], u64* restrict pos, u64* restrict 
 
         // WRITE THE ORIGINAL VALUE
         *pos++ = BE64(x);
-
-        // AVALANCHE OF ORIGINAL THROUGH KEYS
-        x = (((((((x + H) ^ G) + F) ^ E) + D) ^ C) + B) ^ A;
     }
 }
 
 // USING SECRET S, APPLY RANDOM R, AND DERIVE KEY K
 static void secret_derivate_random_as_key (const u64 S[SECRET_KEYS_N][K_LEN], const u64 L[K_LEN], const u64 R[K_LEN], u64 K[K_LEN]) {
 
-    __crypt_prefetch_k_once(L);
+    u64 sum = 0;
 
-    // LOAD DYNAMIC RANDOM
-    u64 A = BE64(R[0]), B = BE64(R[1]), C = BE64(R[2]), D = BE64(R[3]),
-        E = BE64(R[4]), F = BE64(R[5]), G = BE64(R[6]), H = BE64(R[7]);
+    // WHILE IS FETCHING L...
+    __prefetch_r_temporal_high(L);
 
-    // WE KEEP THE PING SMALL FOR NETWORKING AND RAMDOMNESS REASONS
-    // SO FROM THIS LITTLE RANDOM PING WE WILL GENERATE A BIGGER THING
+    // ...LOAD DYNAMIC RANDOM
     for_count (k, K_LEN)
-        A += B += C += D += E += F += G += H += K[k] =
-            (((((((L[k] + H) ^ G) + F) ^ E) + D) ^ C) + B) ^ A;
+        K[k] = sum += BE64(R[k]);
+
+    // ...AND NOW APPLY L
+    for_count (k, K_LEN)
+        K[k] += sum += L[k];
 
     // THE INDEXING WILL CONSIDER ALL THE BITS
-    u64 sum = A + B + C + D + E + F + G + H;
-        sum += sum >> 32;
-        sum += sum >> 16;
+    sum += sum >> 32;
+    sum += sum >> 16;
 
     // DYNAMICALLY CHOOSE CONSTANT SECRET
     const u64* const restrict s = S[sum % SECRET_KEYS_N];
 
-    //
-    __crypt_prefetch_k_once(s);
+    // WHILE IS FETCHING S...
+    __prefetch_r_temporal_high(s);
 
-    // WHILE THE MEMORY IS LOADED, WE CAN ALSO DO THIS
+    // ...DO THIS (THIS IS DUMB, BUT WE ARE STALLED ANYWAY)
+    // NOW WE HAVE
     for_count (k, K_LEN)
-        sum += K[k] += swap64(K[k] + sum);
+        K[k] += sum += K[k];
 
-    // MERGE
+    // ...AND NOW APPLY S
     for_count (k, K_LEN)
-        sum += K[k] += swap64(s[k] + sum);
+        K[k] += sum += s[k];
 }
 
 // GENERATE CONSTANT PING/PONG KEYS

@@ -53,6 +53,19 @@
     __builtin_choose_expr(                    sizeof(x) <= sizeof(uint),   __builtin_ctz(x),   \
                                                                            __builtin_ctzll(x))))))
 
+#define __prefetch_r_temporal_none(addr)     __builtin_prefetch((addr), 0, 0)
+#define __prefetch_w_temporal_none(addr)     __builtin_prefetch((addr), 1, 0)
+#define __prefetch_s_temporal_none(addr)     __builtin_prefetch((addr), 2, 0)
+#define __prefetch_r_temporal_low(addr)      __builtin_prefetch((addr), 0, 1)
+#define __prefetch_w_temporal_low(addr)      __builtin_prefetch((addr), 1, 1)
+#define __prefetch_s_temporal_low(addr)      __builtin_prefetch((addr), 2, 1)
+#define __prefetch_r_temporal_moderate(addr) __builtin_prefetch((addr), 0, 2)
+#define __prefetch_w_temporal_moderate(addr) __builtin_prefetch((addr), 1, 2)
+#define __prefetch_s_temporal_moderate(addr) __builtin_prefetch((addr), 2, 2)
+#define __prefetch_r_temporal_high(addr)     __builtin_prefetch((addr), 0, 3)
+#define __prefetch_w_temporal_high(addr)     __builtin_prefetch((addr), 1, 3)
+#define __prefetch_s_temporal_high(addr)     __builtin_prefetch((addr), 2, 3)
+
 typedef __u8   u8;
 typedef __u16 u16;
 typedef __u32 u32;
