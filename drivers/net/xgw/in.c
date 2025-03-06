@@ -442,21 +442,33 @@ _is_xgw:
 
     const u64 counter = __atomic_load_n(&path->counter, __ATOMIC_RELAXED);
 
-    if (counter) {
-        // NAO SOU UM SERVIDOR ESPERANDO POR UM SYN-ACK
-        if (ABS_DIFF(p_counter, counter) > 2) {
-            // O COUNTER NAO ESTA COMO ESPERADO
-            ret_path(PSTATS_I_COUNTER_MISMATCH);
-    } elif (p_counter != path->counterSyn)
-        // SOU UM SERVIDOR ESPERANDO POR UM SYN
-        // THIS PACKET IS NOT A SYN
-        ret_path(PSTATS_I_COUNTER_NOT_SYN);
-
 #if 1 // NOTE: O COUNTER DO PACOTE NÃO PODE SER UM DE NOSSOS CODIGOS INTERNOS
     if (p_counter < 32 ||
         p_counter >= 0xFFFFFFFFFFFFFFDFULL)
         ret_path(PSTATS_I_COUNTER_INVALID);
 #endif
+
+    if (counter) {
+        // NAO SOU UM SERVIDOR ESPERANDO POR UM SYN-ACK
+        if (ABS_DIFF(p_counter, counter) > 2) {
+            // O COUNTER NAO ESTA COMO ESPERADO
+            ret_path(PSTATS_I_COUNTER_MISMATCH);
+    } else {
+        // SOU UM SERVIDOR ESPERANDO POR UM SYN-ACK
+        if (p_counter != path->counterSyn)
+            // THIS PACKET IS NOT A SYN
+            ret_path(PSTATS_I_COUNTER_NOT_SYN);
+        if (size != PING_SIZE_SYN)
+            // THIS PACKET IS NOT A SYN
+            ret_path(PSTATS_I_COUNTER_NOT_SYN);
+        if (i != I_KEY_PING)
+            // THIS PACKET IS NOT A SYN
+            ret_path(PSTATS_I_COUNTER_NOT_SYN);
+    }
+
+
+    elif ()
+
 
     const u64 r_counter = pkt_decrypt(node, i, pkt, size, hash);
 
