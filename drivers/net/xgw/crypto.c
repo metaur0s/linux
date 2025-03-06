@@ -335,46 +335,14 @@ static void secret_derivate_from_password (u64 S[SECRET_KEYS_N][K_LEN], const u8
 // AUTHENTICITY, INTEGRITY AND PRIVACY
 // - DATA
 
-/* NOTE: QUALQUER ALTERAÇÃO EM UM BIT DO INFO OU DO SCOUNTER TEM QUE RESULTAR EM ALGO DIFERENTE AQUI
-
-def compute (a, b):
-    #return ((a + b) ^ a) + b
-    #return (((a + b) ^ (a * b)) + a) ^ b
-    #return ((a + b) * a) + b
-    return (((a + b) * a) + b) ^ a
-
-for a in (0xAABBCC0000, 0xAABBCC0001, 0xAABBCCDD00, 0xAABBCCDDEE, 0xAABBCCDDFF):
-    for b in (0xAABBCC0000, 0xAABBCC0001, 0xAABBCCDD00, 0xAABBCCDDEE, 0xAABBCCDDFF):
-        cksum = compute(a, b)
-        assert cksum != compute(a + 1, b)
-        assert cksum != compute(a - 1, b)
-        assert cksum != compute(a ^ 1, b)
-        assert cksum != compute(a    , b + 1)
-        assert cksum != compute(a    , b - 1)
-        assert cksum != compute(a    , b ^ 1)
-        assert cksum != compute(a + 1, b + 1)
-        assert cksum != compute(a - 1, b - 1)
-        assert cksum != compute(a ^ 1, b ^ 1)
-        assert cksum != compute(a + 1, b - 1)
-        assert cksum != compute(a + 1, b ^ 1)
-        assert cksum != compute(a - 1, b + 1)
-        assert cksum != compute(a - 1, b ^ 1)
-        assert cksum != compute(a ^ 1, b + 1)
-        assert cksum != compute(a ^ 1, b - 1)
-*/
-static inline u64 _PKT_SEED (const pkt_s* const pkt) {
-
-    const u64 a = BE64(pkt->x.info);
-    const u64 b = BE64(pkt->x.seed);
-
-    return (((a + b) * a) + b) ^ a;
-}
+// NOTE: QUALQUER ALTERAÇÃO EM UM BIT DO PATH ID OU DO RCOUNTER TEM QUE RESULTAR EM ALGO DIFERENTE AQUI
+#define _PKT_SEED(pkt) BE64(pkt->x.info ^ pkt->x.counter)
 
 // A IDÉIA É ASSUMIR QUE O SIZE É SEMPRE MULTIPLO DE 64-BITS.
 // DAÍ O RESTO QUE PASSAR DISSO, É "EXPULSO" DO ALIGN, FAZENDO ELE COMECAR MAIS PARA FRENTE.
 #define _PKT_START(pkt, size) (PTR(pkt) + PKT_SIZE + (size % sizeof(u64)))
 #define _PKT_END(pkt, size)   (PTR(pkt) + PKT_SIZE + PKT_ALIGN_SIZE + size)
 
-// NOTE: TEM QUE FAZER APOS TER SETADO O PKT INFO E SCOUNTER
-#define pkt_encrypt(node, o, pkt, size, counter) encrypt(node->oKeys[o], _PKT_START(pkt, size), _PKT_END(pkt, size), _PKT_SEED(pkt), counter)
-#define pkt_decrypt(node, i, pkt, size, counter) decrypt(node->iKeys[i], _PKT_START(pkt, size), _PKT_END(pkt, size), _PKT_SEED(pkt), counter)
+// NOTE: TEM QUE FAZER APOS TER SETADO O PKT INFO E RCOUNTER
+#define pkt_encrypt(node, o, pkt, size, lcounter) encrypt(node->oKeys[o], _PKT_START(pkt, size), _PKT_END(pkt, size), _PKT_SEED(pkt), lcounter)
+#define pkt_decrypt(node, i, pkt, size, lcounter) decrypt(node->iKeys[i], _PKT_START(pkt, size), _PKT_END(pkt, size), _PKT_SEED(pkt), lcounter)

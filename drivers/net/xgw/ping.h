@@ -3,14 +3,9 @@
 #define PONG_SIZE (PONG_RANDOMS_N * sizeof(u64))
 
 #define PING_RANDOMS_N (K_LEN + 1)
-#define PONG_RANDOMS_N 16
+#define PONG_RANDOMS_N 8
 
-struct ping_s {
-    u64 rnd [K_LEN];
-    u8 _ [7];
-    u8 ver; // SENDER'S IKEYS INDEX BEING REGISTERED
-};
-
-BUILD_ASSERT(sizeof(ping_s) == PING_SIZE);
+// PING PACKET PAYLOAD: KEYS ... RANDOM ... 8-BIT VERSION ... RANDOM
+#define PING_VERSION_OFFSET (PING_SIZE - 4)
 
 BUILD_ASSERT(PING_SIZE != PONG_SIZE);

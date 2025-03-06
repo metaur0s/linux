@@ -92,8 +92,8 @@ struct hdr_x_s { // WIRE
             u16 dsize; // SIZE OF THE PAYLOAD (WIRE) OR HEADER (RUNTIME)
         };  u64 info;
     };
-    u64 session; // PATH SESSION
-    u64 hash; // HASH OF THE INFO, COUNTER AND DATA
+    u64 counter; // SENDER'S RCOUNTER
+    u64 hash; // SENDER'S LCOUNTER (ENCRYPTED WITH INFO, COUNTER AND DATA)
 };
 
 //
