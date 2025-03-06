@@ -87,13 +87,13 @@ struct hdr_x_s { // WIRE
         struct {
             u16 src;
             u16 dst;
-            u8  path;
+            u8  path; // BEM NO MEIO PARA PROTEGELO NO HASHING
             u8  version;
             u16 dsize; // SIZE OF THE PAYLOAD (WIRE) OR HEADER (RUNTIME)
         };  u64 info;
     };
-    u64 dcounter; // DST COUNTER
-    u64 scounter; // SRC COUNTER (MASKED BY CHECKSUM)
+    u64 counter; // PATH COUNTER
+    u64 hash; // HASH OF THE INFO, COUNTER AND DATA
 };
 
 //

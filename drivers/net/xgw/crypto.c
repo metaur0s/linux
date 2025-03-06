@@ -221,16 +221,11 @@ static void reset_node_ping_keys (node_s* const node, const uint self, const uin
     for_count (k, K_LEN) LK[k] = x + y;
 
     // NOW MERGE WITH THE ENTIRE SECRET
-    const u64* S   =  node->secret;
-    const u64* end = &node->secret[SECRET_KEYS_N];
-
-    do { __crypt_prefetch_k_once(S);
-
-        for_count (k, K_LEN) XK[k] += x += swap64(S[k] + x);
-        for_count (k, K_LEN) YK[k] += y += swap64(S[k] + y);
-        for_count (k, K_LEN) LK[k] += swap64(swap64(S[k] + x) + y);
-
-    } while ((S += K_LEN) != end);
+    for_count (s, SECRET_KEYS_N) {
+        for_count (k, K_LEN) x += XK[k] += swap64q(node->secret[s][k], popcount(x));
+        for_count (k, K_LEN) y += YK[k] += swap64q(node->secret[s][k], popcount(y));
+        for_count (k, K_LEN)      LK[k] += swap64q(node->secret[s][k], popcount(x + y));
+    }
 
     //
     for_count (pid, PATHS_N) {
@@ -298,7 +293,7 @@ static void secret_derivate_from_password (u64 S[SECRET_KEYS_N][K_LEN], const u8
 
     // SHUFFLE
     for_count (c, PASSWORD_ROUNDS) {
-        for_count (s, SECRET_KEYS_N) { __crypt_prefetch_k_once(S[s]);
+        for_count (s, SECRET_KEYS_N) {
             for_count (k, K_LEN) {
 
                 A += S[H % SECRET_KEYS_N][C % K_LEN] * E;
@@ -325,11 +320,46 @@ static void secret_derivate_from_password (u64 S[SECRET_KEYS_N][K_LEN], const u8
 // AUTHENTICITY, INTEGRITY AND PRIVACY
 // - DATA
 
+/* NOTE: QUALQUER ALTERAÇÃO EM UM BIT DO INFO OU DO SCOUNTER TEM QUE RESULTAR EM ALGO DIFERENTE AQUI
+
+def compute (a, b):
+    #return ((a + b) ^ a) + b
+    #return (((a + b) ^ (a * b)) + a) ^ b
+    #return ((a + b) * a) + b
+    return (((a + b) * a) + b) ^ a
+
+for a in (0xAABBCC0000, 0xAABBCC0001, 0xAABBCCDD00, 0xAABBCCDDEE, 0xAABBCCDDFF):
+    for b in (0xAABBCC0000, 0xAABBCC0001, 0xAABBCCDD00, 0xAABBCCDDEE, 0xAABBCCDDFF):
+        cksum = compute(a, b)
+        assert cksum != compute(a + 1, b)
+        assert cksum != compute(a - 1, b)
+        assert cksum != compute(a ^ 1, b)
+        assert cksum != compute(a    , b + 1)
+        assert cksum != compute(a    , b - 1)
+        assert cksum != compute(a    , b ^ 1)
+        assert cksum != compute(a + 1, b + 1)
+        assert cksum != compute(a - 1, b - 1)
+        assert cksum != compute(a ^ 1, b ^ 1)
+        assert cksum != compute(a + 1, b - 1)
+        assert cksum != compute(a + 1, b ^ 1)
+        assert cksum != compute(a - 1, b + 1)
+        assert cksum != compute(a - 1, b ^ 1)
+        assert cksum != compute(a ^ 1, b + 1)
+        assert cksum != compute(a ^ 1, b - 1)
+*/
+static inline u64 _PKT_SEED (const pkt_s* const pkt) {
+
+    const u64 a = BE64(pkt->x.info);
+    const u64 b = BE64(pkt->x.counter);
+
+    return (((a + b) * a) + b) ^ a;
+}
+
 // A IDÉIA É ASSUMIR QUE O SIZE É SEMPRE MULTIPLO DE 64-BITS.
 // DAÍ O RESTO QUE PASSAR DISSO, É "EXPULSO" DO ALIGN, FAZENDO ELE COMECAR MAIS PARA FRENTE.
 #define _PKT_START(pkt, size) (PTR(pkt) + PKT_SIZE + (size % sizeof(u64)))
 #define _PKT_END(pkt, size)   (PTR(pkt) + PKT_SIZE + PKT_ALIGN_SIZE + size)
 
 // NOTE: TEM QUE FAZER APOS TER SETADO O PKT INFO E SCOUNTER
-#define pkt_encrypt(node, o, pkt, size, rcounter, lcounter) (lcounter ^ encrypt(node->oKeys[o], _PKT_START(pkt, size), _PKT_END(pkt, size), rcounter))
-#define pkt_decrypt(node, i, pkt, size, rcounter, hash)     (hash     ^ decrypt(node->iKeys[i], _PKT_START(pkt, size), _PKT_END(pkt, size), rcounter))
+#define pkt_encrypt(node, o, pkt, size) encrypt(node->oKeys[o], _PKT_START(pkt, size), _PKT_END(pkt, size), _PKT_SEED(pkt))
+#define pkt_decrypt(node, i, pkt, size) decrypt(node->iKeys[i], _PKT_START(pkt, size), _PKT_END(pkt, size), _PKT_SEED(pkt))

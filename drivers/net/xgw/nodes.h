@@ -139,10 +139,10 @@ struct path_s {
     u16 rtt_max; // CONFIG
     u16 rtt_var; // CONFIG
     // --
-    u64 lcounter; // IN_PONG | MEU COUNTER A SER RECEBIDO -> QUANDO EU O RECEBI | KEEPER USA PARA DAR TIMEOUT
-    u64 rcounter; // IN_PING | COUNTER DO ULTIMO PING DO PEER (PARA CONFIRMAR SE É SEQUENCIAL E NÃO REPETIDO)
-    u64 last;     // KEEPER
-    u64 sent;     // KEEPER | QUANDO ENVIEI O ULTIMO PING
+    u64 counter;  // COUNTER, GERADO PELO CLIENTE, MANTIDO LOCALMENTE
+    u64 sent;     // QUANDO ENVIEI O PING
+    u64 received; // QUANDO RECEBI O PONG
+    u64 reserved64;
     u64 acks;     // KEEPER - HISTORY
     u16 rtt;      // KEEPER WRITE / OUT READ  <<---- VAI TER QUE ENFIAR ESSA PORRA ENTÃO DENTRO DO CACHE LINE DO SKEL, OU NO NODE
     u8  rtt_index;
@@ -238,8 +238,7 @@ struct node_s { // DEIXA TUDO NO MESMO CACHE LINE PARA A ITERACAO DO KEEPER
     u16 ipaths; // PATHS ALLOWED TO IN
     u16 mtu;
     u16 weights;
-    u64 lcounter;
-    u64 rcounter;
+    u64 reserved64[2];
     u64* conns; // JIFFIES (60) | PID (4) -- GROUPS OF CONNECTIONS WITH SAME HASH
     u32 connsN:24, // O OUT PRECISA DISSO  ((((1 << node->order) * PAGE_SIZE) - offsetof(node_s, conns)) / sizeof(conn_s))
         info:8;
@@ -256,17 +255,20 @@ struct node_s { // DEIXA TUDO NO MESMO CACHE LINE PARA A ITERACAO DO KEEPER
     net_device_s* dev; // TODO: USA MUITO NO IN, E TALVEZ NO OUT E NO CMD
 // 32 -- RO - NAME
     char name [NODE_NAME_SIZE];
+// 128 --
+    u64 synCounters [PATHS_N]; // THE DEFAULT ONES
 // 5120 -- PATHS
     path_s paths [PATHS_N];
 // 16384 --
-    volatile stat_s pstats [PATHS_N] [64]; // TODO: DIMINUIR ISSO
+    volatile stat_s pstats [PATHS_N] [64]; // TODO: DIMINUIR ISSO, MAS MANTER ALINHADO
 // ---------------------- NODE_SIZE_INIT -----------------------------
-    char _ [384]; // 512 - ((1209984 - (1048576+131072+8640+64)) % 512)
-// 8640 + 64 -- KEEPER/OUT READ, IN WRITE
+// -- LEARN KEY
+    u64 lKey [K_LEN];
+// -- KEEPER/OUT READ, IN WRITE
     u64 oKeys [O_KEYS_ALL] [K_LEN];
-// 131072 -- IN READ, KEEPER WRITE
+// -- IN READ, KEEPER WRITE
     u64 iKeys [I_KEYS_ALL] [K_LEN];
-// 1048576 -- RO
+// -- RO
     u64 secret [SECRET_KEYS_N] [K_LEN]; // TODO: PARA SER DINAMICO, TERA QUE RESETAR TAMBEM O node->paths[*].pstats
 };
 
@@ -274,24 +276,23 @@ BUILD_ASSERT(sizeof(((node_s*)NULL)->pstats)
          >= (sizeof(((node_s*)NULL)->pstats[0][0]) * PSTATS_N));
 
 //
-BUILD_ASSERT(sizeof(((node_s*)NULL)->oKeys)  == 8704);
-BUILD_ASSERT(sizeof(((node_s*)NULL)->iKeys)  == 131072);
-BUILD_ASSERT(sizeof(((node_s*)NULL)->secret) == 1048576);
+BUILD_ASSERT(sizeof(((node_s*)NULL)->lKey)   == K_SIZE);
+BUILD_ASSERT(sizeof(((node_s*)NULL)->oKeys)  == (O_KEYS_ALL * K_SIZE));
+BUILD_ASSERT(sizeof(((node_s*)NULL)->iKeys)  == (I_KEYS_ALL * K_SIZE));
+BUILD_ASSERT(sizeof(((node_s*)NULL)->secret) == (SECRET_KEYS_N * K_SIZE));
+BUILD_ASSERT(sizeof(((node_s*)NULL)->synCounters) == 128);
 BUILD_ASSERT(sizeof(((node_s*)NULL)->paths)  == 5120);
 BUILD_ASSERT(sizeof(((node_s*)NULL)->pstats) == 16384);
-BUILD_ASSERT(sizeof(node_s)                  == 1209984 + 384);
 
-BUILD_ASSERT(offsetof(node_s, opaths)   % CACHE_LINE_SIZE == 0);
-BUILD_ASSERT(offsetof(node_s, ptr)      % CACHE_LINE_SIZE == 0);
-BUILD_ASSERT(offsetof(node_s, paths)    % CACHE_LINE_SIZE == 0);
-BUILD_ASSERT(offsetof(node_s, pstats)   % CACHE_LINE_SIZE == 0);
-BUILD_ASSERT(offsetof(node_s, oKeys)    % CACHE_LINE_SIZE == 0);
-BUILD_ASSERT(offsetof(node_s, iKeys)    % CACHE_LINE_SIZE == 0);
-BUILD_ASSERT(offsetof(node_s, secret)   % CACHE_LINE_SIZE == 0);
-
-BUILD_ASSERT(offsetof(node_s, oKeys)    % 512 == 0);
-BUILD_ASSERT(offsetof(node_s, iKeys)    % 512 == 0);
-BUILD_ASSERT(offsetof(node_s, secret)   % 512 == 0);
+BUILD_ASSERT(offsetof(node_s, opaths)      % CACHE_LINE_SIZE == 0);
+BUILD_ASSERT(offsetof(node_s, ptr)         % CACHE_LINE_SIZE == 0);
+BUILD_ASSERT(offsetof(node_s, synCounters) % CACHE_LINE_SIZE == 0);
+BUILD_ASSERT(offsetof(node_s, paths)       % CACHE_LINE_SIZE == 0);
+BUILD_ASSERT(offsetof(node_s, pstats)      % CACHE_LINE_SIZE == 0);
+BUILD_ASSERT(offsetof(node_s, lKey)        % CACHE_LINE_SIZE == 0);
+BUILD_ASSERT(offsetof(node_s, oKeys)       % CACHE_LINE_SIZE == 0);
+BUILD_ASSERT(offsetof(node_s, iKeys)       % CACHE_LINE_SIZE == 0);
+BUILD_ASSERT(offsetof(node_s, secret)      % CACHE_LINE_SIZE == 0);
 
 // THE TYPES MUST BE ABLE TO HOLD THE VALUES
 BUILD_ASSERT((typeof(((node_s*)NULL)->nid))NID_MAX == NID_MAX);

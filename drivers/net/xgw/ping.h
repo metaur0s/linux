@@ -12,3 +12,5 @@ struct ping_s {
 };
 
 BUILD_ASSERT(sizeof(ping_s) == PING_SIZE);
+
+BUILD_ASSERT(PING_SIZE != PONG_SIZE);

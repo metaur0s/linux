@@ -139,37 +139,6 @@ static inline void in_discover (const path_s* const path, const skb_s* const skb
 // PING DESTINATION'S COUNTER
 #define COUNTER_SYN 0
 
-static inline int __compare_exchange64_cst (volatile u64* const where, u64 old, const u64 new) {
-
-    return __atomic_compare_exchange_n(where, &old, new, 0, __ATOMIC_SEQ_CST, __ATOMIC_RELAXED);
-}
-
-static inline int in_pp_pong (node_s* const node, path_s* const path, const u64 p_lcounter, const u64 p_rcounter) {
-
-    if (p_rcounter <= COUNTER_CONNECTING)
-        // HIS COUNTER IS INVALID
-        return PSTATS_I_PONG_RCOUNTER_INVALID;
-
-    // PONGS TEM QUE SER DENTRO DO INTERVALO
-    if (!__compare_exchange64_cst(&path->lcounter, p_lcounter, get_jiffies_64()))
-        // O RACE PODE TER ACONTECIDO JUNTO COM OUTRO RECEIVE, OU O KEEPER ACABA DE AVANCAR
-        return PSTATS_I_PONG_LCOUNTER_MISMATCH;
-
-    // SAVED O HORARIO EM QUE RECEBEU O PONG PARA O LCOUNTER ATUAL
-
-    // PATH->RCOUNTER IS RESPONSIBILITY OF THE PING, NOT THE PONG;
-    // BUT IF THIS PONG IS THE SYN-ACK, THIS IS WHERE THE CLIENT DISCOVERS THE SERVER COUNTER,
-    // AND THEN STOPS SENDING SYN
-    __compare_exchange64_cst(&path->rcounter, COUNTER_CONNECTING, p_rcounter);
-
-    // SAVE REMOTE COUNTER
-    // NOTE: HERE WE RACE WITH ABOVE; THE KEEPEER MAY HAVE READ AN INVALID node->rcounter
-    // BUT THAT WOULD MEAN WE RECEIED A PONG AFTER A KEEPER INTERVAL
-    __atomic_store_n(&node->rcounter, p_rcounter, __ATOMIC_RELAXED);
-
-    return PSTATS_I_PONG_GOOD;
-}
-
 static inline int in_pp_ping (node_s* const node, path_s* const path, const u64 p_lcounter, const u64 p_rcounter , const skb_s* const iskb, const ping_s* const ping) {
 
     pkt_s* skel; pkt_s skel_;
@@ -301,15 +270,19 @@ static inline int in_pp_ping (node_s* const node, path_s* const path, const u64 
     return PSTATS_I_PING_GOOD;
 }
 
-static noinline int in_pp (node_s* const node, skb_s* const iskb, const pkt_s* const pkt, const uint size, const u64 p_lcounter, const u64 p_rcounter) {
+static inline int in_pp (node_s* const node, path_s* const path, const u64 counter, skb_s* const iskb, const pkt_s* const pkt, const uint size, const u64 p_counter) {
 
-    path_s* const path = &node->paths[BE8(pkt->x.path)];
-
-    if (size == PONG_SIZE)
-        return in_pp_pong(node, path, p_lcounter, p_rcounter);
+    if (size == PONG_SIZE) {
+        // NOTA: O PONG TEM QUE SER ENVIADO COM O COUNTER QUE RECEBEU NO PING, NAO IMPORTA SE SOU CLIENTE OU SERVIDOR.
+        if (__atomic_compare_exchange_n(&path->received, p_counter, get_jiffies_64(), 0, __ATOMIC_SEQ_CST, __ATOMIC_RELAXED))
+            // SUCCESS
+            return PSTATS_I_PONG_GOOD;
+        // PONG REPETIDO, OU ATRASADO
+        return PSTATS_I_PONG_COUNTER_MISMATCH;
+    }
 
     if (size == PING_SIZE)
-        return in_pp_ping(node, path, p_lcounter, p_rcounter, iskb, PTR(pkt->p));
+        return in_pp_ping(node, path, counter, p_counter, iskb, PTR(pkt->p));
 
     return PSTATS_I_NOT_PING_OR_PONG;
 }
@@ -422,8 +395,8 @@ _is_xgw:
     const uint pid        = BE8  (pkt->x.path);
     const uint size       = BE16 (pkt->x.dsize);
     const uint i          = BE8  (pkt->x.version);
-    const u64  p_rcounter = BE64 (pkt->x.scounter);
-    const u64  hash       = BE64 (pkt->x.dcounter);
+    const u64  p_counter  = BE64 (pkt->x.counter);
+    const u64  hash       = BE64 (pkt->x.hash);
 
     ASSERT(nid < NODES_N);
 
@@ -460,24 +433,26 @@ _is_xgw:
     if ((PTR(pkt) + PKT_SIZE + PKT_ALIGN_SIZE + size) > end)
         ret_path(PSTATS_I_SIZE_TRUNCATED);
 
-    //
-    const u64 p_lcounter = pkt_decrypt(node, i, pkt, size, hash);
+    const path_s* const = &node->paths[pid];
 
-    if (i == I_KEY_PING)
-        // PING/PONG
-        ret_path(in_pp(node, skb, pkt, size, p_lcounter, p_rcounter));
+    const u64 counter = __atomic_load_n(&path->counter, __ATOMIC_RELAXED);
 
-    // NORMAL PACKET
+    if (ABS_DIFF(p_counter, counter) > 2)
+        ret_path(PSTATS_I_DATA_LCOUNTER_MISMATCH);
 
     // O SIGN É O TIMESTAMP
     // REPLAY/CORRUPTION/FORGING/EXPIRATION PROTECTION
     // NOTE: LEMBRANDO QUE O TEMPO TODO AMBOS FICAM AJUSTANDO O NODE->DIFF,
     //       ENTAO NAO DA PARA LEVAR AO PE DA LETRA ESSES TIMES
     // NOTE: O PACOTE PODE TER LEVADO UM TEMPO A CHEGAR, SER PROCESSADO ETC
-    const u64 node_lcounter = __atomic_load_n(&node->lcounter, __ATOMIC_RELAXED);
+    if (pkt_decrypt(node, i, pkt, size) != hash)
+        ret_path(PSTATS_I_HASH_MISMATCH);
 
-    if (ABS_DIFF(node_lcounter, p_lcounter) > 2)
-        ret_path(PSTATS_I_DATA_LCOUNTER_MISMATCH);
+    if (i == I_KEY_PING)
+        // PING/PONG
+        ret_path(in_pp(node, path, counter, skb, pkt, size, p_counter));
+
+    // NORMAL PACKET
 
     // AVANCA O ALIGNMENT
     void* const orig = PTR(pkt) + PKT_SIZE + PKT_ALIGN_SIZE;

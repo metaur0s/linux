@@ -64,7 +64,7 @@ static inline u16 udp_checksum6 (const void* ip, uint size) {
 // TODO: AQUI ENCRIPTA E NAO RETORNA NADA xD
 // TODO: SE ESSA PORRA COMPUTAR CHECKSUM TCP/UDP,
 // ENTAO VAI TER QUE SER DEPOIS DE ENCRYPTAR
-static void pkt_encapsulate (const node_s* const node, const uint o, const u64 rcounter, const pkt_s* const skel, skb_s* const skb, void* const restrict orig, const uint size) {
+static void pkt_encapsulate (const node_s* const node, const uint o, const u64 counter, const pkt_s* const skel, skb_s* const skb, void* const restrict orig, const uint size) {
 
     ASSERT(size >= XGW_PAYLOAD_MIN);
     ASSERT(size <= XGW_PAYLOAD_MAX);
@@ -73,7 +73,7 @@ static void pkt_encapsulate (const node_s* const node, const uint o, const u64 r
 
     ASSERT(skel->x.src  == BE16(nodeSelf));
     ASSERT(skel->x.dst  == BE16(node->nid));
-    ASSERT(skel->x.path == BE8(path->pid));
+ // ASSERT(skel->x.path == BE8(path->pid));
 
     ASSERT(skel->phys);
 
@@ -134,10 +134,10 @@ static void pkt_encapsulate (const node_s* const node, const uint o, const u64 r
     random64_n(pkt->p, PKT_ALIGN_RANDOMS, SUFFIX_ULL(CONFIG_XGW_RANDOM_ENCRYPT_ALIGN));
 
     //
-    pkt->x.dsize    = BE16(size);
-    pkt->x.version  = BE8(node->oVersions[o]);
-    pkt->x.scounter = BE64(__atomic_load_n(&node->lcounter, __ATOMIC_RELAXED));
-    pkt->x.dcounter = BE64(pkt_encrypt(node, o, pkt, size, rcounter));
+    pkt->x.dsize   = BE16(size);
+    pkt->x.version = BE8(node->oVersions[o]);
+    pkt->x.counter = BE64(counter);
+    pkt->x.hash    = BE64(pkt_encrypt(node, o, pkt, size));
 
     switch (type) {
 
@@ -390,9 +390,10 @@ static netdev_tx_t out (skb_s* const skb, net_device_s* const dev) {
         ret_path(PSTATS_O_DATA_NO_HEADROOM);
 
     pkt_encapsulate(node,
-        __atomic_load_n(&node->oIndex,   __ATOMIC_RELAXED),
-        __atomic_load_n(&node->rcounter, __ATOMIC_RELAXED),
-        &path->skel, skb, p, size);
+        __atomic_load_n(&node->oIndex,  __ATOMIC_RELAXED),
+        __atomic_load_n(&path->counter, __ATOMIC_RELAXED),
+        &path->skel, skb, p, size
+    );
 
     // -- THE FUNCTION CAN BE CALLED FROM AN INTERRUPT
     // -- WHEN CALLING THIS METHOD, INTERRUPTS MUST BE ENABLED
