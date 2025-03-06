@@ -106,7 +106,7 @@ static inline u64 encrypt (const u64 K[K_LEN], u64* restrict pos, u64* restrict 
 
         // IF FINISHED, RETURN THE HASH
         if (pos == end)
-            return A + B + C + D + E + F ^ G + H;
+            return A + B + C + D + E + F + G + H;
 
         // READ THE ORIGINAL VALUE
         const u64 orig = BE64(*pos);
@@ -154,7 +154,7 @@ static inline u64 decrypt (const u64 K[K_LEN], u64* restrict pos, u64* restrict 
 
         // IF FINISHED, RETURN THE HASH
         if (pos == end)
-            return A + B + C + D + E + F ^ G + H;
+            return A + B + C + D + E + F + G + H;
 
         // READ THE ENCRYPTED VALUE AND DECRYPT IT
         x = DEC(BE64(*pos));
