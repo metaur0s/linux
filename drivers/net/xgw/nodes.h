@@ -128,7 +128,7 @@ BUILD_ASSERT(PATH_RTT_EFFECTIVE_MAX < ((85 * KEEPER_INTERVAL) / 100));
 
 struct path_s {
 // 64 -- KEEPER / IN
-  // 16 RO
+// 16 RO
     u32 info;
     u16 nid;
     u8  pid;
@@ -138,7 +138,7 @@ struct path_s {
     u16 rtt_min; // CONFIG
     u16 rtt_max; // CONFIG
     u16 rtt_var; // CONFIG
-// --
+// 46 --
     u64 lcounter; // IN_PONG | MEU COUNTER A SER RECEBIDO -> QUANDO EU O RECEBI | KEEPER USA PARA DAR TIMEOUT
     u64 rcounter; // IN_PING | COUNTER DO ULTIMO PING DO PEER (PARA CONFIRMAR SE É SEQUENCIAL E NÃO REPETIDO)
     u64 last;     // KEEPER
@@ -149,7 +149,7 @@ struct path_s {
     u8  dhcp; // ADDR/DHCP ID
     u8  tos;
     u8  ttl;
-// 32 -- KEEPER / PING
+// 30 -- KEEPER / PING
     skb_s* _skb;
     path_s* next; // NA LISTA DE PINGS - ONLY VALID WHEN PATH STATUS >= K_UNSTABLE
     u16 reserved32;
@@ -157,7 +157,7 @@ struct path_s {
     u8  sPortsN;
     u8  dPortIndex;
     u8  dPortsN;
-// SÓ PODE USAR PSTATS SE TEVE PATH-> !!!
+    // SÓ PODE USAR PSTATS SE TEVE PATH-> !!!
     volatile stat_s* pstats; // TODO: UMA ARRAY AQUI MESMO?
     // TODO: SEMANTICA DE memset(PATH, 0) AO DELETAR O PATH, E ESSES STATS
 // 48 -- RO (ALMOST) - KEEPER ON START
