@@ -46,7 +46,7 @@ static inline void __crypt_fetch_data (const u64* const pos, const u64* const en
 #endif
 }
 
-u64 encrypt (const u64 K[K_LEN], u64* restrict pos, u64* restrict const end, u64 x, const u64 sign) {
+u64 encrypt (const u64 K[K_LEN], u64* restrict pos, u64* restrict const end, u64 x) {
 
     ASSERT(end >= &pos[PKT_ALIGN_SIZE]);
     ASSERT(end <= &pos[PKT_ALIGN_SIZE + XGW_PAYLOAD_MAX]);
@@ -88,24 +88,18 @@ u64 encrypt (const u64 K[K_LEN], u64* restrict pos, u64* restrict const end, u64
         } while (x >>= (24 + (x % 32)));
 
         if (pos == end)
-            // USE THE ORIGINAL SIGN
-            x = sign;
-        else // READ THE ORIGINAL VALUE
-            x = BE64(*pos);
+            // RETURN THE HASH
+            return A + B + C + D + E + F + G + H;
 
-        // ENCRYPT IT
-        const u64 e = ENC(x);
-
-        if (pos == end)
-            // RETURN THE ENCRYPTED SIGN
-            return e;
+        // READ THE ORIGINAL VALUE
+        x = BE64(*pos);
 
         // WRITE THE ENCRYPTED VALUE
-        *pos++ = BE64(e);
+        *pos++ = BE64(ENC(x));
     }
 }
 
-u64 decrypt (const u64 K[K_LEN], u64* restrict pos, u64* restrict const end, u64 x, const u64 hash) {
+u64 decrypt (const u64 K[K_LEN], u64* restrict pos, u64* restrict const end, u64 x) {
 
     ASSERT(end >= &pos[PKT_ALIGN_SIZE]);
     ASSERT(end <= &pos[PKT_ALIGN_SIZE + XGW_PAYLOAD_MAX]);
@@ -139,17 +133,11 @@ u64 decrypt (const u64 K[K_LEN], u64* restrict pos, u64* restrict const end, u64
         } while (x >>= (24 + (x % 32)));
 
         if (pos == end)
-            // USE THE ENCRYPTED SIGN
-            x = hash;
-        else // READ THE ENCRYPTED VALUE
-            x = BE64(*pos);
+            // RETURN THE HASH
+            return A + B + C + D + E + F + G + H;
 
-        // DECRYPT IT
-        x = DEC(x);
-
-        if (pos == end)
-            // RETURN THE ORIGINAL SIGN
-            return x;
+        // READ THE ENCRYPTED VALUE AND DECRYPT IT
+        x = DEC(BE64(*pos));
 
         // WRITE THE ORIGINAL VALUE
         *pos++ = BE64(x);
@@ -344,5 +332,5 @@ static void secret_derivate_from_password (u64 S[SECRET_KEYS_N][K_LEN], const u8
 #define _PKT_END(pkt, size)   (PTR(pkt) + PKT_SIZE + PKT_ALIGN_SIZE + size)
 
 // NOTE: TEM QUE FAZER APOS TER SETADO O PKT INFO E RCOUNTER
-#define pkt_encrypt(node, o, pkt, size, lcounter) encrypt(node->oKeys[o], _PKT_START(pkt, size), _PKT_END(pkt, size), _PKT_SEED(pkt), lcounter)
-#define pkt_decrypt(node, i, pkt, size, lcounter) decrypt(node->iKeys[i], _PKT_START(pkt, size), _PKT_END(pkt, size), _PKT_SEED(pkt), lcounter)
+#define pkt_encrypt(node, o, pkt, size, counter) encrypt(node->oKeys[o], _PKT_START(pkt, size), _PKT_END(pkt, size), _PKT_SEED(pkt), counter)
+#define pkt_decrypt(node, i, pkt, size, counter) decrypt(node->iKeys[i], _PKT_START(pkt, size), _PKT_END(pkt, size), _PKT_SEED(pkt), counter)

@@ -1,5 +1,7 @@
 
 typedef struct pkt_s  pkt_s;
+typedef struct ping_s ping_s;
+typedef struct pong_s pong_s;
 typedef struct path_s path_s;
 typedef struct node_s node_s;
 typedef struct stat_s stat_s;

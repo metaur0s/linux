@@ -400,7 +400,7 @@ _is_xgw:
     const uint pid       = BE8  (pkt->x.path);
     const uint size      = BE16 (pkt->x.dsize);
     const uint i         = BE8  (pkt->x.version);
-    const u64  p_session = BE64 (pkt->x.session);
+    const u64  p_counter = BE64 (pkt->x.counter);
     const u64  hash      = BE64 (pkt->x.hash);
 
     ASSERT(nid < NODES_N);
@@ -442,26 +442,53 @@ _is_xgw:
 
     const u64 counter = __atomic_load_n(&path->counter, __ATOMIC_RELAXED);
 
-    // NOTE: O COUNTER DO PACOTE NÃO PODE SER UM DE NOSSOS CODIGOS INTERNOS
-    if (p_counter < 16)
+    if (counter) {
+        // NAO SOU UM SERVIDOR ESPERANDO POR UM SYN-ACK
+        if (ABS_DIFF(p_counter, counter) > 2) {
+            // O COUNTER NAO ESTA COMO ESPERADO
+            ret_path(PSTATS_I_COUNTER_MISMATCH);
+    } elif (p_counter != path->counterSyn)
+        // SOU UM SERVIDOR ESPERANDO POR UM SYN
+        // THIS PACKET IS NOT A SYN
+        ret_path(PSTATS_I_COUNTER_NOT_SYN);
+
+#if 1 // NOTE: O COUNTER DO PACOTE NÃO PODE SER UM DE NOSSOS CODIGOS INTERNOS
+    if (p_counter < 32 ||
+        p_counter >= 0xFFFFFFFFFFFFFFDFULL)
         ret_path(PSTATS_I_COUNTER_INVALID);
+#endif
 
-    if (ABS_DIFF(p_counter, counter) > 2)
-        ret_path(PSTATS_I_DATA_LCOUNTER_MISMATCH);
+    const u64 r_counter = pkt_decrypt(node, i, pkt, size, hash);
 
-    // O SIGN É O TIMESTAMP
+    if (counter == 0) {
+        // SOU UM SERVIDOR ESPERANDO POR UM SYN-ACK
+        // -- ISTO TEM QUE SER UM PING
+        // -- ISTO TEM QUE SER UM SYN/SYN-ACK (JA CONFIRMADO ACIMA)
+        //
+        // A ASSINATURA DO PACOTE
+
+    }
+
+
+
     // REPLAY/CORRUPTION/FORGING/EXPIRATION PROTECTION
     // NOTE: LEMBRANDO QUE O TEMPO TODO AMBOS FICAM AJUSTANDO O NODE->DIFF,
     //       ENTAO NAO DA PARA LEVAR AO PE DA LETRA ESSES TIMES
     // NOTE: O PACOTE PODE TER LEVADO UM TEMPO A CHEGAR, SER PROCESSADO ETC
-    if (pkt_decrypt(node, i, pkt, size) != hash)
+
+
+    if (l_counter != r_counter)
+        // ISSO SÓ ACONTECE NO CASO DO PING/PONG
         ret_path(PSTATS_I_HASH_MISMATCH);
+
 
     if (i == I_KEY_PING)
         // PING/PONG
         ret_path(in_pp(node, path, counter, skb, pkt, size, p_counter));
 
     // NORMAL PACKET
+
+
 
     // AVANCA O ALIGNMENT
     void* const orig = PTR(pkt) + PKT_SIZE + PKT_ALIGN_SIZE;
