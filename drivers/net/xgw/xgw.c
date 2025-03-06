@@ -80,10 +80,6 @@
 #include "dhcp.h"
 #include "cmd.h"
 
-//
-static inline u64   swap64 (const u64 x) { const uint q = popcount64(x); return (x >> q) | (x << (64 - q)); }
-static inline u64 unswap64 (const u64 x) { const uint q = popcount64(x); return (x << q) | (x >> (64 - q)); }
-
 DEFINE_SPINLOCK(xlock);
 
 static volatile u64 _xrnd [RANDOM_LEN];
