@@ -1,16 +1,57 @@
 
 // !!!!!! TODO: XGW TO XGW REDIRECT WITHOUT GOING THROUGH IP STACK
 
-// NAO FAZ UM SWAP FINAL POIS O VALOR É EXPOSTO K[4] ISSO SERIA INUTIL
-#define ENC(x) (  swap64(  swap64(  swap64(  swap64(  swap64(  swap64(  swap64((x) + A) + B) + C) + D) + E) + F) + G) + H)
-#define DEC(x) (unswap64(unswap64(unswap64(unswap64(unswap64(unswap64(unswap64((x) - H) - G) - F) - E) - D) - C) - B) - A)
+static inline u64   swap64 (const u64 x) { const uint q = popcount64(x); return (x >> q) | (x << (64 - q)); }
+static inline u64 unswap64 (const u64 x) { const uint q = popcount64(x); return (x << q) | (x >> (64 - q)); }
 
-static inline u64 encrypt (const u64 K[K_LEN], u64* restrict pos, u64* restrict const end, u64 x) {
+static inline u64   swap64q (const u64 x, const uint q) { return (x >> q) | (x << (64 - q)); }
+static inline u64 unswap64q (const u64 x, const uint q) { return (x << q) | (x >> (64 - q)); }
+
+#define   swap64x(x, y, z) (  swap64q((x), popcount64(z)) + (y))
+#define unswap64x(x, y, z)  unswap64q((x) - (y), popcount64(z))
+
+// USA SÓ METADE DAS VARIÁVEIS; AS DEMAIS SÃO USADAS PARA ROTACIONAR
+// ASSIM UM BRUTE-FORCE VAI TER DE ALÉM DE CHECAR TODAS AS POSSIBILIDADES DISSO AQUI, MAS TAMBÉM AS ROTACIONAIS
+#define ENC(x)    swap64x(  swap64x(  swap64x(  swap64x((x), A, B), C, D), E, F), G, H)
+#define DEC(x)  unswap64x(unswap64x(unswap64x(unswap64x((x), G, H), E, F), C, D), A, B)
+
+static inline void __crypt_fetch_data (const u64* const pos, const u64* const end) {
+
+#if 1
+    // NOTE: CHOOSE THE RIGHT ONE HERE
+#define ___prefetch __prefetch_w_temporal_high
+    ___prefetch((void*)pos +  0*CACHE_LINE_SIZE);
+    ___prefetch((void*)pos +  1*CACHE_LINE_SIZE);
+    ___prefetch((void*)pos +  2*CACHE_LINE_SIZE);
+    ___prefetch((void*)pos +  3*CACHE_LINE_SIZE);
+    ___prefetch((void*)pos +  4*CACHE_LINE_SIZE);
+    ___prefetch((void*)pos +  5*CACHE_LINE_SIZE);
+    ___prefetch((void*)pos +  6*CACHE_LINE_SIZE);
+    ___prefetch((void*)pos +  7*CACHE_LINE_SIZE);
+#if 0
+    ___prefetch((void*)pos +  8*CACHE_LINE_SIZE);
+    ___prefetch((void*)pos +  9*CACHE_LINE_SIZE);
+    ___prefetch((void*)pos + 10*CACHE_LINE_SIZE);
+    ___prefetch((void*)pos + 11*CACHE_LINE_SIZE);
+    ___prefetch((void*)pos + 12*CACHE_LINE_SIZE);
+    ___prefetch((void*)pos + 13*CACHE_LINE_SIZE);
+    ___prefetch((void*)pos + 14*CACHE_LINE_SIZE);
+    ___prefetch((void*)pos + 15*CACHE_LINE_SIZE);
+#endif
+#undef ___prefetch
+    (void)end;
+#else
+    (void)pos;
+    (void)end;
+#endif
+}
+
+u64 encrypt (const u64 K[K_LEN], u64* restrict pos, u64* restrict const end, u64 x, const u64 sign) {
 
     ASSERT(end >= &pos[PKT_ALIGN_SIZE]);
     ASSERT(end <= &pos[PKT_ALIGN_SIZE + XGW_PAYLOAD_MAX]);
 
-    __prefetch_w_temporal_none(pos);
+    __crypt_fetch_data(pos, end);
 
     // INITIAL KEYS, PER INTERVAL
     u64 A = K[0], B = K[1], C = K[2], D = K[3],
@@ -21,13 +62,14 @@ static inline u64 encrypt (const u64 K[K_LEN], u64* restrict pos, u64* restrict 
         // AVALANCHE OF ORIGINAL THROUGH KEYS
         // DONT LET THE ORIGINAL CONTROL THE ACCUMULATION AND LOOP
         // E FAZ O A AFETAR O H, ETC
-        x += ((((((A + B) ^ C) + D) ^ E) + F) ^ G) + H;
+        x += A + B + C + D + E + F + G + H;
 
-        do { // LOOPA DE 1 A 3 VEZES (A MAIORIA 2, AS VEZES 3, DIFICILMENTE 1)
-            // (POIS É MAIS FÁCIL TER UM NO FIM DO QUE NENHUM NO MEIO E FIM)
+        do {
 
+            // RANDOMLY ADD THE PREVIOUS ORIG AND ALL THE KEYS
             A += B += C += D += E += F += G += H += x;
 
+            // RANDOMLY ADD OUR CONSTANTS
             A += K[H % K_LEN];
             B += K[G % K_LEN];
             C += K[F % K_LEN];
@@ -37,29 +79,37 @@ static inline u64 encrypt (const u64 K[K_LEN], u64* restrict pos, u64* restrict 
             G += K[B % K_LEN];
             H += K[A % K_LEN];
 
-            // MAX: 64 / (24 + (0 * 8)/8) = 2.66
-            // AVG: 64 / (24 + (4 * 8)/8) = 2.28
-            // MIN: 64 / (24 + (8 * 8)/8) = 2
-        } while (x >>= (24 + (x % 8)));
+            // THIS HAS 2 EFFECTS:
+            //      1 - RANDOMIZES THE AMOUNT OF LOOP ITERATIONS
+            //      2 - RANDOMIZES THE VALUE OF X FOR THE SUM ABOVE
+            // MAX: 64 / (24 +    0) = 2.66
+            // AVG: 64 / (24 + 32/2) = 1.6
+            // MIN: 64 / (24 +   32) = 1.14
+        } while (x >>= (24 + (x % 32)));
 
-        // IF FINISHED, RETURN THE HASH
         if (pos == end)
-            return A + B + C + D + E + F + G + H;
+            // USE THE ORIGINAL SIGNATURE
+            x = sign;
+        else // READ THE ORIGINAL VALUE
+            x = BE64(*pos);
 
-        // READ THE ORIGINAL VALUE
-        x = BE64(*pos);
+        const u64 e = ENC(x);
+
+        if (pos == end)
+            // FINISHED, RETURN THE ENCRYPTED SIGNATURE
+            return e;
 
         // WRITE THE ENCRYPTED VALUE
-        *pos++ = BE64(ENC(x));
+        *pos++ = BE64(e);
     }
 }
 
-static inline u64 decrypt (const u64 K[K_LEN], u64* restrict pos, u64* restrict const end) {
+u64 decrypt (const u64 K[K_LEN], u64* restrict pos, u64* restrict const end, u64 x, const u64 hash) {
 
     ASSERT(end >= &pos[PKT_ALIGN_SIZE]);
     ASSERT(end <= &pos[PKT_ALIGN_SIZE + XGW_PAYLOAD_MAX]);
 
-    __prefetch_w_temporal_none(pos);
+    __crypt_fetch_data(pos, end);
 
     // INITIAL KEYS, PER INTERVAL
     u64 A = K[0], B = K[1], C = K[2], D = K[3],
@@ -68,15 +118,14 @@ static inline u64 decrypt (const u64 K[K_LEN], u64* restrict pos, u64* restrict 
     loop {
 
         // AVALANCHE OF ORIGINAL THROUGH KEYS
-        // DONT LET THE ORIGINAL CONTROL THE ACCUMULATION AND LOOP
-        // E FAZ O A AFETAR O H, ETC
-        x += ((((((A + B) ^ C) + D) ^ E) + F) ^ G) + H;
+        x += A + B + C + D + E + F + G + H;
 
-        do { // LOOPA DE 1 A 3 VEZES (A MAIORIA 2, AS VEZES 3, DIFICILMENTE 1)
-            // (POIS É MAIS FÁCIL TER UM NO FIM DO QUE NENHUM NO MEIO E FIM)
+        do {
 
+            // RANDOMLY ADD THE PREVIOUS ORIG AND ALL THE KEYS
             A += B += C += D += E += F += G += H += x;
 
+            // RANDOMLY ADD OUR CONSTANTS
             A += K[H % K_LEN];
             B += K[G % K_LEN];
             C += K[F % K_LEN];
@@ -86,17 +135,20 @@ static inline u64 decrypt (const u64 K[K_LEN], u64* restrict pos, u64* restrict 
             G += K[B % K_LEN];
             H += K[A % K_LEN];
 
-            // MAX: 64 / (24 + (0 * 8)/8) = 2.66
-            // AVG: 64 / (24 + (4 * 8)/8) = 2.28
-            // MIN: 64 / (24 + (8 * 8)/8) = 2
-        } while (x >>= (24 + (x % 8)));
+        } while (x >>= (24 + (x % 32)));
 
-        // IF FINISHED, RETURN THE HASH
         if (pos == end)
-            return A + B + C + D + E + F + G + H;
+            // USE THE ENCRYPTED SIGNATURE
+            x = hash;
+        else // READ THE ENCRYPTED VALUE
+            x = BE64(*pos);
 
-        // READ THE ENCRYPTED VALUE AND DECRYPT IT
-        x = DEC(BE64(*pos));
+        // DECRYPT IT
+        x = DEC(x);
+
+        if (pos == end)
+            // FINISHED, RETURN THE ORIGINAL SIGNATURE
+            return x;
 
         // WRITE THE ORIGINAL VALUE
         *pos++ = BE64(x);
@@ -130,9 +182,9 @@ static void secret_derivate_random_as_key (const u64 S[SECRET_KEYS_N][K_LEN], co
     __prefetch_r_temporal_high(s);
 
     // ...DO THIS (THIS IS DUMB, BUT WE ARE STALLED ANYWAY)
-    // NOW WE HAVE
+    // [(i, 7 - i)  for i in range(8)] -> [(0, 7), (1, 6), (2, 5), (3, 4), (4, 3), (5, 2), (6, 1), (7, 0)]
     for_count (k, K_LEN)
-        K[k] += sum += K[k];
+        K[k] += sum += K[7 - k];
 
     // ...AND NOW APPLY S
     for_count (k, K_LEN)
@@ -147,6 +199,7 @@ static void secret_derivate_random_as_key (const u64 S[SECRET_KEYS_N][K_LEN], co
 // * MUST NOT EXPOSE SECRET.
 // * MUST PROVE SENDER/RECEIVER HOST IDS.
 // * MUST PROVE THE PING WILL GENERATE THE SAME KEYS.
+// * CONSIDERING WE MAY HAVE THOUSANDS OF HOSTS USING THE SAME PASSWORD, MUST NOT BE ABLE TO WATCH ALL AND DISCOVER IT
 // --
 // WILL GENERATE TWO KEYS:
 //      NODE HIGHER WILL USE THEM AS IN/OUT,
@@ -174,22 +227,19 @@ static void reset_node_ping_keys (node_s* const node, const uint self, const uin
 
     // INITIALIZE THE KEYS
     // MESMO QUE USE O MESMO PASSWORD ENTRE VARIOS NODES, NAO DEIXA QUE O PING KEYS SEJA O MESMO
-    for_count (k, K_LEN) XK[k] = x += 0xA601E857DF7F6A12ULL;
-    for_count (k, K_LEN) YK[k] = y += 0xF0778A61A03B4480ULL;
+    for_count (k, K_LEN) XK[k] = x;
+    for_count (k, K_LEN) YK[k] = y;
     for_count (k, K_LEN) LK[k] = x + y;
 
     // NOW MERGE WITH THE ENTIRE SECRET
-    u64 A = 0xAFEE0C56092DF220ULL, B = 0x8BD98EC995251C3CULL, C = 0x9A3943E82D8DD4D2ULL, D = 0x501FBD1644159395ULL,
-        E = 0x02E12A80B229ADF5ULL, F = 0x52DC3014C0C6A1BAULL, G = 0x89DEA1B4941E360CULL, H = 0xC1B7B1DD4CA86D42ULL;
-
     const u64* S   =  node->secret;
     const u64* end = &node->secret[SECRET_KEYS_N];
 
     do { __crypt_prefetch_k_once(S);
 
-        for_count (k, K_LEN) A += B += C += D += E += F += G += H += XK[k] = swap64(swap64(swap64(swap64(swap64(swap64(swap64(swap64(swap64(XK[k] + S[k]) + H) + G) + F) + E) + D) + C) + B) + A);
-        for_count (k, K_LEN) A += B += C += D += E += F += G += H += YK[k] = swap64(swap64(swap64(swap64(swap64(swap64(swap64(swap64(swap64(YK[k] + S[k]) + H) + G) + F) + E) + D) + C) + B) + A);
-        for_count (k, K_LEN) A += B += C += D += E += F += G += H +=  L[k] = swap64(swap64(swap64(swap64(swap64(swap64(swap64(swap64(swap64(LK[k] + S[k]) + H) + G) + F) + E) + D) + C) + B) + A);
+        for_count (k, K_LEN) XK[k] += x += swap64(S[k] + x);
+        for_count (k, K_LEN) YK[k] += y += swap64(S[k] + y);
+        for_count (k, K_LEN) LK[k] += swap64(swap64(S[k] + x) + y);
 
     } while ((S += K_LEN) != end);
 }
@@ -231,14 +281,14 @@ static void secret_derivate_from_password (u64 S[SECRET_KEYS_N][K_LEN], const u8
 #endif
 
     //
-    u64 A = 0x47092E83C59147FBULL, B = 0x6B80F1DD47505E84ULL, C = 0x8ACB8D82EBE013B0ULL, D = 0xEF7D87567DABC6DDULL,
-        E = 0x879E9AF60BA2284DULL, F = 0x16CC54BBE05DA85FULL, G = 0x76A45CC8348064B5ULL, H = 0x03781F048D90B044ULL;
+    u64 A = S[0][0], B = S[0][1], C = S[0][2], D = S[0][3],
+        E = S[0][4], F = S[0][5], G = S[0][6], H = S[0][7];
 
     // NAO DEIXA SER APENAS UMA REPETICAO
     for_count (s, SECRET_KEYS_N)
         for_count (k, K_LEN)
             A += B += C += D += E += F += G += H += S[s][k] =
-                swap64(swap64(swap64(swap64(swap64(swap64(swap64(swap64(S[s][k] + H) + G) + F) + E) + D) + C) + B) + A);
+                swap64(swap64(swap64(swap64(swap64(swap64(swap64(S[s][k] + H) + G) + F) + E) + D) + C) + B) + A;
 
     // SHUFFLE
     for_count (c, PASSWORD_ROUNDS) {
@@ -254,7 +304,7 @@ static void secret_derivate_from_password (u64 S[SECRET_KEYS_N][K_LEN], const u8
                 G += S[B % SECRET_KEYS_N][A % K_LEN] * C;
                 H += S[A % SECRET_KEYS_N][B % K_LEN] * D;
 
-                S[s][k] = swap64(swap64(swap64(swap64(swap64(swap64(swap64(swap64(S[s][k] + H) + G) + F) + E) + D) + C) + B) + A);
+                S[s][k] = swap64(swap64(swap64(swap64(swap64(swap64(swap64(S[s][k] + H) + G) + F) + E) + D) + C) + B) + A;
             }
         }
     }
