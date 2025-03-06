@@ -102,6 +102,9 @@ static inline u64 encrypt (const u64 K[K_LEN], u64* restrict pos, u64* restrict 
             G += K[B % K_LEN];
             H += K[A % K_LEN];
 
+            // MAX: 64 / (24 + (0 * 8)/8) = 2.66
+            // AVG: 64 / (24 + (4 * 8)/8) = 2.28
+            // MIN: 64 / (24 + (8 * 8)/8) = 2
         } while (x >>= (24 + (x % 8)));
 
         // IF FINISHED, RETURN THE HASH
