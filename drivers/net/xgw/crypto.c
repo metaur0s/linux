@@ -89,7 +89,7 @@ u64 encrypt (const u64 K[K_LEN], u64* restrict pos, u64* restrict const end, u64
 
         if (pos == end)
             // RETURN THE HASH
-            return A + B + C + D + E + F + G + H;
+            return ((A + C) ^ E) + G;
 
         // READ THE ORIGINAL VALUE
         x = BE64(*pos);
@@ -134,7 +134,7 @@ u64 decrypt (const u64 K[K_LEN], u64* restrict pos, u64* restrict const end, u64
 
         if (pos == end)
             // RETURN THE HASH
-            return A + B + C + D + E + F + G + H;
+            return ((A + C) ^ E) + G;
 
         // READ THE ENCRYPTED VALUE AND DECRYPT IT
         x = DEC(BE64(*pos));

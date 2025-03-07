@@ -87,7 +87,7 @@ struct hdr_x_s { // WIRE
         struct {
             u16 src;
             u16 dst;
-            u8  path; // BEM NO MEIO PARA PROTEGELO NO HASHING
+            u8  path; // BEM NO MEIO PARA PROTEGE-LO NO HASHING
             u8  version;
             u16 dsize; // SIZE OF THE PAYLOAD (WIRE) OR HEADER (RUNTIME)
         };  u64 info;
