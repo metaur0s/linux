@@ -159,7 +159,7 @@ static void secret_derivate_random_as_key (const u64 S[K_LEN], const u64 R[K_LEN
     sum += sum >> 16;
 
     do {
-        K[sum % K_LEN] += S[K[sum % K_LEN] % K_LEN];
+        K[sum % K_LEN] += S[K[sum % K_LEN] % K_LEN] + sum;
     } while (sum >>= 7);
 }
 
