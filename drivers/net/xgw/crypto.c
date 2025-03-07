@@ -145,39 +145,22 @@ u64 decrypt (const u64 K[K_LEN], u64* restrict pos, u64* restrict const end, u64
 }
 
 // USING SECRET S, APPLY RANDOM R, AND DERIVE KEY K
-static void secret_derivate_random_as_key (const u64 S[SECRET_KEYS_N][K_LEN], const u64 L[K_LEN], const u64 R[K_LEN], u64 K[K_LEN]) {
+static void secret_derivate_random_as_key (const u64 S[K_LEN], const u64 R[K_LEN], u64 K[K_LEN]) {
 
+    // WHILE IS FETCHING S...
+    __prefetch_r_temporal_high(S);
+
+    // ...LOAD DYNAMIC RANDOM AND ITS SUM
     u64 sum = 0;
 
-    // WHILE IS FETCHING L...
-    __prefetch_r_temporal_high(L);
-
-    // ...LOAD DYNAMIC RANDOM
     for_count (k, K_LEN)
-        K[k] = sum += swap64q(BE64(R[k]), popcount(sum));
-
-    // ...AND NOW APPLY L
-    for_count (k, K_LEN)
-        K[k] += sum += swap64q(L[k], popcount(sum));
-
-    // THE INDEXING WILL CONSIDER ALL THE BITS
+        sum += K[k] = BE64(R[k]);
     sum += sum >> 32;
     sum += sum >> 16;
 
-    // DYNAMICALLY CHOOSE CONSTANT SECRET
-    const u64* const restrict s = S[sum % SECRET_KEYS_N];
-
-    // WHILE IS FETCHING S...
-    __prefetch_r_temporal_high(s);
-
-    // ...DO THIS (THIS IS DUMB, BUT WE ARE STALLED ANYWAY)
-    // [(i, 7 - i)  for i in range(8)] -> [(0, 7), (1, 6), (2, 5), (3, 4), (4, 3), (5, 2), (6, 1), (7, 0)]
-    for_count (k, K_LEN)
-        K[k] += sum += swap64q(K[7 - k], popcount(sum));
-
-    // ...AND NOW APPLY S
-    for_count (k, K_LEN)
-        K[k] += sum += swap64q(s[k], popcount(sum));
+    do {
+        K[sum % K_LEN] += S[K[sum % K_LEN] % K_LEN];
+    } while (sum >>= 7);
 }
 
 // GENERATE CONSTANT PING/PONG KEYS
@@ -199,11 +182,8 @@ static void reset_node_ping_keys (node_s* const node, const uint self, const uin
     ASSERT(peer < NODES_N);
     ASSERT(self != peer);
 
-    u64* restrict XPING; u64 x = 0x0001000100010001ULL * self;
-    u64* restrict YPING; u64 y = 0x0001000100010001ULL * peer;
-    u64* restrict XPONG;
-    u64* restrict YPONG;
-    u64* restrict LEARN;
+    u64* restrict XPING; u64* restrict XPONG; u64 x = 0x0001000100010001ULL * self;
+    u64* restrict YPING; u64* restrict YPONG; u64 y = 0x0001000100010001ULL * peer;
 
     if (x > y) {
         // SWAP THEM, SO WE ALWAYS HAVE THE SAME X AND Y
@@ -218,23 +198,22 @@ static void reset_node_ping_keys (node_s* const node, const uint self, const uin
         YPING = node->iKeys[I_KEY_PING];
         XPONG = node->oKeys[O_KEY_PONG];
         YPONG = node->iKeys[I_KEY_PONG];
-    }   LEARN = node->lKey;
+    }
 
     // INITIALIZE THE KEYS
     // MESMO QUE USE O MESMO PASSWORD ENTRE VARIOS NODES, NAO DEIXA QUE O PING KEYS SEJA O MESMO
-    for_count (k, K_LEN) XPING[k] = x;
-    for_count (k, K_LEN) YPING[k] = y;
-    for_count (k, K_LEN) XPONG[k] = x;
-    for_count (k, K_LEN) YPONG[k] = y;
-    for_count (k, K_LEN) LEARN[k] = x + y;
+    for_count (k, K_LEN) XPING[k] = XPONG[k] = x;
+    for_count (k, K_LEN) YPING[k] = YPONG[k] = y;
 
     // NOW MERGE WITH THE ENTIRE SECRET
     for_count (s, SECRET_KEYS_N) {
-        for_count (k, K_LEN) XPING[k] += x += y += swap64q(node->secret[s][k], popcount(x));
-        for_count (k, K_LEN) YPING[k] += x += y += swap64q(node->secret[s][k], popcount(y));
-        for_count (k, K_LEN) XPONG[k] += x += y += swap64q(node->secret[s][k], popcount(x));
-        for_count (k, K_LEN) YPONG[k] += x += y += swap64q(node->secret[s][k], popcount(y));
-        for_count (k, K_LEN) LEARN[k] += x += y += swap64q(node->secret[s][k], popcount(x + y));
+        for_count (k, K_LEN) {
+            x += y ^= node->secret[s][k];
+            x += y ^= XPING[k] += swap64q(x, popcount(y));
+            x += y ^= XPONG[k] += swap64q(x, popcount(y));
+            x += y ^= YPING[k] += swap64q(x, popcount(y));
+            x += y ^= YPONG[k] += swap64q(x, popcount(y));
+        }
     }
 
     //
@@ -254,7 +233,7 @@ static void reset_node_ping_keys (node_s* const node, const uint self, const uin
             node->paths[pid].counterSyn = x;
         }
 
-        x += y += swap64q(x, popcount(y));
+        x += y ^= swap64q(x, popcount(y));
     }
 }
 

@@ -264,8 +264,6 @@ struct node_s { // DEIXA TUDO NO MESMO CACHE LINE PARA A ITERACAO DO KEEPER
 // 16384 --
     volatile stat_s pstats [PATHS_N] [64]; // TODO: DIMINUIR ISSO, MAS MANTER ALINHADO
 // ---------------------- NODE_SIZE_INIT -----------------------------
-// -- LEARN KEY
-    u64 lKey [K_LEN];
 // -- KEEPER/OUT READ, IN WRITE
     u64 oKeys [O_KEYS_ALL] [K_LEN];
 // -- IN READ, KEEPER WRITE
@@ -278,7 +276,6 @@ BUILD_ASSERT(sizeof(((node_s*)NULL)->pstats)
          >= (sizeof(((node_s*)NULL)->pstats[0][0]) * PSTATS_N));
 
 //
-BUILD_ASSERT(sizeof(((node_s*)NULL)->lKey)   == K_SIZE);
 BUILD_ASSERT(sizeof(((node_s*)NULL)->oKeys)  == (O_KEYS_ALL * K_SIZE));
 BUILD_ASSERT(sizeof(((node_s*)NULL)->iKeys)  == (I_KEYS_ALL * K_SIZE));
 BUILD_ASSERT(sizeof(((node_s*)NULL)->secret) == (SECRET_KEYS_N * K_SIZE));
@@ -291,7 +288,6 @@ BUILD_ASSERT(offsetof(node_s, ptr)         % CACHE_LINE_SIZE == 0);
 BUILD_ASSERT(offsetof(node_s, synCounters) % CACHE_LINE_SIZE == 0);
 BUILD_ASSERT(offsetof(node_s, paths)       % CACHE_LINE_SIZE == 0);
 BUILD_ASSERT(offsetof(node_s, pstats)      % CACHE_LINE_SIZE == 0);
-BUILD_ASSERT(offsetof(node_s, lKey)        % CACHE_LINE_SIZE == 0);
 BUILD_ASSERT(offsetof(node_s, oKeys)       % CACHE_LINE_SIZE == 0);
 BUILD_ASSERT(offsetof(node_s, iKeys)       % CACHE_LINE_SIZE == 0);
 BUILD_ASSERT(offsetof(node_s, secret)      % CACHE_LINE_SIZE == 0);
