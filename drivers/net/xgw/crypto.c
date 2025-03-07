@@ -54,7 +54,7 @@ u64 encrypt (const u64 K[K_LEN], u64* restrict pos, u64* restrict const end, u64
         // AVALANCHE OF ORIGINAL THROUGH KEYS
         // DONT LET THE ORIGINAL CONTROL THE ACCUMULATION AND LOOP
         // E FAZ O A AFETAR O H, ETC
-        x += A + C + E + G;
+        x += ((B + D) ^ F) + H;
 
         do {
 
