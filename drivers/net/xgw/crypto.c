@@ -4,16 +4,8 @@
 static inline u64   swap64 (const u64 x) { const uint q = popcount(x); return (x >> q) | (x << (64 - q)); }
 static inline u64 unswap64 (const u64 x) { const uint q = popcount(x); return (x << q) | (x >> (64 - q)); }
 
-static inline u64   swap64q (const u64 x, const uint q) { return (x >> q) | (x << (64 - q)); }
-static inline u64 unswap64q (const u64 x, const uint q) { return (x << q) | (x >> (64 - q)); }
-
-#define   swap64x(x, y, z) (  swap64q((x), popcount(z)) + (y))
-#define unswap64x(x, y, z)  unswap64q((x) - (y), popcount(z))
-
-// USA SÓ METADE DAS VARIÁVEIS; AS DEMAIS SÃO USADAS PARA ROTACIONAR
-// ASSIM UM BRUTE-FORCE VAI TER DE ALÉM DE CHECAR TODAS AS POSSIBILIDADES DISSO AQUI, MAS TAMBÉM AS ROTACIONAIS
-#define ENC(x)    swap64x(  swap64x(  swap64x(  swap64x((x), A, B), C, D), E, F), G, H)
-#define DEC(x)  unswap64x(unswap64x(unswap64x(unswap64x((x), G, H), E, F), C, D), A, B)
+#define ENC(x) (  swap64(  swap64(  swap64(  swap64(  swap64(  swap64(  swap64((x) + A) + B) + C) + D) + E) + F) + G) + H)
+#define DEC(x) (unswap64(unswap64(unswap64(unswap64(unswap64(unswap64(unswap64((x) - H) - G) - F) - E) - D) - C) - B) - A)
 
 static inline void __crypt_fetch_data (const u64* const pos, const u64* const end) {
 
@@ -62,22 +54,18 @@ u64 encrypt (const u64 K[K_LEN], u64* restrict pos, u64* restrict const end, u64
         // AVALANCHE OF ORIGINAL THROUGH KEYS
         // DONT LET THE ORIGINAL CONTROL THE ACCUMULATION AND LOOP
         // E FAZ O A AFETAR O H, ETC
-        x += A + B + C + D + E + F + G + H;
+        x += ((A + C) ^ E) + G;
 
         do {
 
             // RANDOMLY ADD THE PREVIOUS ORIG AND ALL THE KEYS
-            A += B += C += D += E += F += G += H += x;
+            B += D += F += H += x;
 
             // RANDOMLY ADD OUR CONSTANTS
-            A += K[H % K_LEN];
-            B += K[G % K_LEN];
-            C += K[F % K_LEN];
-            D += K[E % K_LEN];
-            E += K[D % K_LEN];
-            F += K[C % K_LEN];
-            G += K[B % K_LEN];
-            H += K[A % K_LEN];
+            A += K[B % K_LEN];
+            C += K[D % K_LEN];
+            E += K[F % K_LEN];
+            G += K[H % K_LEN];
 
             // THIS HAS 2 EFFECTS:
             //      1 - RANDOMIZES THE AMOUNT OF LOOP ITERATIONS
@@ -106,29 +94,21 @@ u64 decrypt (const u64 K[K_LEN], u64* restrict pos, u64* restrict const end, u64
 
     __crypt_fetch_data(pos, end);
 
-    // INITIAL KEYS, PER INTERVAL
     u64 A = K[0], B = K[1], C = K[2], D = K[3],
         E = K[4], F = K[5], G = K[6], H = K[7];
 
     loop {
 
-        // AVALANCHE OF ORIGINAL THROUGH KEYS
-        x += A + B + C + D + E + F + G + H;
+        x += ((A + C) ^ E) + G;
 
         do {
 
-            // RANDOMLY ADD THE PREVIOUS ORIG AND ALL THE KEYS
-            A += B += C += D += E += F += G += H += x;
+            B += D += F += H += x;
 
-            // RANDOMLY ADD OUR CONSTANTS
-            A += K[H % K_LEN];
-            B += K[G % K_LEN];
-            C += K[F % K_LEN];
-            D += K[E % K_LEN];
-            E += K[D % K_LEN];
-            F += K[C % K_LEN];
-            G += K[B % K_LEN];
-            H += K[A % K_LEN];
+            A += K[B % K_LEN];
+            C += K[D % K_LEN];
+            E += K[F % K_LEN];
+            G += K[H % K_LEN];
 
         } while (x >>= (24 + (x % 32)));
 
@@ -208,11 +188,12 @@ static void reset_node_ping_keys (node_s* const node, const uint self, const uin
     // NOW MERGE WITH THE ENTIRE SECRET
     for_count (s, SECRET_KEYS_N) {
         for_count (k, K_LEN) {
-            x += y ^= node->secret[s][k];
-            x += y ^= XPING[k] += swap64q(x, popcount(y));
-            x += y ^= XPONG[k] += swap64q(x, popcount(y));
-            x += y ^= YPING[k] += swap64q(x, popcount(y));
-            x += y ^= YPONG[k] += swap64q(x, popcount(y));
+            x += node->secret[s][k];
+            y ^= node->secret[s][k];
+            x += y ^= XPING[k] += swap64(x + y);
+            x += y ^= XPONG[k] += swap64(x + y);
+            x += y ^= YPING[k] += swap64(x + y);
+            x += y ^= YPONG[k] += swap64(x + y);
         }
     }
 
