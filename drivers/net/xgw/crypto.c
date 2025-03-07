@@ -1,14 +1,14 @@
 
 // !!!!!! TODO: XGW TO XGW REDIRECT WITHOUT GOING THROUGH IP STACK
 
-static inline u64   swap64 (const u64 x) { const uint q = popcount64(x); return (x >> q) | (x << (64 - q)); }
-static inline u64 unswap64 (const u64 x) { const uint q = popcount64(x); return (x << q) | (x >> (64 - q)); }
+static inline u64   swap64 (const u64 x) { const uint q = popcount(x); return (x >> q) | (x << (64 - q)); }
+static inline u64 unswap64 (const u64 x) { const uint q = popcount(x); return (x << q) | (x >> (64 - q)); }
 
 static inline u64   swap64q (const u64 x, const uint q) { return (x >> q) | (x << (64 - q)); }
 static inline u64 unswap64q (const u64 x, const uint q) { return (x << q) | (x >> (64 - q)); }
 
-#define   swap64x(x, y, z) (  swap64q((x), popcount64(z)) + (y))
-#define unswap64x(x, y, z)  unswap64q((x) - (y), popcount64(z))
+#define   swap64x(x, y, z) (  swap64q((x), popcount(z)) + (y))
+#define unswap64x(x, y, z)  unswap64q((x) - (y), popcount(z))
 
 // USA SÓ METADE DAS VARIÁVEIS; AS DEMAIS SÃO USADAS PARA ROTACIONAR
 // ASSIM UM BRUTE-FORCE VAI TER DE ALÉM DE CHECAR TODAS AS POSSIBILIDADES DISSO AQUI, MAS TAMBÉM AS ROTACIONAIS
@@ -154,11 +154,11 @@ static void secret_derivate_random_as_key (const u64 S[SECRET_KEYS_N][K_LEN], co
 
     // ...LOAD DYNAMIC RANDOM
     for_count (k, K_LEN)
-        K[k] = sum += BE64(R[k]);
+        K[k] = sum += swap64q(BE64(R[k]), popcount(sum));
 
     // ...AND NOW APPLY L
     for_count (k, K_LEN)
-        K[k] += sum += L[k];
+        K[k] += sum += swap64q(L[k], popcount(sum));
 
     // THE INDEXING WILL CONSIDER ALL THE BITS
     sum += sum >> 32;
@@ -173,11 +173,11 @@ static void secret_derivate_random_as_key (const u64 S[SECRET_KEYS_N][K_LEN], co
     // ...DO THIS (THIS IS DUMB, BUT WE ARE STALLED ANYWAY)
     // [(i, 7 - i)  for i in range(8)] -> [(0, 7), (1, 6), (2, 5), (3, 4), (4, 3), (5, 2), (6, 1), (7, 0)]
     for_count (k, K_LEN)
-        K[k] += sum += K[7 - k];
+        K[k] += sum += swap64q(K[7 - k], popcount(sum));
 
     // ...AND NOW APPLY S
     for_count (k, K_LEN)
-        K[k] += sum += s[k];
+        K[k] += sum += swap64q(s[k], popcount(sum));
 }
 
 // GENERATE CONSTANT PING/PONG KEYS
@@ -199,32 +199,42 @@ static void reset_node_ping_keys (node_s* const node, const uint self, const uin
     ASSERT(peer < NODES_N);
     ASSERT(self != peer);
 
-    u64* restrict XK; u64 x = 0x0001000100010001ULL * self;
-    u64* restrict YK; u64 y = 0x0001000100010001ULL * peer;
-    u64* restrict LK;
+    u64* restrict XPING; u64 x = 0x0001000100010001ULL * self;
+    u64* restrict YPING; u64 y = 0x0001000100010001ULL * peer;
+    u64* restrict XPONG;
+    u64* restrict YPONG;
+    u64* restrict LEARN;
 
     if (x > y) {
         // SWAP THEM, SO WE ALWAYS HAVE THE SAME X AND Y
         x ^= y; y ^= x; x ^= y;
         // CADA LADO USA OS MESMOS PING/PONG, POREM INVERTIDOS
-        XK = node->iKeys[I_KEY_PING];
-        YK = node->oKeys[O_KEY_PING];
+        XPING = node->iKeys[I_KEY_PING];
+        YPING = node->oKeys[O_KEY_PING];
+        XPONG = node->iKeys[I_KEY_PONG];
+        YPONG = node->oKeys[O_KEY_PONG];
     } else {
-        XK = node->oKeys[O_KEY_PING];
-        YK = node->iKeys[I_KEY_PING];
-    }   LK = node->lKey;
+        XPING = node->oKeys[O_KEY_PING];
+        YPING = node->iKeys[I_KEY_PING];
+        XPONG = node->oKeys[O_KEY_PONG];
+        YPONG = node->iKeys[I_KEY_PONG];
+    }   LEARN = node->lKey;
 
     // INITIALIZE THE KEYS
     // MESMO QUE USE O MESMO PASSWORD ENTRE VARIOS NODES, NAO DEIXA QUE O PING KEYS SEJA O MESMO
-    for_count (k, K_LEN) XK[k] = x;
-    for_count (k, K_LEN) YK[k] = y;
-    for_count (k, K_LEN) LK[k] = x + y;
+    for_count (k, K_LEN) XPING[k] = x;
+    for_count (k, K_LEN) YPING[k] = y;
+    for_count (k, K_LEN) XPONG[k] = x;
+    for_count (k, K_LEN) YPONG[k] = y;
+    for_count (k, K_LEN) LEARN[k] = x + y;
 
     // NOW MERGE WITH THE ENTIRE SECRET
     for_count (s, SECRET_KEYS_N) {
-        for_count (k, K_LEN) x += XK[k] += swap64q(node->secret[s][k], popcount(x));
-        for_count (k, K_LEN) y += YK[k] += swap64q(node->secret[s][k], popcount(y));
-        for_count (k, K_LEN)      LK[k] += swap64q(node->secret[s][k], popcount(x + y));
+        for_count (k, K_LEN) XPING[k] += x += y += swap64q(node->secret[s][k], popcount(x));
+        for_count (k, K_LEN) YPING[k] += x += y += swap64q(node->secret[s][k], popcount(y));
+        for_count (k, K_LEN) XPONG[k] += x += y += swap64q(node->secret[s][k], popcount(x));
+        for_count (k, K_LEN) YPONG[k] += x += y += swap64q(node->secret[s][k], popcount(y));
+        for_count (k, K_LEN) LEARN[k] += x += y += swap64q(node->secret[s][k], popcount(x + y));
     }
 
     //
