@@ -375,9 +375,9 @@ static netdev_tx_t out (skb_s* const skb, net_device_s* const dev) {
         path = &node->paths[pid];
 
         // STORE STREAM TIMEOUT + PID
-        // NOTE: O RTT É O TEMPO DE IR E VIR, AQUI BASTA O TEMPO DE IR
         // CONSIDERAR O LATENCY (SÓ DE IDA) + CPU BUSY TIME + IMPRECISOES
-    } while (!__atomic_compare_exchange_n(conn, &to, (now + (path->rtt * PATHS_N)) | pid, 0, __ATOMIC_SEQ_CST, __ATOMIC_RELAXED));
+        // TODO: + rtt_var
+    } while (!__atomic_compare_exchange_n(conn, &to, (now + ((atomic_get(&path->latency) + 16) * PATHS_N)) | pid, 0, __ATOMIC_SEQ_CST, __ATOMIC_RELAXED));
 
 #if 1
     if (skb->ip_summed == CHECKSUM_PARTIAL)

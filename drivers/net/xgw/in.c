@@ -233,7 +233,7 @@ _is_xgw:
         if (p_ltime != path->syn)
             // ELE NAO CONHECE NOSSO CODIGO
             ret_path(PSTATS_I_LTIME_NOT_SYN);
-    } elif (ABS_DIFF(now, p_ltime) > 400))
+    } elif (ABS_DIFF(now, p_ltime) > 400)
         // ELE NAO CONHECE NOSSO TIME
         ret_path(PSTATS_I_LTIME_MISMATCH);
 
@@ -262,12 +262,15 @@ _is_xgw:
                 // HIS RAW TIME CANNOT GO DOWN OR REPEAT
                 ret_path(PSTATS_I_RTIME_BACKWARDS);
             // COMPARA O TIME QUE ELE DIZ TER, COM O TIME (APROXIMADO) QUE SABEMOS QUE ELE TEM
-            const s64 diff = LTIME_TO_RTIME(now) - (p_rtime + latency);
-            // A IMPRECISÃO NÃO PODE SER TÃO GRANDE ASSIM
-            if (diff > 2000)
-                ret_path(PSTATS_I_RTIME_AFOBADO);
-            if (diff < -2000)
-                ret_path(PSTATS_I_RTIME_LESADO);
+            const s64 diff =
+                (p_rtime + latency) // O RELOGIO DELE COMO ELE DIZ QUE ESTA (APROXIMADO)
+                	-
+             	LTIME_TO_RTIME(now, tdiff) // O RELOGIO DELE COMO ELE DEVERIA SER (APROXIMADO)
+            ; // A IMPRECISÃO NÃO PODE SER TÃO GRANDE ASSIM:
+            if (diff > 2000) // PEER AFOBADO
+                ret_path(PSTATS_I_RTIME_SKEW_UP);
+            if (diff < -2000) // PEER LESADO
+                ret_path(PSTATS_I_RTIME_SKEW_DOWN);
         }
 
         // FAZ ISSO PRIMEIRO ANTES DE LIBERAR O PATH PARA ENVIAR

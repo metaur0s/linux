@@ -488,9 +488,9 @@ static ssize_t __cold_as_ice __optimize_size cmd (struct file *file, const char 
                 if (!(pinfo & (P_CLIENT | P_SERVER)))
                                           CMD_ERR(PATH_NEED_CLT_SRV);
                 if (!(pinfo & P_TIMEOUT)) CMD_ERR(PATH_NEED_TIMEOUT);
-                if (!(pinfo & P_RTT_MIN)) CMD_ERR(PATH_NEED_RTT_MIN);
-                if (!(pinfo & P_RTT_MAX)) CMD_ERR(PATH_NEED_RTT_MAX);
-                if (!(pinfo & P_RTT_VAR)) CMD_ERR(PATH_NEED_RTT_VAR);
+                if (!(pinfo & P_LATENCY_MIN)) CMD_ERR(PATH_NEED_RTT_MIN);
+                if (!(pinfo & P_LATENCY_MAX)) CMD_ERR(PATH_NEED_RTT_MAX);
+                if (!(pinfo & P_LATENCY_VAR)) CMD_ERR(PATH_NEED_RTT_VAR);
 
                 //
                 ASSERT((pinfo & (P_CLIENT | P_SERVER))
@@ -686,9 +686,9 @@ static ssize_t __cold_as_ice __optimize_size cmd (struct file *file, const char 
         (path->info & P_VID                 ) ? " VID"            : "",
         (path->info & P_TOS                 ) ? " TOS"            : "",
         (path->info & P_TTL                 ) ? " TTL"            : "",
-        (path->info & P_RTT_MIN             ) ? " RTT-MIN"        : "",
-        (path->info & P_RTT_MAX             ) ? " RTT-MAX"        : "",
-        (path->info & P_RTT_VAR             ) ? " RTT-VAR"        : "",
+        (path->info & P_LATENCY_MIN         ) ? " RTT-MIN"        : "",
+        (path->info & P_LATENCY_MAX         ) ? " RTT-MAX"        : "",
+        (path->info & P_LATENCY_VAR         ) ? " RTT-VAR"        : "",
         (path->info & P_TIMEOUT             ) ? " TIMEOUT"        : "",
         (path->info & P_NAME                ) ? " NAME"           : "",
         (path->info & P_DHCP                ) ? " DHCP"           : "",
@@ -1161,40 +1161,40 @@ static ssize_t __cold_as_ice __optimize_size cmd (struct file *file, const char 
 
         case CMD_PATH_SET_RTT_MIN: { // TODO: ARREDONDAR PARA CIMA?
 
-            const uintll rtt = ((uintll)cmd->rtt * HZ) / 1000;
+            const uintll latency = (((uintll)cmd->rtt * HZ) / 1000) / 2; // TODO: ELE ESTA RECE BENDO O RTT E NAO LATENCY
 
-            if (rtt < PATH_RTT_MIN
-             || rtt > PATH_RTT_MAX)
+            if (latency < PATH_LATENCY_MIN
+             || latency > PATH_LATENCY_MAX)
                 CMD_ERR(INVALID_RTT);
 
-            path->rtt_min = rtt;
-            path->info |= P_RTT_MIN;
+            path->latency_min = latency;
+            path->info |= P_LATENCY_MIN;
 
         } break;
 
         case CMD_PATH_SET_RTT_MAX: { // TODO: ARREDONDAR PARA CIMA?
 
-            const uintll rtt = ((uintll)cmd->rtt * HZ) / 1000;
+            const uintll rtt = (((uintll)cmd->rtt * HZ) / 1000) / 2; // TODO: ELE ESTA RECE BENDO O RTT E NAO LATENCY
 
-            if (rtt < PATH_RTT_MIN
-             || rtt > PATH_RTT_MAX)
+            if (latency < PATH_LATENCY_MIN
+             || latency > PATH_LATENCY_MAX)
                 CMD_ERR(INVALID_RTT);
 
-            path->rtt_max = rtt;
-            path->info |= P_RTT_MAX;
+            path->latency_max = latency;
+            path->info |= P_LATENCY_MAX;
 
         } break;
 
         case CMD_PATH_SET_RTT_VAR: { // TODO: ARREDONDAR PARA CIMA?
 
-            const uintll rtt = ((uintll)cmd->rtt * HZ) / 1000;
+            const uintll latency_var = (((uintll)cmd->rtt * HZ) / 1000) / 2; // TODO: ELE ESTA RECE BENDO O RTT E NAO LATENCY
 
-            if (rtt < PATH_RTT_VAR_MIN
-             || rtt > PATH_RTT_VAR_MAX)
+            if (latency_var < PATH_LATENCY_VAR_MIN
+             || latency_var > PATH_LATENCY_VAR_MAX)
                 CMD_ERR(INVALID_RTT);
 
-            path->rtt_var = rtt;
-            path->info |= P_RTT_VAR;
+            path->latency_var = latency_var;
+            path->info |= P_LATENCY_VAR;
 
         } break;
 
