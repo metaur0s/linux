@@ -351,33 +351,41 @@ static netdev_tx_t out (skb_s* const skb, net_device_s* const dev) {
     if (!opaths)
         ret_node(NSTATS_O_DATA_NO_PATH);
 
-    const path_s* path; u64 to, now; uint pid;
-
     // CHOOSE CONN
-    u64* const conn = &node->conns[(cid + (cid >> 16) + (cid >> 32) + (cid >> 48)) % node->connsN];
+    cid += cid >> 32;
+    cid += cid >> 16;
+    cid %= node->connsN;
 
-    // NEED THIS ATOMICITY LOOP BECAUSE SOMEONE ELSE USE THE CURRENT (OR OTHER ONE) AND OVERWRITE WHAT WE JUST SET
-    do {
+    u64* const conn = &node->conns[cid];
+
+    const u64 now = get_current_ms();
+
+    const path_s* path; u64 burst, burst_new; uint pid;
+
+    do { // NEED THIS ATOMICITY LOOP IN CASE SOMEONE ELSE USE THE CURRENT (OR OTHER ONE) AND OVERWRITE WHAT WE JUST SET
+
         // LOAD STREAM TIMEOUT + PID
-        to = __atomic_load_n(conn, __ATOMIC_SEQ_CST);
+        burst = atomic_get(conn);
 
-        // NOTE: ESTE TIME PODE FICAR COMPROMETIDO NO CASO DE INTERRUPTS E/OU PREEMPTION
-        now = get_jiffies_64() * PATHS_N;
+        pid = ( // CHOOSE A PATH
+            burst // STARTING FROM CURRENT,
+            + // BUT CHANGE IF IDLE
+           (burst < (now * PATHS_N))
+        ) % PATHS_N;
 
-        // CHOOSE A PATH - STARTING FROM CURRENT, CHANGED IF IDLE
-        // NOTE: O ULTIMO GRUPO TEM QUE SER REPETIDO
-        pid = (to + (to < now)) % PATHS_N;
         // NOTE: NO CASO DE OPATHS SER 0, ESTE VALOR FINAL SERA UNSPECIFIED
+        // NOTE: O ULTIMO GRUPO TEM QUE SER REPETIDO
         pid = __ctz((opaths >> pid) << pid) % PATHS_N;
 
         ASSERT(opaths & OPATH(pid));
 
         path = &node->paths[pid];
 
-        // STORE STREAM TIMEOUT + PID
         // CONSIDERAR O LATENCY (SÓ DE IDA) + CPU BUSY TIME + IMPRECISOES
-        // TODO: + rtt_var
-    } while (!__atomic_compare_exchange_n(conn, &to, (now + ((atomic_get(&path->latency) + 16) * PATHS_N)) | pid, 0, __ATOMIC_SEQ_CST, __ATOMIC_RELAXED));
+        burst_new = ((now + atomic_get(&path->latency) + atomic_get(&path->latency_var) + 16) * PATHS_N) + pid;
+
+        // STORE STREAM TIMEOUT + PID
+    } while (!__atomic_compare_exchange_n(conn, &burst, burst_new, 0, __ATOMIC_SEQ_CST, __ATOMIC_RELAXED));
 
 #if 1
     if (skb->ip_summed == CHECKSUM_PARTIAL)
@@ -390,7 +398,7 @@ static netdev_tx_t out (skb_s* const skb, net_device_s* const dev) {
         ret_path(PSTATS_O_DATA_NO_HEADROOM);
 
     // TODO: USAR O GET JIFFIES ACIMA
-    pkt_encapsulate(node, atomic_get(&node->oUse), RTIME(get_current_ms(), atomic_get(&path->tdiff)), &path->skel, skb, p, size);
+    pkt_encapsulate(node, atomic_get(&node->oUse), RTIME(now, atomic_get(&path->tdiff)), &path->skel, skb, p, size);
 
     // -- THE FUNCTION CAN BE CALLED FROM AN INTERRUPT
     // -- WHEN CALLING THIS METHOD, INTERRUPTS MUST BE ENABLED
