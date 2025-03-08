@@ -241,8 +241,8 @@ struct node_s { // DEIXA TUDO NO MESMO CACHE LINE PARA A ITERACAO DO KEEPER
     u32 connsN:24, // O OUT PRECISA DISSO  ((((1 << node->order) * PAGE_SIZE) - offsetof(node_s, conns)) / sizeof(conn_s))
         info:8;
     u8  iCycle; // TODO: CONNS COM __ATOMIC_SEQ_CST
-    u8  oCycle; // O OVERFLOW TEM QUE SER MULTIPLO DE O_KEYS_DYNAMIC
-    u8  oIndex; // QUAL SERA USADO PARA ENCRIPTAR
+    u8  oSave; // O OVERFLOW TEM QUE SER MULTIPLO DE O_KEYS_DYNAMIC
+    u8  oUse; // QUAL SERA USADO PARA ENCRIPTAR
     u8  oVersions [O_KEYS_ALL];
     u8 reserved [14];
 // 32 -- RO - KEEPER/CMD

@@ -273,49 +273,45 @@ _is_xgw:
                 ret_path(PSTATS_I_RTIME_SKEW_DOWN);
         }
 
-        // FAZ ISSO PRIMEIRO ANTES DE LIBERAR O PATH PARA ENVIAR
-        // NOTE: A CADA INTERVALO SAO ENVIADOS PINGS POR TODOS OS PATHS,
-        //       ENTAO PODE ACABAR TENDO RACE CONDITION AQUI.
-        // POR PRECAUCAO O IDEAL É TER MAIS ENTRADAS NA ARRAY DO QUE PROCESSADORES/THREADS
-        const uint o = __atomic_add_fetch(&node->oCycle, 1, __ATOMIC_ACQUIRE) % O_KEYS_DYNAMIC;
-                                           node->oVersions[o] = BE8(ping->ver);
-                                    memcpy(node->oKeys[o], K, sizeof(K));
-                         __atomic_store_n(&node->oIndex,   o,          __ATOMIC_RELAXED);
-                         __atomic_store_n(&node->rcounter, p_rcounter, __ATOMIC_RELEASE);
-
         if (i == I_KEY_PONG) {
             // CONNECTING / ESTABLISHED
-
-            // TODO: LIMITAR A QUANTIDADE DE SYNS RECEBIVEIS A CADA KEEPER INTERVAL
 
             if (!__atomic_compare_exchange_n(&path->pingSent, &p_ltime, 0, 0, __ATOMIC_SEQ_CST, __ATOMIC_RELAXED))
                 ret_path(PSTATS_I_PONG_RACED);
 
-            // CONFIRMOU QUE ESTA RESPOSTA SE REFERE AO ULTIMO PING ENVIADO, E LIMPOU ELE: NAO VAI ACEITAR OUTRO
+            // CONFIRMOU QUE ESTE PONG RESPONDEU O ULTIMO PING ENVIADO
+            // LIMPOU ELE: NAO VAI ACEITAR OUTRO
 
-            const u16 latency = (latency + (now - p_ltime)/2) / 2;
+            latency = (latency + (now - p_ltime)/2) / 2;
 
             // ELE NOS MANDOU O TIME DELE DE QUANDO ELE RECEBEU.
             // MAS CONSIDERA O TIME QUE ELE TINHA QUANDO ENVIAMOS.
             // E ENTAO PEGA A COMPARAÇÃO ENTRE *LOCAL TIME WHEN I SENT* COM *REMOTE TIME WHEN I SENT*
-            const s64 tdiff = (tdiff + LTIME_DIFF_RTIME(p_ltime, p_rtime - latency)) / 2;
+            tdiff = (tdiff + LTIME_DIFF_RTIME(p_ltime, p_rtime - latency)) / 2;
 
             // ESTE AQUI DEVERIA SER COMPARE, EXCHANGE, MAS:
             // SÓ PODE ACONTECER UM RACE SE ENTRARMOS NESTE BLOCO E AO MESMO TEMPO O KEEPER GERAR UM NOVO path->pingSent,
             // E A RESPOSTA VIR TELEPATICAMENTE E SER PROCESSADA AO MESMO TEMPO.
             // O RESULTADO É QUE PODERIAMOS ESTAR ESCREVENDO ESTE P_RTIME ANTIGO POR CIMA DO NOVO.
             // MAS DE QUALQUER JEITO, O NOVO É MAIOR DO QUE O ANTERIOR A ESTE, COMO CHECAMOS ACIMA.
-            __atomic_store_n(&path->rtime, p_rtime, __ATOMIC_RELAXED);
-            __atomic_store_n(&path->tdiff, tdiff, __ATOMIC_RELAXED);
-            __atomic_store_n(&path->rtt, rtt, __ATOMIC_RELAXED);
-            __atomic_store_n(&path->pongReceived, now, __ATOMIC_SEQ_CST); // <-- THIS MOVES FROM CONNECTING -> ESTABLISHED
+            __atomic_store_n(&path->tdiff, 	  tdiff,  __ATOMIC_RELAXED);
+            __atomic_store_n(&path->latency, 	latency,  __ATOMIC_RELAXED);
+            __atomic_store_n(&path->pongReceived, now, 	  __ATOMIC_RELAXED);
+            __atomic_store_n(&path->rtime,  	 p_rtime, __ATOMIC_SEQ_CST); // <-- THIS MOVES FROM CONNECTING -> ESTABLISHED
 
             // LEARN HIS INPUT KEYS (MY OUTPUT KEYS)
+            const uint ver = BE64(PKT_PING_VER(pkt)) & 0xFF;
+            const uint sec = BE64(PKT_PING_SEC(pkt)) >> (64 - 8);
+
             u64 K[K_LEN];
 
-            secret_derivate_random_as_key(node->secret, ping->rnd, K);
+            secret_derivate_random_as_key(node->secret[sec], PKT_PING_K(pkt), K);
 
-            // NOW APPLY
+            // FAZ ISSO PRIMEIRO ANTES DE LIBERAR O PATH PARA ENVIAR
+            const uint o = __atomic_add_fetch(&node->oSave, 1, __ATOMIC_ACQUIRE) % O_KEYS_DYNAMIC;
+                                               node->oVersions[o] = ver;
+                                        memcpy(node->oKeys[o], K, sizeof(K));
+                             __atomic_store_n(&node->oUse, o,  __ATOMIC_RELEASE);
 
             ret_path(PSTATS_I_PONG_OK);
         }
@@ -340,6 +336,7 @@ _is_xgw:
                 // SYN
                 // LEARN O PATH EM UM HEADER TEMPORARIO
                 // NAO APRENDE KEYS E NEM COUNTERS
+                // TODO: LIMITAR A QUANTIDADE DE SYNS RECEBIVEIS A CADA KEEPER INTERVAL
                 skel = &temp_skel;
 
             in_discover(path, skb, skel);
@@ -365,8 +362,11 @@ _is_xgw:
         // GERA AS KEYS
         random64_n(PTR(ping), PING_RANDOMS_N, SUFFIX_ULL(CONFIG_XGW_RANDOM_PING));
 
+        // O RANDOM GEROU QUAL SEC USAREMOS
+        const uint sec = BE64(PKT_PING_SEC(pkt)) >> (64 - 8);
+
         // SEM ATOMICITY/BARRIER POR QUE O PEER SO VAI REFERENCIAR ESSE NOSSO INPUT INDEX QUANDO ELE RECEBER
-        secret_derivate_random_as_key(node->secret, ping->rnd, node->iKeys[i]);
+        secret_derivate_random_as_key(node->secret[s], PKT_PING_K(pkt), node->iKeys[i]);
 
         pkt->time = BE64(p_rtime);
 

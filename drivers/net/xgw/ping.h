@@ -10,5 +10,6 @@
 // NOTE: AO ENVIAR UM PONG, O PKT->COUNTER É O RCOUNTER SENDO RESPONDIDO
 
 #define PKT_PING_K(pkt)     (pkt->p + PKT_ALIGN_RANDOMS)
-#define PKT_PING_VER(pkt)   (pkt->p[PKT_ALIGN_RANDOMS + K_LEN])
+#define PKT_PING_SEC(pkt)   (pkt->p[PKT_ALIGN_RANDOMS + K_LEN]) // >> (64 - 8)
+#define PKT_PING_VER(pkt)   (pkt->p[PKT_ALIGN_RANDOMS + K_LEN]) // 0xFF
 #define PKT_PING_TIME(pkt)  (pkt->p[PKT_ALIGN_RANDOMS + K_LEN + 1])
