@@ -128,7 +128,7 @@ static void keeper (struct timer_list* const timer) {
                 }   path->pingSent   = 0; // AINDA NAO CONSTRUI PING
                     path->pongReceived = 0;
                     path->tdiff      = 0;
-                    path->latency    = 300;
+                    path->latency    = path->latency_max + path->latency_var;
                     path->info      ^= K_START | K_LISTEN;
 
                 // ENABLE IN
@@ -160,9 +160,7 @@ static void keeper (struct timer_list* const timer) {
                     path->info      ^= K_LISTEN | K_ESTABLISHED;
                     path->acks       = 0;
                     path->since      = now;
-                    path->last       = now;
                     path->starts    += 1;
-                    path->rtt        = path->rtt_max + path->rtt_var;
                  // path->sent      -> 0  --- SERA SETADO ABAIXO
                  // path->lcounter  -> 0  --- SERA SETADO ABAIXO
                  // path->rcounter  -> a) COUNTER_CONNECTING (KEEPER - START)
@@ -183,65 +181,46 @@ static void keeper (struct timer_list* const timer) {
                     goto _suspend;
                 }
 
-                // PEGA O TIME DE QUANDO ELE RECEBEU UM PONG
-                // ESTE TIME SÓ É ESCRITO SE O MEU COUNTER, CITADO NO PONG, É O QUE ESTÁ NELE
-                //      cmp_exchange(path->lcounter, pong_lcounter, get_jiffies64())
-                // O UNICO QUE ESCREVE EM PATH->LCOUNTER
-                //      a) AQUI, QUANDO PASSO A CONSIDERAR O NOVO NODE->COUNTER
-                //      b) IN_PONG, AO SUBSTITUIR ESTE VALOR DE NODE->COUNTER --> NOW
-                // ENTAO ESTE PATH->LCOUNTER LIDO SO PODE SER:
-                //      a) O NODE->LCOUNTER COLOCADO ANTERIORMENTE, AQUI (node->lcounter - 1)
-                //      b) O TIME COLOCADO PELO IN_PONG
-                //      c) O 0 INICIAL
-                const u64 received = __atomic_exchange_n(&path->lcounter, node->lcounter, __ATOMIC_SEQ_CST);
+                const u64 pongReceived = atomic_get(&path->pongReceived);
 
-                if (received) {
-
-                    if (received != (node->lcounter - 1)) {
-                        // RECEBEU
-
-                        // USE O NOW AO INVES DE RECEIVED POIS O RECEIVED PODE ESTAR ERRADO (SER UM COUNTER)
-                        path->last = now;
-
-                    } elif ((path->last + path->timeout * HZ) < now) {
-                        // NOT RECEIVED, AND TIMED OUT
-                        printk("XGW: %s [%s]: TIMED OUT\n", node->name, path->name);
-                        goto _suspend;
-                    }
-
-                    // A SECOND ELAPSED
-                    // TODO: ELE TEM QUE TER RECEBIDO TAMBEM UM PING, HA PELO MENOS 2 KEEPER INTERVALS
-                    // TODO: E A INTERFACE ESTA UP
-                    // TODO: E A INTERFACE ESTA COM CARRIER
-                    const u64 acks = (path->acks << 1) | (received <= (path->sent + path->rtt));
-
-                    if (path->acks != acks) {
-                        path->acks = acks;
-                        // CHANGED
-
-                        const char* str;
-
-                        switch (acks) {
-                            case 0x0000000000000000ULL: str = "LOST";       break;
-                            case 0x0000000000000001ULL: str = "RECOVERING"; break;
-                            case 0xFFFFFFFFFFFFFFFEULL: str = "UNSTABLE";   break;
-                            case 0xFFFFFFFFFFFFFFFFULL: str = "STABLE";     break;
-                            default:                    str = NULL;
-                        }
-
-                        if (str)
-                            printk("XGW: %s [%s]: %s WITH RTT %u\n", node->name, path->name, str, (uint)path->rtt);
-                    }
-
-                    // DOS PIORES AOS MELHORES
-                #define IS_STABLE(acks, interval, loss) (popcount((acks) << (ACKS_N - (interval))) >= ((interval) - (loss)))
-                    opaths |= (
-                        (((u64)IS_STABLE(acks, 12, 8)) << (3*PATHS_N)) | // BASTA QUE ESTEJA FUNCIONANDO ENTAO
-                        (((u64)IS_STABLE(acks, 20, 1)) << (2*PATHS_N)) |
-                        (((u64)IS_STABLE(acks, 12, 0)) << (1*PATHS_N)) | // NOTE: THIS ONE SHOULD BE REPEATED
-                         ((u64)IS_STABLE(acks, 12, 0)) // TODO: REMOVE THIS REPETITION LIMITATION
-                    ) << pid;
+                if ((pongReceived + path->timeout * HZ) < now) {
+                    // TIMED OUT WAITING FOR PONGS
+                    printk("XGW: %s [%s]: TIMED OUT\n", node->name, path->name);
+                    goto _suspend;
                 }
+
+                // A SECOND ELAPSED
+                // TODO: ELE TEM QUE TER RECEBIDO TAMBEM UM PING, HA PELO MENOS 2 KEEPER INTERVALS
+                // TODO: E A INTERFACE ESTA UP
+                // TODO: E A INTERFACE ESTA COM CARRIER
+                const u64 acks = (path->acks << 1) | (pongReceived <= (path->pingSent + 2*atomic_get(&path->latency) + path->latency_var));
+
+                if (path->acks != acks) {
+                    path->acks = acks;
+                    // CHANGED
+
+                    const char* str;
+
+                    switch (acks) {
+                        case 0x0000000000000000ULL: str = "LOST";       break;
+                        case 0x0000000000000001ULL: str = "RECOVERING"; break;
+                        case 0xFFFFFFFFFFFFFFFEULL: str = "UNSTABLE";   break;
+                        case 0xFFFFFFFFFFFFFFFFULL: str = "STABLE";     break;
+                        default:                    str = NULL;
+                    }
+
+                    if (str)
+                        printk("XGW: %s [%s]: %s WITH LATENCY %u\n", node->name, path->name, str, (uint)atomic_get(&path->latency));
+                }
+
+                // DOS PIORES AOS MELHORES
+            #define IS_STABLE(acks, interval, loss) (popcount((acks) << (ACKS_N - (interval))) >= ((interval) - (loss)))
+                opaths |= (
+                    (((u64)IS_STABLE(acks, 12, 8)) << (3*PATHS_N)) | // BASTA QUE ESTEJA FUNCIONANDO ENTAO
+                    (((u64)IS_STABLE(acks, 20, 1)) << (2*PATHS_N)) |
+                    (((u64)IS_STABLE(acks, 12, 0)) << (1*PATHS_N)) | // NOTE: THIS ONE SHOULD BE REPEATED
+                        ((u64)IS_STABLE(acks, 12, 0)) // TODO: REMOVE THIS REPETITION LIMITATION
+                ) << pid;
 
                 // MAKE PING
                 // TODO: SO FAZER ISSO SE A INTERFACE ESTIVER UP E COM CARRIER, PARA NAO PERDER IKEYS ATOA
@@ -256,13 +235,15 @@ static void keeper (struct timer_list* const timer) {
                     //
                     random64_n(PTR(ping), PING_RANDOMS_N, SUFFIX_ULL(CONFIG_XGW_RANDOM_PING));
 
-                    ping->ltime = BE64(ltime);
+                    const uint o = atomic_get(&path->rtime) == COUNTER_CONNECTING ?
+                        O_KEY_SYN : O_KEY_PING;
 
-                    // BUILD THE PING FROM THE SKEL
-                    pkt_encapsulate(node, XXXXXXXXx : O_KEY_SYN : O_KEY_PING, // ELE VAI MANDAR SYN ATÉ RECEBER O PRIMEIRO PING, O QUAL MARCARA O RCOUNTER
-                        __atomic_load_n(&path->rcounter, __ATOMIC_RELAXED) == COUNTER_CONNECTING ? COUNTER_SYN :
-                        &path->skel, skb, ping, PING_SIZE // TODO: SO PODE MARCAR O path->rcounter *APOS* ATUALIZAR O node->rcounter
-                    );
+                    const u64 rtime = (o == O_KEY_SYN) ?
+                        path->syn : RTIME(now, atomic_get(&path->tdiff));
+
+                    // ENCAPSULATE THE PING
+                    // TODO: SO PODE MARCAR O path->rcounter *APOS* ATUALIZAR O node->rcounter
+                    pkt_encapsulate(node, o, rtime, &path->skel, skb, ping, PING_SIZE);
                 }
             }
 

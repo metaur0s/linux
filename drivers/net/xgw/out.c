@@ -390,11 +390,7 @@ static netdev_tx_t out (skb_s* const skb, net_device_s* const dev) {
         ret_path(PSTATS_O_DATA_NO_HEADROOM);
 
     // TODO: USAR O GET JIFFIES ACIMA
-    const u64 rtime = get_current_ms() + atomic_get(&path->tdiff);
-
-    const uint o = atomic_get(&node->oUse);
-
-    pkt_encapsulate(node, o, rtime, &path->skel, skb, p, size);
+    pkt_encapsulate(node, atomic_get(&node->oUse), RTIME(get_current_ms(), atomic_get(&path->tdiff)), &path->skel, skb, p, size);
 
     // -- THE FUNCTION CAN BE CALLED FROM AN INTERRUPT
     // -- WHEN CALLING THIS METHOD, INTERRUPTS MUST BE ENABLED

@@ -230,12 +230,14 @@ _is_xgw:
             if (p_rtime <= rtime)
                 // HIS RAW TIME CANNOT GO DOWN OR REPEAT
                 ret_path(PSTATS_I_RTIME_BACKWARDS);
-            // COMPARA O TIME QUE ELE DIZ TER, COM O TIME (APROXIMADO) QUE SABEMOS QUE ELE TEM
-            const s64 diff =
-                (p_rtime + latency) // O RELOGIO DELE COMO ELE DIZ QUE ESTA (APROXIMADO)
-                    -
-                LTIME_TO_RTIME(now, tdiff) // O RELOGIO DELE COMO ELE DEVERIA SER (APROXIMADO)
-            ; // A IMPRECISÃO NÃO PODE SER TÃO GRANDE ASSIM:
+            // O QUANTO
+            //      (O RELOGIO DELE COMO ELE DIZ QUE ESTA (APROXIMADO))
+            //          (LEVANDO EM CONTA QUE ISTO FOI UM SNAPSHOT DELE HA *LATENCY* ATÉ RECEBERMOS)
+            // ESTÁ EM RELAÇÃO A
+            //      (O RELOGIO DELE COMO ELE DEVE ESTAR (APROXIMADO))
+            const s64 diff = (p_rtime + latency) - RTIME(now, tdiff);
+            // A IMPRECISÃO NÃO PODE SER TÃO GRANDE ASSIM:
+            // NOTE: CONSIDERAR PATH->LATENCY_VAR
             if (diff > 2000) // PEER AFOBADO
                 ret_path(PSTATS_I_RTIME_SKEW_UP);
             if (diff < -2000) // PEER LESADO
