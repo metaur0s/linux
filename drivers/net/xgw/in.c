@@ -340,12 +340,12 @@ _is_xgw:
         // O % É PARA QUE POSSAMOS USAR PALAVRAS MAIORES
         const uint i = __atomic_add_fetch(&node->iCycle, 1, __ATOMIC_RELAXED) % I_KEYS_DYNAMIC;
 
-     // ping->sec -> JA GERADO PELO RANDOM
+     // pong->sec -> JA GERADO PELO RANDOM
         pong->ver  = BE16(i); // OVERWRITE WITH THE VERSION
         pong->time = BE64(now);
 
         // O RANDOM GEROU QUAL SEC USAREMOS
-        const uint sec = BE16(ping->sec);
+        const uint sec = BE16(pong->sec);
 
         // SEM ATOMICITY/BARRIER POR QUE O PEER SO VAI REFERENCIAR ESSE NOSSO INPUT INDEX QUANDO ELE RECEBER
         secret_derivate_random_as_key(node->secret[sec], pong->rnd, node->iKeys[i]);
