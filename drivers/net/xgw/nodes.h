@@ -141,8 +141,8 @@ struct path_s {
     // --
     u64 acks;     // KEEPER - HISTORY
     u64 syn; // O PKT->TSTAMP QUE O CLIENTE VAI USAR, ENQUANTO NAO DESCOBRE ELE
-    u64 pingSent;     // QUANDO ENVIEI O PING
-    u64 pongReceived; // QUANDO RECEBI O PONG
+    u64 asked_ms;    // QUANDO ENVIEI O PING
+    u64 answered_hz; // QUANDO RECEBI O PONG
     u64 rtime;  // LAST PING->TSTAMP RECEIVED (HIS RAW TIME)
     s64 tdiff;  // ltime - rtime
 // 32 -- KEEPER / PING

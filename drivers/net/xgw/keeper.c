@@ -17,7 +17,7 @@ static void keeper (struct timer_list* const timer) {
 
     timer->expires = jiffies + KEEPER_INTERVAL;
 
-    const u64 now = get_jiffies_64();
+    const u64 now_hz = get_jiffies_64();
 
     for (node_s* node = knodes; node; node = node->next) {
 
@@ -159,7 +159,7 @@ static void keeper (struct timer_list* const timer) {
 
                     path->info      ^= K_LISTEN | K_ESTABLISHED;
                     path->acks       = 0;
-                    path->since      = now;
+                    path->since      = now_hz;
                     path->starts    += 1;
                  // path->sent      -> 0  --- SERA SETADO ABAIXO
                  // path->lcounter  -> 0  --- SERA SETADO ABAIXO
@@ -183,7 +183,7 @@ static void keeper (struct timer_list* const timer) {
 
                 const u64 pongReceived = atomic_get(&path->pongReceived);
 
-                if ((pongReceived + path->timeout * HZ) < now) {
+                if ((pongReceived + path->timeout * HZ) < now_hz) {
                     // TIMED OUT WAITING FOR PONGS
                     printk("XGW: %s [%s]: TIMED OUT\n", node->name, path->name);
                     goto _suspend;
@@ -235,14 +235,13 @@ static void keeper (struct timer_list* const timer) {
                     //
                     random64_n(PTR(ping), PING_RANDOMS_N, SUFFIX_ULL(CONFIG_XGW_RANDOM_PING));
 
-                    const uint o = atomic_get(&path->rtime) == RCOUNTER_CONNECTING ?
+                    const uint o = atomic_get(&path->rtime) == RTIME_CONNECTING ?
                         O_KEY_SYN : O_KEY_PING;
 
                     const u64 rtime = (o == O_KEY_SYN) ?
-                        path->syn : RTIME(now, atomic_get(&path->tdiff));
+                        path->syn : RTIME(hz_as_ms(now_hz), atomic_get(&path->tdiff));
 
                     // ENCAPSULATE THE PING
-                    // TODO: SO PODE MARCAR O path->rcounter *APOS* ATUALIZAR O node->rcounter
                     pkt_encapsulate(node, o, rtime, &path->skel, skb, ping, PING_SIZE);
                 }
             }
@@ -352,7 +351,7 @@ _skip:
 
                 if (skb) {
                     path->_skb = NULL;
-                    path->sent = get_jiffies_64();
+                    path->pingSent = get_current_ms();
 
                     // TEM QUE LER ANTES POIS O SKB SERA PERTIDO
                     len = skb->len;
