@@ -202,36 +202,6 @@ static void keeper (struct timer_list* const timer) {
                     if (received != (node->lcounter - 1)) {
                         // RECEBEU
 
-                        // ELAPSED TIME: PONG_RECEIVED - PING_SENT
-                        u64 rtt = received - path->sent;
-
-                        // FORCE CONFIGURED LIMITS
-                        if   (rtt < path->rtt_min)
-                              rtt = path->rtt_min;
-                        elif (rtt > path->rtt_max)
-                              rtt = path->rtt_max;
-
-                        // REPLACE THE OLDEST WITH IT
-                        path->rtts[path->rtt_index++ % PATH_RTTS_N] = rtt;
-
-                        // CALCULATE THE AVERAGE, WEIGHTING THE HIGHESTS
-                        // REFORCA ESTE NOVO
-                        u64 w = rtt; rtt *= rtt;
-
-                        for_count (i, PATH_RTTS_N) {
-                            const u64 x = path->rtts[i];
-                            w   += x;
-                            rtt += x * x;
-                        }
-
-                        rtt /= w;
-
-                        // ATURA VARIACOES
-                        rtt += path->rtt_var;
-
-                        // TODO: USE IT ON THE CONNECTIONS
-                        __atomic_store_n(&path->rtt, rtt, __ATOMIC_RELAXED);
-
                         // USE O NOW AO INVES DE RECEIVED POIS O RECEIVED PODE ESTAR ERRADO (SER UM COUNTER)
                         path->last = now;
 
@@ -291,10 +261,9 @@ static void keeper (struct timer_list* const timer) {
                     ping->ltime = BE64(ltime);
 
                     // BUILD THE PING FROM THE SKEL
-                    pkt_encapsulate(node, O_KEY_PING, // ELE VAI MANDAR SYN ATÉ RECEBER O PRIMEIRO PING, O QUAL MARCARA O RCOUNTER
+                    pkt_encapsulate(node, XXXXXXXXx : O_KEY_SYN : O_KEY_PING, // ELE VAI MANDAR SYN ATÉ RECEBER O PRIMEIRO PING, O QUAL MARCARA O RCOUNTER
                         __atomic_load_n(&path->rcounter, __ATOMIC_RELAXED) == COUNTER_CONNECTING ? COUNTER_SYN :
-                        __atomic_load_n(&node->rcounter, __ATOMIC_RELAXED), // TODO: SO PODE MARCAR O path->rcounter *APOS* ATUALIZAR O node->rcounter
-                        &path->skel, skb, ping, PING_SIZE
+                        &path->skel, skb, ping, PING_SIZE // TODO: SO PODE MARCAR O path->rcounter *APOS* ATUALIZAR O node->rcounter
                     );
                 }
             }

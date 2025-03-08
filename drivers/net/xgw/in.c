@@ -243,6 +243,7 @@ _is_xgw:
             // CONFIRMOU QUE ESTE PONG RESPONDEU O ULTIMO PING ENVIADO
             // LIMPOU ELE: NAO VAI ACEITAR OUTRO
 
+            // TODO: CONSIDER MIN/MAX CONFIGURED
             latency = (latency + (now - p_ltime)/2) / 2;
 
             // ELE NOS MANDOU O TIME DELE DE QUANDO ELE RECEBEU.
@@ -347,7 +348,7 @@ _is_xgw:
         random64_n(pong, PONG_RANDOMS_N, p_rcounter);
 
         // TODO: O ALIGN COM RANDOM TEM QUE SER COLOCADO FORA DO ENCAPSULATE, POIS NO CASO DO PING/PONG NAO VAMOS USAR
-        pkt_encapsulate(node, O_KEY_PING, p_rcounter, skel, oskb, pong, PONG_SIZE);
+        pkt_encapsulate(node, O_KEY_PONG, p_rcounter, skel, oskb, pong, PONG_SIZE);
 
         oskb->ip_summed = CHECKSUM_NONE;
 
