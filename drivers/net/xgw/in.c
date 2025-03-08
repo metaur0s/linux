@@ -20,15 +20,16 @@ BUILD_ASSERT(IPPROTO_TCP != ETH_P_IP);
 BUILD_ASSERT(IPPROTO_TCP != ETH_P_IPV6);
 
 // ON path->rtime
-#define PATH_RCOUNTER_LISTENING  0
-#define PATH_RCOUNTER_ACCEPTING  1
-#define PATH_RCOUNTER_CONNECTING 2
+#define PATH_RCOUNTER_LISTENING   0
+#define PATH_RCOUNTER_ACCEPTING   1
+#define PATH_RCOUNTER_CONNECTING  2
+#define PATH_RCOUNTER_ESTABLISHED XGW_TIME_MIN
 
 #define COUNTER_SYN_MIN ((u64)8)
 #define COUNTER_SYN_MAX ((~(u64)0) - 32)
 
-#define XGW_TIME_MIN ((u64)32)
-#define XGW_TIME_MAX ((~(u64)0) - 4*12*31*24*3600)
+#define XGW_TIME_MIN ((u64)8192)
+#define XGW_TIME_MAX ((u64)(8ULL*12*31*24*3600*1000))
 
 static inline void in_discover (const path_s* const path, const skb_s* const skb, pkt_s* const skel) {
 
@@ -460,24 +461,31 @@ _is_xgw:
 
     u64 rtime = atomic_get(&path->rtime);
 
-    if (rtime >= PATH_RCOUNTER_CONNECTING) {
-        if (rtime == PATH_RCOUNTER_CONNECTING && i != I_KEY_PONG)
+    if (rtime >= PATH_RCOUNTER_ESTABLISHED) {
+        if (i == I_KEY_SYN)
+            // ESTABLISHED RECEBE TUDO MENOS SYN
+            ret_path(PSTATS_I_ESTABLISHED_SYN);
+    } elif (rtime == PATH_RCOUNTER_CONNECTING) {
+        if (i != I_KEY_PONG)
             // CONNECTING SO RECEBE PONGS
             ret_path(PSTATS_I_NOT_PONG);
-        if (ABS_DIFF(now, p_ltime) > 400) // TODO: O ENVIADOR OU O RECEBEDOR TEM QUE INCLUIR O LATENCY NO pkt->tstamp?
-            // ELE NAO CONHECE NOSSO TIME
-            ret_path(PSTATS_I_LTIME_MISMATCH);
     } elif (rtime == PATH_RCOUNTER_LISTENING) {
-        if (i != I_KEY_PING)
-            // LISTENING SO RECEBE PINGS
-            ret_path(PSTATS_I_NOT_PING);
-        if (ABS_DIFF(now, p_ltime) > 400 && p_ltime != path->syn)
-            // LISTENING SO RECEBE COM PKT->TSTAMP +/- now | SYN
-            ret_path(PSTATS_I_LTIME_MISMATCH);
+        if (i != I_KEY_SYN &&
+            i != I_KEY_PING)
+            // LISTENING SO RECEBE SYN E PING
+            ret_path(PSTATS_I_NOT_SYN_OR_PING);
     } else { // RACED WITH AN ACCEPTING
         ASSERT(rtime == PATH_RCOUNTER_ACCEPTING);
         ret_path(PSTATS_I_WHILE_ACCEPTING);
     }
+
+    if (i == I_KEY_SYN) {
+        if (p_ltime != path->syn)
+            // ELE NAO CONHECE NOSSO CODIGO
+            ret_path(PSTATS_I_LTIME_NOT_SYN);
+    } elif (ABS_DIFF(now, p_ltime) > 400))
+        // ELE NAO CONHECE NOSSO TIME
+        ret_path(PSTATS_I_LTIME_MISMATCH);
 
     // DECRYPT
     if (pkt_decrypt(node, i, pkt, size) != hash)
@@ -496,22 +504,42 @@ _is_xgw:
             // INVALID RTIME
             ret_path(PSTATS_I_RTIME_INVALID);
 
-        if ((rtime >= p_rtime) && (rtime - p_rtime) > 500)
+        // HIS RAW TIME NEVER GOES DOWN
+        if (p_rtime <= rtime)
             // NOTE: JA SEI QUE O RTIME É CONHECIDO AQUI, POIS SE NAO FOSSE SERIA 0, 1 ETC,
-            //  E PARA SER SER MENOR DO QUE ISSO, P_RTIME TERIA DE SER INVALIDO, E NAO É POIS JA CHECOU
+            //  E PARA SER SER MENOR DO QUE ISSO, P_RTIME TERIA DE SER INVALIDO, E NAO É POIS JA CHECOU.
             // ATRASADO / REPEATED
             ret_path(PSTATS_I_RTIME_BACKWARDS);
+
+        u64 latency = atomic_get(&path->latency);
+        s64 tdiff   = atomic_get(&path->tdiff);
+
+        if (i != I_KEY_SYN) {
+            // ELE CONHECE NOSSO TIME
+        }
+
+        if (0)
+            // JA CONHECO O TIME DELE
+            if (((p_rtime + latency) - (rtime)) > 4000)
+                // P
+                ret_path(PSTATS_I_RTIME_AFOBADO);
 
         if (i == I_KEY_PONG) {
             // CONNECTING / ESTABLISHED
 
-            if (__atomic_compare_exchange_n(&path->rtime, &rtime, p_rtime, 0, __ATOMIC_ACQUIRE, __ATOMIC_RELAXED)) {
-                __atomic_compare_exchange_n(&path->pingSent, &p_ltime, 0, 0, __ATOMIC_ACQUIRE, __ATOMIC_RELAXED);
-                u64 rtt = (atomic_get(&path->rtt) + (now - p_ltime)) / 2;
-                u64 tdiff = (atomic_get(&path->tdiff) + ((s64)p_ltime - (s64)(p_rtime + rtt/2))) / 2;
-                __atomic_store_n(&path->rtt, rtt, __ATOMIC_RELAXED);
+            if (__atomic_compare_exchange_n(&path->pingSent, &p_ltime, 0, 0, __ATOMIC_SEQ_CST, __ATOMIC_RELAXED)) {
+                // CONFIRMOU QUE ESTA RESPOSTA SE REFERE AO ULTIMO PING ENVIADO, E LIMPOU ELE: NAO VAI ACEITAR OUTRO
+                u64 latency = (latency + (now - p_ltime)/2) / 2;
+                s64 tdiff = (tdiff + ((s64)p_ltime - (s64)(p_rtime - latency))) / 2;
+                // ESTE AQUI DEVERIA SER COMPARE, EXCHANGE, MAS:
+                // SÓ PODE ACONTECER UM RACE SE ENTRARMOS NESTE BLOCO E AO MESMO TEMPO O KEEPER GERAR UM NOVO path->pingSent,
+                // E A RESPOSTA VIR TELEPATICAMENTE E SER PROCESSADA AO MESMO TEMPO.
+                // O RESULTADO É QUE PODERIAMOS ESTAR ESCREVENDO ESTE P_RTIME ANTIGO POR CIMA DO NOVO.
+                // MAS DE QUALQUER JEITO, O NOVO É MAIOR DO QUE O ANTERIOR A ESTE, COMO CHECAMOS ACIMA.
+                __atomic_store_n(&path->rtime, p_rtime, __ATOMIC_RELAXED);
                 __atomic_store_n(&path->tdiff, tdiff, __ATOMIC_RELAXED);
-                __atomic_store_n(&path->pongReceived, now, __ATOMIC_RELAXED); // <-- THIS MOVES FROM CONNECTING -> ESTABLISHED
+                __atomic_store_n(&path->rtt, rtt, __ATOMIC_RELAXED);
+                __atomic_store_n(&path->pongReceived, now, __ATOMIC_SEQ_CST); // <-- THIS MOVES FROM CONNECTING -> ESTABLISHED
             }
 
             ret_path(PSTATS_I_RTIME_BACKWARDS); //goto pong_ok;
