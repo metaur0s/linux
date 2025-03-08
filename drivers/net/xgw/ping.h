@@ -9,8 +9,11 @@
 
 struct ping_s {
     u64 rnd [K_LEN];
-    u8 _ [6];
-    u8 sec;
-    u8 ver;
+    u16 _;
+    u16 ver;
+    u16 __;
+    u16 sec;
     u64 time;
 };
+
+BUILD_ASSERT(sizeof(ping_s) == PING_SIZE);

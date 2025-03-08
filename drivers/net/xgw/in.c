@@ -1,13 +1,4 @@
-static inline uint node_icycle (node_s* const node) {
 
-    uint old, new;
-
-    do {
-       new = ((old = atomic_get(&node->iCycle)) + 1) % I_KEYS_DYNAMIC;
-    } while (!__atomic_compare_exchange_n(&node->iCycle, &old, new, 0, __ATOMIC_SEQ_CST, __ATOMIC_RELAXED));
-}
-
-// ON path->rtime
 #define RTIME_LISTENING   0
 #define RTIME_ACCEPTING   1
 #define RTIME_CONNECTING  2
@@ -124,18 +115,21 @@ _is_xgw:
     pkt_s* const pkt = ptr - sizeof(pkt_s);
 
     const uint nid      = BE16 (pkt->x.src);
+    const uint dst      = BE16 (pkt->x.dst);
     const uint pid      = BE8  (pkt->x.path);
-    const uint size     = BE16 (pkt->x.dsize);
     const uint i        = BE8  (pkt->x.version);
+    const uint size     = BE16 (pkt->x.dsize);
           u64  p_ltime  = BE64 (pkt->x.time);
     const u64  hash     = BE64 (pkt->x.hash);
 
-    ASSERT(nid < NODES_N);
+    // NAO PRECISAREMOS CHECAR LIMITES, POIS NAO CABEM MESMO
+    BUILD_ASSERT(~(typeof(pkt->x.src))0 < NODES_N);
+    BUILD_ASSERT(~(typeof(pkt->x.dst))0 < NODES_N);
 
     if (nid == nodeSelf)
         ret_dev(DSTATS_I_FROM_SELF);
 
-    if (BE16(pkt->x.dst) != nodeSelf)
+    if (dst != nodeSelf)
         ret_node(NSTATS_I_FORWARD);
 
     // TODO: UMA FLAG GLOBAL XGW IS DISABLED
@@ -197,6 +191,10 @@ _is_xgw:
         ASSERT(rtime == RTIME_ACCEPTING);
         ret_path(PSTATS_I_WHILE_ACCEPTING);
     }
+
+    if (i >= I_KEYS_ALL)
+        //
+        ret_path(PSTATS_I_BAD_VERSION);
 
     if (i == I_KEY_SYN) {
         if (p_ltime != path->syn)
@@ -272,8 +270,8 @@ _is_xgw:
             __atomic_store_n(&path->rtime,       p_rtime, __ATOMIC_SEQ_CST); // RTIME_CONNECTING / RTIME_ESTABLISHED -> RTIME_ESTABLISHED
 
             // LEARN HIS INPUT KEYS (MY OUTPUT KEYS)
-            const uint ver = BE8(ping->ver);
-            const uint sec = BE8(ping->sec);
+            const uint ver = BE16(ping->ver);
+            const uint sec = BE16(ping->sec);
 
             u64 K[K_LEN];
 
@@ -337,22 +335,24 @@ _is_xgw:
         // GERA AS KEYS
         random64_n(PTR(pong), PING_RANDOMS_N, SUFFIX_ULL(CONFIG_XGW_RANDOM_PING));
 
-        // A CADA PING A INPUT KEY MAIS ANTIGA É EXPIRADA
-        const uint i = node_icycle();
+        // A CADA PONG A INPUT KEY MAIS ANTIGA É EXPIRADA
+        // OVERFLOWS NAO TERAO PROBLEMAS
+        // O % É PARA QUE POSSAMOS USAR PALAVRAS MAIORES
+        const uint i = __atomic_add_fetch(&node->iCycle, 1, __ATOMIC_RELAXED) % I_KEYS_DYNAMIC;
 
      // ping->sec -> JA GERADO PELO RANDOM
-        pong->ver  = BE8(i); // OVERWRITE WITH THE VERSION
+        pong->ver  = BE16(i); // OVERWRITE WITH THE VERSION
         pong->time = BE64(now);
 
         // O RANDOM GEROU QUAL SEC USAREMOS
-        const uint sec = BE8(ping->sec);
+        const uint sec = BE16(ping->sec);
 
         // SEM ATOMICITY/BARRIER POR QUE O PEER SO VAI REFERENCIAR ESSE NOSSO INPUT INDEX QUANDO ELE RECEBER
         secret_derivate_random_as_key(node->secret[sec], pong->rnd, node->iKeys[i]);
 
         // USA O RAW RTIME QUE RECEBEU
         // TODO: O ALIGN COM RANDOM TEM QUE SER COLOCADO FORA DO ENCAPSULATE, POIS NO CASO DO PING/PONG NAO VAMOS USAR
-        pkt_encapsulate(node, O_KEY_PONG, p_rtime, skel, oskb, pong, PONG_SIZE);
+        pkt_encapsulate(node, O_KEY_PONG, p_rtime, skel, oskb, pong, PING_SIZE);
 
         oskb->ip_summed = CHECKSUM_NONE;
 
@@ -362,7 +362,7 @@ _is_xgw:
             ret_path(PSTATS_I_PING_GOOD_ANSWER_SEND_FAILED);
 
         // NOTE: WE WILL INFORM THE TOTAL SIZE SENT THROUGHT THE PHYSICAL INTERFACE
-        atomic_add(&path->pstats[PSTATS_O_PONG_OK].bytes, skel->hsize + PKT_ALIGN_SIZE + PONG_SIZE);
+        atomic_add(&path->pstats[PSTATS_O_PONG_OK].bytes, skel->hsize + PKT_ALIGN_SIZE + PING_SIZE);
         atomic_inc(&path->pstats[PSTATS_O_PONG_OK].count);
 
         ret_path(PSTATS_I_PING_GOOD);

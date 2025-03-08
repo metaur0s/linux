@@ -46,9 +46,6 @@ static void keeper (struct timer_list* const timer) {
 
         ASSERT(node->oVersions[O_KEY_PING] == I_KEY_PING);
 
-        __atomic_add_fetch(&node->rcounter, 1, __ATOMIC_SEQ_CST); // O OUT USA ISSO PARA ENVIAR
-        __atomic_add_fetch(&node->lcounter, 1, __ATOMIC_SEQ_CST); // O IN USA ISSO PARA RECEBER
-
 #ifdef CONFIG_XGW_BEEP // SITUACAO DESTE NODE, CONFORME OS PATHS
         uint stableWeights = 0, stableSum = 0;
 #endif
