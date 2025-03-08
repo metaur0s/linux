@@ -125,8 +125,10 @@ static void keeper (struct timer_list* const timer) {
                     printk("XGW: %s [%s]: LISTENING\n", node->name, path->name);
                     path->skel.type  = 0; //
                     path->rtime      = RTIME_LISTENING;
-                }   path->sent       = 0; // AINDA NAO CONSTRUI PING
-                    path->since      = 0; // AINDA NAO RECEBI O PRIMEIRO [MEU COUNTER]
+                }   path->pingSent   = 0; // AINDA NAO CONSTRUI PING
+                    path->pongReceived = 0;
+                    path->tdiff      = 0;
+                    path->latency    = 300;
                     path->info      ^= K_START | K_LISTEN;
 
                 // ENABLE IN
