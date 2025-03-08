@@ -88,19 +88,19 @@
 #define __P_TYPE_CLR (P_MAC_SRC | P_MAC_DST | P_ADDR_SRC | P_ADDR_DST | P_VPROTO | P_VID | P_DHCP)
 
 //
-#define PATH_RTTS_N 16
+#define PATH_LATENCYS_N 16
 
 // 10ms - 625ms
-#define PATH_RTT_MIN (HZ / 100)
-#define PATH_RTT_MAX ((25 * HZ) / 40)
+#define PATH_LATENCY_MIN (HZ / 100)
+#define PATH_LATENCY_MAX ((25 * HZ) / 40)
 
 // 10ms - 120ms
-#define PATH_RTT_VAR_MIN (HZ / 100)
-#define PATH_RTT_VAR_MAX ((3 * HZ) / 25)
+#define PATH_LATENCY_VAR_MIN (HZ / 100)
+#define PATH_LATENCY_VAR_MAX ((3 * HZ) / 25)
 
 // 15ms - 750ms
-#define PATH_RTT_EFFECTIVE_MIN (HZ / 64)
-#define PATH_RTT_EFFECTIVE_MAX ((75 * HZ) / 100)
+#define PATH_LATENCY_EFFECTIVE_MIN (HZ / 64)
+#define PATH_LATENCY_EFFECTIVE_MAX ((75 * HZ) / 100)
 
 // NOTE: NAO ADIANTA SER MUITO LONGO POIS OS KEYS PODEM ACABAR SENDO INUTILIZADOS
 // NOTE: NAO ADIANTA SER LONGO POIS FICARA UM TEMPAO TRAVADO (SERVER)
@@ -109,19 +109,19 @@
 #define PATH_TIMEOUT_MAX 255
 
 //
-BUILD_ASSERT(PATH_RTT_MIN     >= 1);
-BUILD_ASSERT(PATH_RTT_VAR_MIN >= 1);
+BUILD_ASSERT(PATH_LATENCY_MIN     >= 1);
+BUILD_ASSERT(PATH_LATENCY_VAR_MIN >= 1);
 
-BUILD_ASSERT(PATH_RTT_MIN     < PATH_RTT_MAX);
-BUILD_ASSERT(PATH_RTT_VAR_MIN < PATH_RTT_VAR_MAX);
+BUILD_ASSERT(PATH_LATENCY_MIN     < PATH_LATENCY_MAX);
+BUILD_ASSERT(PATH_LATENCY_VAR_MIN < PATH_LATENCY_VAR_MAX);
 BUILD_ASSERT(PATH_TIMEOUT_MIN < PATH_TIMEOUT_MAX);
 
 //
-BUILD_ASSERT((PATH_RTT_MIN + PATH_RTT_VAR_MIN) >= PATH_RTT_EFFECTIVE_MIN);
-BUILD_ASSERT((PATH_RTT_MAX + PATH_RTT_VAR_MAX) <= PATH_RTT_EFFECTIVE_MAX);
+BUILD_ASSERT((PATH_LATENCY_MIN + PATH_LATENCY_VAR_MIN) >= PATH_LATENCY_EFFECTIVE_MIN);
+BUILD_ASSERT((PATH_LATENCY_MAX + PATH_LATENCY_VAR_MAX) <= PATH_LATENCY_EFFECTIVE_MAX);
 
 // TEM QUE TER UMA FOLGUINHA...
-BUILD_ASSERT(PATH_RTT_EFFECTIVE_MAX < ((85 * KEEPER_INTERVAL) / 100));
+BUILD_ASSERT(PATH_LATENCY_EFFECTIVE_MAX < ((85 * KEEPER_INTERVAL) / 100));
 
 //
 #define PATH_SIZE 256
@@ -135,9 +135,9 @@ struct path_s {
     u8  timeout; // CONFIG | O CMD VAI CONVERTER O TEMPO EM SEGUNDOS/MINUTOS EM HIFFIES
     u8  weight;
     u8  weight_acks;
-    u16 rtt_min; // CONFIG
-    u16 rtt_max; // CONFIG
-    u16 rtt_var; // CONFIG
+    u16 latency_min; // CONFIG
+    u16 latency_max; // CONFIG
+    u16 latency_var; // CONFIG
     // --
     u64 acks;     // KEEPER - HISTORY
     u64 syn; // O PKT->TSTAMP QUE O CLIENTE VAI USAR, ENQUANTO NAO DESCOBRE ELE
@@ -146,7 +146,7 @@ struct path_s {
     u64 rtime;  // LAST PING->TSTAMP RECEIVED (HIS RAW TIME)
     s64 tdiff;  // ltime - rtime
 // 32 -- KEEPER / PING
-    u16 rtt;      // KEEPER WRITE / OUT READ  <<---- VAI TER QUE ENFIAR ESSA PORRA ENTÃO DENTRO DO CACHE LINE DO SKEL, OU NO NODE
+    u16 latency;      // KEEPER WRITE / OUT READ  <<---- VAI TER QUE ENFIAR ESSA PORRA ENTÃO DENTRO DO CACHE LINE DO SKEL, OU NO NODE
     u8  tos;
     u8  ttl;
     u8  sPortIndex;
@@ -169,31 +169,31 @@ struct path_s {
 };
 
 //
-BUILD_ASSERT(offsetof(path_s,   info) % CACHE_LINE_SIZE == 0);
-BUILD_ASSERT(offsetof(path_s,    rtt) % CACHE_LINE_SIZE == 0);
-BUILD_ASSERT(offsetof(path_s, sPorts) % CACHE_LINE_SIZE == 0);
+BUILD_ASSERT(offsetof(path_s,    info) % CACHE_LINE_SIZE == 0);
+BUILD_ASSERT(offsetof(path_s, latency) % CACHE_LINE_SIZE == 0);
+BUILD_ASSERT(offsetof(path_s,  sPorts) % CACHE_LINE_SIZE == 0);
 
 BUILD_ASSERT(sizeof(path_s) == PATH_SIZE);
 
 //
-BUILD_ASSERT(PATH_RTT_MIN     >= 1);
-BUILD_ASSERT(PATH_RTT_VAR_MIN >= 1);
+BUILD_ASSERT(PATH_LATENCY_MIN     >= 1);
+BUILD_ASSERT(PATH_LATENCY_VAR_MIN >= 1);
 
-BUILD_ASSERT((typeof(((path_s*)NULL)->nid))         NID_MAX          == NID_MAX);
-BUILD_ASSERT((typeof(((path_s*)NULL)->pid))         PID_MAX          == PID_MAX);
-BUILD_ASSERT((typeof(((path_s*)NULL)->rtt))         PATH_RTT_MAX     == PATH_RTT_MAX);
-BUILD_ASSERT((typeof(((path_s*)NULL)->rtt_min))     PATH_RTT_MAX     == PATH_RTT_MAX);
-BUILD_ASSERT((typeof(((path_s*)NULL)->rtt_max))     PATH_RTT_MAX     == PATH_RTT_MAX);
-BUILD_ASSERT((typeof(((path_s*)NULL)->rtt_var))     PATH_RTT_VAR_MAX == PATH_RTT_VAR_MAX);
-BUILD_ASSERT((typeof(((path_s*)NULL)->timeout))     PATH_TIMEOUT_MAX == PATH_TIMEOUT_MAX);
-BUILD_ASSERT((typeof(((path_s*)NULL)->info))        P_INFO           == P_INFO);
-BUILD_ASSERT((typeof(((path_s*)NULL)->info))        K_ESTABLISHED    == K_ESTABLISHED);
-BUILD_ASSERT((typeof(((path_s*)NULL)->weight))      PATH_WEIGHT_MAX  == PATH_WEIGHT_MAX);
-BUILD_ASSERT((typeof(((path_s*)NULL)->weight_acks)) ACKS_N           == ACKS_N);
-BUILD_ASSERT((typeof(((path_s*)NULL)->sPortsN))     PATH_PORTS_N     == PATH_PORTS_N);
-BUILD_ASSERT((typeof(((path_s*)NULL)->dPortsN))     PATH_PORTS_N     == PATH_PORTS_N);
-BUILD_ASSERT((typeof(((path_s*)NULL)->sPortIndex))  (PATH_PORTS_N-1) == (PATH_PORTS_N-1));
-BUILD_ASSERT((typeof(((path_s*)NULL)->dPortIndex))  (PATH_PORTS_N-1) == (PATH_PORTS_N-1));
+BUILD_ASSERT((typeof(((path_s*)NULL)->nid))         NID_MAX              == NID_MAX);
+BUILD_ASSERT((typeof(((path_s*)NULL)->pid))         PID_MAX              == PID_MAX);
+BUILD_ASSERT((typeof(((path_s*)NULL)->latency))     PATH_LATENCY_MAX     == PATH_LATENCY_MAX);
+BUILD_ASSERT((typeof(((path_s*)NULL)->latency_min)) PATH_LATENCY_MAX     == PATH_LATENCY_MAX);
+BUILD_ASSERT((typeof(((path_s*)NULL)->latency_max)) PATH_LATENCY_MAX     == PATH_LATENCY_MAX);
+BUILD_ASSERT((typeof(((path_s*)NULL)->latency_var)) PATH_LATENCY_VAR_MAX == PATH_LATENCY_VAR_MAX);
+BUILD_ASSERT((typeof(((path_s*)NULL)->timeout))     PATH_TIMEOUT_MAX     == PATH_TIMEOUT_MAX);
+BUILD_ASSERT((typeof(((path_s*)NULL)->info))        P_INFO               == P_INFO);
+BUILD_ASSERT((typeof(((path_s*)NULL)->info))        K_ESTABLISHED        == K_ESTABLISHED);
+BUILD_ASSERT((typeof(((path_s*)NULL)->weight))      PATH_WEIGHT_MAX      == PATH_WEIGHT_MAX);
+BUILD_ASSERT((typeof(((path_s*)NULL)->weight_acks)) ACKS_N               == ACKS_N);
+BUILD_ASSERT((typeof(((path_s*)NULL)->sPortsN))     PATH_PORTS_N         == PATH_PORTS_N);
+BUILD_ASSERT((typeof(((path_s*)NULL)->dPortsN))     PATH_PORTS_N         == PATH_PORTS_N);
+BUILD_ASSERT((typeof(((path_s*)NULL)->sPortIndex))  (PATH_PORTS_N-1)     == (PATH_PORTS_N-1));
+BUILD_ASSERT((typeof(((path_s*)NULL)->dPortIndex))  (PATH_PORTS_N-1)     == (PATH_PORTS_N-1));
 
 //
 BUILD_ASSERT((sizeof(((path_s*)NULL)->acks)*8) == ACKS_N);

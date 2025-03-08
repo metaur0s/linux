@@ -207,7 +207,7 @@ _is_xgw:
         // BAD SIZE FOR A PING PACKET
         ret_path(PSTATS_I_PING_BAD_SIZE);
 
-    u64 latency = atomic_get(&path->latency);
+    u16 latency = atomic_get(&path->latency);
     s64 tdiff   = atomic_get(&path->tdiff);
     u64 rtime   = atomic_get(&path->rtime);
 
@@ -285,13 +285,12 @@ _is_xgw:
 
             // TODO: LIMITAR A QUANTIDADE DE SYNS RECEBIVEIS A CADA KEEPER INTERVAL
 
-
             if (!__atomic_compare_exchange_n(&path->pingSent, &p_ltime, 0, 0, __ATOMIC_SEQ_CST, __ATOMIC_RELAXED))
                 ret_path(PSTATS_I_PONG_RACED);
 
             // CONFIRMOU QUE ESTA RESPOSTA SE REFERE AO ULTIMO PING ENVIADO, E LIMPOU ELE: NAO VAI ACEITAR OUTRO
 
-            const u64 latency = (latency + (now - p_ltime)/2) / 2;
+            const u16 latency = (latency + (now - p_ltime)/2) / 2;
 
             // ELE NOS MANDOU O TIME DELE DE QUANDO ELE RECEBEU.
             // MAS CONSIDERA O TIME QUE ELE TINHA QUANDO ENVIAMOS.
