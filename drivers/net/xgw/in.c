@@ -405,7 +405,7 @@ _is_xgw:
     const uint pid      = BE8  (pkt->x.path);
     const uint size     = BE16 (pkt->x.dsize);
     const uint i        = BE8  (pkt->x.version);
-    const u64  p_ltime  = BE64 (pkt->x.time);
+          u64  p_ltime  = BE64 (pkt->x.time);
     const u64  hash     = BE64 (pkt->x.hash);
 
     ASSERT(nid < NODES_N);
@@ -506,10 +506,10 @@ _is_xgw:
             // CONNECTING / ESTABLISHED
 
             if (__atomic_compare_exchange_n(&path->rtime, &rtime, p_rtime, 0, __ATOMIC_ACQUIRE, __ATOMIC_RELAXED)) {
-                __bultin_exchange_n(&path->pingSent, p_ltime, 0));
-                u64 latency = (atomic_get(&path->latency) + (now - p_ltime)) / 2;
-                u64 tdiff = (atomic_get(&path->tdiff) + ((s64)p_ltime - (s64)(p_rtime + latency/2))) / 2;
-                __atomic_store_n(&path->latency, latency, __ATOMIC_RELAXED);
+                __atomic_compare_exchange_n(&path->pingSent, &p_ltime, 0, 0, __ATOMIC_ACQUIRE, __ATOMIC_RELAXED);
+                u64 rtt = (atomic_get(&path->rtt) + (now - p_ltime)) / 2;
+                u64 tdiff = (atomic_get(&path->tdiff) + ((s64)p_ltime - (s64)(p_rtime + rtt/2))) / 2;
+                __atomic_store_n(&path->rtt, rtt, __ATOMIC_RELAXED);
                 __atomic_store_n(&path->tdiff, tdiff, __ATOMIC_RELAXED);
                 __atomic_store_n(&path->pongReceived, now, __ATOMIC_RELAXED); // <-- THIS MOVES FROM CONNECTING -> ESTABLISHED
             }
@@ -518,12 +518,12 @@ _is_xgw:
         }
 
         // THIS IS A PING
-        skel_s* skel; skel_s temp_skel;
+        pkt_s* skel; pkt_s temp_skel;
 
-        if (rtime == 0) {
+        if (rtime == PATH_RCOUNTER_LISTENING) {
             // LISTENING
 
-            if (path->counterSyn == p_ltime)
+            if (p_ltime == path->syn) // TODO: TEM QUE TER UM I_KEY_SYN
                 // RECEIVED A SYN, LEARN ON TEMP
                 skel = &temp_skel;
             elif (__atomic(&path->rtime, &rtime, LOCKA))
