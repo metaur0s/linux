@@ -11,45 +11,6 @@
 #define COUNTER_SYN_MIN ((u64)8)
 #define COUNTER_SYN_MAX ((~(u64)0) - 32)
 
-#if 0
-static inline int in_pp (node_s* const node, path_s* const path, const u64 counter, skb_s* const iskb, const pkt_s* const pkt, const uint size, const u64 p_counter) {
-
-    if (p_counter == path->counterSyn) {
-        // SYN
-
-        skel = &path->skel;
-    }
-
-    // AGORA ENVIA O PONG
-    uint s;
-
-    skb_s* const oskb = alloc_skb(64 + PKT_SIZE + PKT_ALIGN_SIZE + PONG_SIZE + 64, GFP_ATOMIC);
-
-    if (oskb) {
-
-        // TODO: USA O SKB_DATA ALIGNED
-        void* const pong = SKB_DATA(oskb) + 64 + PKT_SIZE + PKT_ALIGN_SIZE;
-
-        random64_n(pong, PONG_RANDOMS_N, p_rcounter);
-
-        // TODO: O ALIGN COM RANDOM TEM QUE SER COLOCADO FORA DO ENCAPSULATE, POIS NO CASO DO PING/PONG NAO VAMOS USAR
-        pkt_encapsulate(node, O_KEY_PING, p_rcounter, skel, oskb, pong, PONG_SIZE);
-
-        oskb->ip_summed = CHECKSUM_NONE;
-
-        if (dev_queue_xmit(oskb))
-             s = PSTATS_O_PONG_FAILED;
-        else s = PSTATS_O_PONG_OK;
-    }   else s = PSTATS_O_PONG_SKB_FAILED;
-
-    // NOTE: WE WILL INFORM THE TOTAL SIZE SENT THROUGHT THE PHYSICAL INTERFACE
-    atomic_add(&path->pstats[s].bytes, skel->hsize + PKT_ALIGN_SIZE + PONG_SIZE);
-    atomic_inc(&path->pstats[s].count);
-
-    return PSTATS_I_PING_GOOD;
-}
-#endif
-
 // TODO: FIXME: PROTECT THE REAL SERVER TCP PORTS SO WE DON'T NEED TO BIND TO THE FAKE INTERFACE
 int in (skb_s* const skb) {
 
@@ -264,8 +225,8 @@ _is_xgw:
             // COMPARA O TIME QUE ELE DIZ TER, COM O TIME (APROXIMADO) QUE SABEMOS QUE ELE TEM
             const s64 diff =
                 (p_rtime + latency) // O RELOGIO DELE COMO ELE DIZ QUE ESTA (APROXIMADO)
-                	-
-             	LTIME_TO_RTIME(now, tdiff) // O RELOGIO DELE COMO ELE DEVERIA SER (APROXIMADO)
+                    -
+                LTIME_TO_RTIME(now, tdiff) // O RELOGIO DELE COMO ELE DEVERIA SER (APROXIMADO)
             ; // A IMPRECISÃO NÃO PODE SER TÃO GRANDE ASSIM:
             if (diff > 2000) // PEER AFOBADO
                 ret_path(PSTATS_I_RTIME_SKEW_UP);
@@ -294,10 +255,10 @@ _is_xgw:
             // E A RESPOSTA VIR TELEPATICAMENTE E SER PROCESSADA AO MESMO TEMPO.
             // O RESULTADO É QUE PODERIAMOS ESTAR ESCREVENDO ESTE P_RTIME ANTIGO POR CIMA DO NOVO.
             // MAS DE QUALQUER JEITO, O NOVO É MAIOR DO QUE O ANTERIOR A ESTE, COMO CHECAMOS ACIMA.
-            __atomic_store_n(&path->tdiff, 	  tdiff,  __ATOMIC_RELAXED);
-            __atomic_store_n(&path->latency, 	latency,  __ATOMIC_RELAXED);
-            __atomic_store_n(&path->pongReceived, now, 	  __ATOMIC_RELAXED);
-            __atomic_store_n(&path->rtime,  	 p_rtime, __ATOMIC_SEQ_CST); // <-- THIS MOVES FROM CONNECTING -> ESTABLISHED
+            __atomic_store_n(&path->tdiff,    tdiff,  __ATOMIC_RELAXED);
+            __atomic_store_n(&path->latency,    latency,  __ATOMIC_RELAXED);
+            __atomic_store_n(&path->pongReceived, now,    __ATOMIC_RELAXED);
+            __atomic_store_n(&path->rtime,       p_rtime, __ATOMIC_SEQ_CST); // <-- THIS MOVES FROM CONNECTING -> ESTABLISHED
 
             // LEARN HIS INPUT KEYS (MY OUTPUT KEYS)
             const uint ver = BE64(PKT_PING_VER(pkt)) & 0xFF;
@@ -374,7 +335,32 @@ _is_xgw:
         PKT_PING_VER(pkt) |= BE64(i); // OVERWRITE WITH THE VERSION
         PKT_PING_TIME(pkt) = BE64(now);
 
-        ret_path(PSTATS_I_PING_OK);
+        skb_s* const oskb = alloc_skb(64 + PKT_SIZE + PKT_ALIGN_SIZE + PONG_SIZE + 64, GFP_ATOMIC);
+
+        if (oskb == NULL)
+            // FAILED TO ALLOCATE SKB
+            ret_path(PSTATS_I_PING_GOOD_ANSWER_SKB_ALLOC_FAILED);
+
+        // TODO: USA O SKB_DATA ALIGNED
+        void* const pong = SKB_DATA(oskb) + 64 + PKT_SIZE + PKT_ALIGN_SIZE;
+
+        random64_n(pong, PONG_RANDOMS_N, p_rcounter);
+
+        // TODO: O ALIGN COM RANDOM TEM QUE SER COLOCADO FORA DO ENCAPSULATE, POIS NO CASO DO PING/PONG NAO VAMOS USAR
+        pkt_encapsulate(node, O_KEY_PING, p_rcounter, skel, oskb, pong, PONG_SIZE);
+
+        oskb->ip_summed = CHECKSUM_NONE;
+
+        if (dev_queue_xmit(oskb))
+            // FAILED TO SEND THE SKB
+            // NOTE: THE SKB WAS ALREADY CONSUMED
+            ret_path(PSTATS_I_PING_GOOD_ANSWER_SEND_FAILED);
+
+        // NOTE: WE WILL INFORM THE TOTAL SIZE SENT THROUGHT THE PHYSICAL INTERFACE
+        atomic_add(&path->pstats[PSTATS_O_PONG_OK].bytes, skel->hsize + PKT_ALIGN_SIZE + PONG_SIZE);
+        atomic_inc(&path->pstats[PSTATS_O_PONG_OK].count);
+
+        ret_path(PSTATS_I_PING_GOOD);
     }
 
     // REPLAY/CORRUPTION/FORGING/EXPIRATION PROTECTION
