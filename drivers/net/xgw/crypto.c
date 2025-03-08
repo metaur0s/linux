@@ -162,38 +162,33 @@ static void reset_node_ping_keys (node_s* const node, const uint self, const uin
     ASSERT(peer < NODES_N);
     ASSERT(self != peer);
 
-    u64* restrict XPING; u64* restrict XPONG; u64 x = 0x0001000100010001ULL * self;
-    u64* restrict YPING; u64* restrict YPONG; u64 y = 0x0001000100010001ULL * peer;
+    u64* restrict X; u64 sum;
+    u64* restrict Y;
 
-    if (x > y) {
-        // SWAP THEM, SO WE ALWAYS HAVE THE SAME X AND Y
-        x ^= y; y ^= x; x ^= y;
-        // CADA LADO USA OS MESMOS PING/PONG, POREM INVERTIDOS
-        XPING = node->iKeys[I_KEY_PING];
-        YPING = node->oKeys[O_KEY_PING];
-        XPONG = node->iKeys[I_KEY_PONG];
-        YPONG = node->oKeys[O_KEY_PONG];
+    // CADA LADO USA OS MESMOS PING/PONG, POREM INVERTIDOS
+    //      SO OS PONTEIROS SAO INVERTIDOS
+    //      AS SOMA SIMPLESMENTE É A MESMA (MAIOR | MENOR)
+    if (self > peer) {
+        sum = 0x0000000100000001ULL * ((self << 16) | peer);
+        X = node->iKeys[I_KEY_SYN];
+        Y = node->oKeys[O_KEY_SYN];
     } else {
-        XPING = node->oKeys[O_KEY_PING];
-        YPING = node->iKeys[I_KEY_PING];
-        XPONG = node->oKeys[O_KEY_PONG];
-        YPONG = node->iKeys[I_KEY_PONG];
+        sum = 0x0000000100000001ULL * ((peer << 16) | self);
+        X = node->oKeys[O_KEY_SYN];
+        Y = node->iKeys[I_KEY_SYN];
     }
 
     // INITIALIZE THE KEYS
     // MESMO QUE USE O MESMO PASSWORD ENTRE VARIOS NODES, NAO DEIXA QUE O PING KEYS SEJA O MESMO
-    for_count (k, K_LEN) XPING[k] = XPONG[k] = x;
-    for_count (k, K_LEN) YPING[k] = YPONG[k] = y;
+    for_count (k, 3 * K_LEN) X[k] = sum;
+    for_count (k, 3 * K_LEN) Y[k] = sum;
+    // TODO: SYN, PING, PONG
 
     // NOW MERGE WITH THE ENTIRE SECRET
     for_count (s, SECRET_KEYS_N) {
-        for_count (k, K_LEN) {
-            x += node->secret[s][k];
-            y ^= node->secret[s][k];
-            x += y ^= XPING[k] += swap64(x + y);
-            x += y ^= XPONG[k] += swap64(x + y);
-            x += y ^= YPING[k] += swap64(x + y);
-            x += y ^= YPONG[k] += swap64(x + y);
+        for_count (k, K_LEN) { sum += node->secret[s][k];
+            for_count (k, 3 * K_LEN) sum += swap64(X[k] += sum);
+            for_count (k, 3 * K_LEN) sum += swap64(Y[k] += sum);
         }
     }
 
@@ -202,7 +197,7 @@ static void reset_node_ping_keys (node_s* const node, const uint self, const uin
 
         // O CLIENTE VAI MANDAR CADA SYN COM ESTE DCOUNTER
         // O SERVER VAI RECEVER O SYN COM ESTE DCOUNTER
-        node->synCounters[pid] = x;
+        node->synCounters[pid] = sum;
 
         if (1) {
             // THE PATH IS USING THE DEFAULT SYN COUNTER
@@ -211,10 +206,10 @@ static void reset_node_ping_keys (node_s* const node, const uint self, const uin
             // E AQUI COPIA PARA o synCounters
             //
             // TODO: ISSO É AO ATIVAR O PATH
-            node->paths[pid].syn = x;
+            node->paths[pid].syn = sum;
         }
 
-        x += y ^= swap64(x) + y;
+        sum += swap64(sum);
     }
 }
 

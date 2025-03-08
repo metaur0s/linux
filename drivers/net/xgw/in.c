@@ -1,269 +1,21 @@
 
-enum PPP_PROTO {
-    PPP_PROTO_IP4   = 0x0021,
-    PPP_PROTO_IP6   = 0x0057,
-    PPP_PROTO_LCP   = 0xC021, // Protocol: Link Control Protocol (0xc021)
-    PPP_PROTO_PAP   = 0xC023, // Protocol: Password Authentication Protocol (0xc023)
-    PPP_PROTO_IPCP4 = 0x8021, // Protocol: Internet Protocol Control Protocol (0x8021)
-    PPP_PROTO_IPCP6 = 0x8057, // Protocol: IPv6 Control Protocol (0x8057)
-    PPP_PROTO_XGW   = 0x2562,
-};
-
-// ASSERT: IPPROTO_UDP != PPP_PROTO_IP4
-// ASSERT: IPPROTO_UDP != PPP_PROTO_IP6
-BUILD_ASSERT(IPPROTO_UDP != ETH_P_IP);
-BUILD_ASSERT(IPPROTO_UDP != ETH_P_IPV6);
-
-// ASSERT: IPPROTO_TCP != PPP_PROTO_IP4
-// ASSERT: IPPROTO_TCP != PPP_PROTO_IP6
-BUILD_ASSERT(IPPROTO_TCP != ETH_P_IP);
-BUILD_ASSERT(IPPROTO_TCP != ETH_P_IPV6);
-
 // ON path->rtime
-#define PATH_RTIME_LISTENING   0
-#define PATH_RTIME_ACCEPTING   1
-#define PATH_RTIME_CONNECTING  2
-#define PATH_RTIME_ESTABLISHED XGW_TIME_MIN
+#define RTIME_LISTENING   0
+#define RTIME_ACCEPTING   1
+#define RTIME_CONNECTING  2
+#define RTIME_ESTABLISHED RTIME_MIN
+
+#define RTIME_MIN ((u64)8192)
+#define RTIME_MAX ((u64)(8ULL*12*31*24*3600*1000))
 
 #define COUNTER_SYN_MIN ((u64)8)
 #define COUNTER_SYN_MAX ((~(u64)0) - 32)
 
-#define XGW_TIME_MIN ((u64)8192)
-#define XGW_TIME_MAX ((u64)(8ULL*12*31*24*3600*1000))
-
-static inline void in_discover (const path_s* const path, const skb_s* const skb, pkt_s* const skel) {
-
-    ASSERT(path->info & P_SERVER);
-
-    const void* orig = SKB_NETWORK(skb);
-
-    // POR SEGURANCA VAMOS EXIGIR ETH_HLEN
-    // É MELHOR FICAR SEM HARDWARE HEADER DO QUE PROBLEMAS MAIORES
-    uint T = skb->mac_len == ETH_HLEN ? __ETH : 0;
-
-    uint proto = skb->protocol;
-
-    switch (proto) {
-        case BE16(ETH_P_8021Q):
-        case BE16(ETH_P_8021AD): // NOTE: PODE ACABAR VIRANDO __VLAN SEM __ETH
-            T |= __VLAN;
-            proto = ((hdr_vlan_s*)orig)->proto;
-            orig += sizeof(hdr_vlan_s);
-            break;
-    }
-
-    switch (proto) {
-        case BE16(ETH_P_PPP_SES):
-            T |= __PPP;
-            proto = ((hdr_ppp_s*)orig)->proto;
-            orig += sizeof(hdr_ppp_s);
-            break;
-    }
-
-    switch (proto) {
-        case BE16(PPP_PROTO_IP4):
-        case BE16(ETH_P_IP):
-            T |= __IP4;
-            proto = ((hdr_ip4_s*)orig)->proto;
-            orig += sizeof(hdr_ip4_s);
-            break;
-        case BE16(PPP_PROTO_IP6):
-        case BE16(ETH_P_IPV6):
-            T |= __IP6;
-            proto = ((hdr_ip6_s*)orig)->proto;
-            orig += sizeof(hdr_ip6_s);
-            break;
-    }
-
-    switch (proto) {
-        case BE8(IPPROTO_UDP):
-            T |= __UDP;
-            orig += sizeof(hdr_udp_s);
-            break;
-        case BE8(IPPROTO_TCP):
-            T |= __TCP;
-            orig += sizeof(hdr_tcp_s);
-            break;
-    }
-
-    //
-    orig -= offsetof(pkt_s, x);
-
-    memcpy(skel, &models[T], sizeof(pkt_s));
-
-    ASSERT(skel->type == T);
-
-    if (T & __ETH) {
-        memcpy(PTR(skel) + skel->moffset + 6, orig + skel->moffset + 0, 6);
-        memcpy(PTR(skel) + skel->moffset + 0, orig + skel->moffset + 6, 6);
-    }
-
-    if (T & __VLAN) // COPIA O VPROTO E O VID
-        memcpy(PTR(skel) + skel->moffset + 12, orig + skel->moffset + 12, 4);
-
-    if (T & __PPP)
-        // COPIA O CODE, SESSION, SIZE E PROTOCOL
-        // O SIZE OVERWRITED DEPOIS
-        memcpy(PTR(skel) + skel->_reserved, orig + skel->_reserved, 8);
-
-    if (T & __IP4) {
-        memcpy(PTR(skel) + skel->Noffset + 16, orig + skel->Noffset + 12, 4);
-        memcpy(PTR(skel) + skel->Noffset + 12, orig + skel->Noffset + 16, 4);
-    } elif (T & __IP6) {
-        memcpy(PTR(skel) + skel->Noffset + 24, orig + skel->Noffset +  8, 16);
-        memcpy(PTR(skel) + skel->Noffset +  8, orig + skel->Noffset + 24, 16);
-    }
-
-    if (T & (__UDP | __TCP)) {
-        memcpy(PTR(skel) + skel->toffset + 0, orig + skel->toffset + 2, 2);
-        memcpy(PTR(skel) + skel->toffset + 2, orig + skel->toffset + 0, 2);
-    }
-
-    // TEM QUE FAZER ISSO AQUI
-    skel->x.dst  = ((pkt_s*)orig)->x.src;
-    skel->x.src  = ((pkt_s*)orig)->x.dst;
-    skel->x.path = ((pkt_s*)orig)->x.path;
- // skel->x.version --> ON encrypt()
- // skel->x.dsize   --> ON encrypt()
- // skel->x.seed    --> ON encrypt()
- // skel->x.hash    --> ON encrypt()
-
-    // PRECISA DISSO POIS SE FOR VLAN AI DIFERE
-    skel->protocol = skb->protocol;
-    skel->phys     = skb->dev;
-
-    // SET TOS/TTL FROM PATH
-    if (T & __IP4) { hdr_ip4_s* const ip4 = PKT_IP4(skel);
-        ip4->tos = BE8(path->tos);
-        ip4->ttl = BE8(path->ttl);
-    } elif (T & __IP6) { hdr_ip6_s* const ip6 = PKT_IP6(skel);
-        ip6->tos = BE8(path->tos);
-        ip6->ttl = BE8(path->ttl);
-        ip6->flow = BE16(0x1111U * path->pid);
-    }
-}
-
 #if 0
 static inline int in_pp (node_s* const node, path_s* const path, const u64 counter, skb_s* const iskb, const pkt_s* const pkt, const uint size, const u64 p_counter) {
 
-    u64 p_counter_ = p_counter;
-
-    if (size == PONG_SIZE) {
-        // NOTA: O PONG TEM QUE SER ENVIADO COM O COUNTER QUE RECEBEU NO PING, NAO IMPORTA SE SOU CLIENTE OU SERVIDOR.
-        if (__atomic_compare_exchange_n(&path->received, &p_counter_, get_jiffies_64(), 0, __ATOMIC_SEQ_CST, __ATOMIC_RELAXED))
-            // SUCCESS
-            return PSTATS_I_PONG_GOOD;
-        // PONG REPETIDO, OU ATRASADO
-        return PSTATS_I_PONG_COUNTER_MISMATCH;
-    }
-
-    if (size != PING_SIZE)
-        return PSTATS_I_NOT_PING_OR_PONG;
-
-    pkt_s* skel; pkt_s skel_;
-
-    //if (p_rcounter <= COUNTER_CONNECTING)
-        // HIS COUNTER IS INVALID
-        // CANNOT BECAME LISTENING/DISCOVERING/CONNECTING
-        //return PSTATS_I_PING_RCOUNTER_INVALID;
-
-    if (path->counter == 0) {
-        // I AM A SERVER, WAITING FOR A SYN
-
-        if (p_session = path->counterSyn) {
-            // THIS PACKET IS NOT A SYN
-            return PSTATS_I_COUNTER_NOT_SYN;
-    }
-
     if (p_counter == path->counterSyn) {
         // SYN
-
-        if (__atomic_compare_exchange_n(&path->counter, &path->counterSyn, p_counter_, 0, __ATOMIC_SEQ_CST, __ATOMIC_RELAXED))
-            // WE RECEIVED A SYN PACKET BUT WE ARE NOT LISTENING
-            //return PSTATS_I_PING_SYN_NOT_LISTENING;
-
-        // TODO: LIMITAR A QUANTIDADE DE SYNS RECEBIVEIS A CADA KEEPER INTERVAL
-
-        // NESTE CASO, LEARN O PATH EM UM PACOTE TEMPORARIO
-        // NESTE CASO, NAO APRENDE KEYS E NEM COUNTERS
-        in_discover(path, iskb, &skel_);
-
-        skel = &skel_;
-
-    } else { // NOTE: THE SIGN HE SENT IS FROM THE NODE->LCOUNTER; IT WOULD BE CORRECT EVEN WITHOUT HANDSHAKE, BUT KEEPER WON'T SEND WITHOUT ONE
-
-        // TODO: LIMITAR A QUANTIDADE DE PINGS RECEBIVEIS A CADA KEEPER INTERVAL
-        //  NA VERDADE, SO RECEBE UM PING A CADA INTERVAL
-
-        u64 node_lcounter = __atomic_load_n(&node->lcounter, __ATOMIC_RELAXED);
-        u64 path_rcounter = __atomic_load_n(&path->rcounter, __ATOMIC_RELAXED); // COUNTER DELE, DO ULTIMO PING QUE ELE NOS MANDOU
-
-        // NOT A SYN; HE MUST KNOW OUR COUNTER
-        // NOTE: CONSIDERAR CLOCK SKELS E INTERVALOS ENTRE PINGS
-        if (ABS_DIFF(node_lcounter, p_ltime) > 2)
-            // HE DOESNT KNOW MY COUNTER
-            return PSTATS_I_PING_LCOUNTER_MISMATCH;
-
-        if (path_rcounter == COUNTER_CONNECTING)
-            // SOMOS UM CLIENTE SE CONECTANDO, E ELE NOS ENVIOU UM PING
-            return PSTATS_I_PING_WHILE_CONNECTING;
-
-        if (path_rcounter >= COUNTER_CONNECTING) {
-            // THE PATH IS SYNCED WITH HIS COUNTER
-
-            if (p_rcounter == path_rcounter)
-                // REPEATED (LAST)
-                return PSTATS_I_PING_RCOUNTER_REPEATED;
-
-            if (p_rcounter < path_rcounter)
-                // REPEATED (OLD)
-                return PSTATS_I_PING_RCOUNTER_OLD;
-
-            if (p_rcounter > (path_rcounter + 65536))
-                // PARA QUE TENHAMOS PERDIDO TANTOS PINGS DELE, ERA PARA TERMOS RESETADO...
-                return PSTATS_I_PING_RCOUNTER_BAD;
-
-            if (p_rcounter != (path_rcounter + 1))
-                // ALGUNS FORAM PERDIDOS
-                __atomic_add_fetch(&path->pstats[PSTATS_I_PING_MISSED].count, p_rcounter - (path_rcounter + 1), __ATOMIC_RELAXED);
-
-            // SAVE HIS SEQ
-            if (!__atomic_compare_exchange_n(&path->rcounter, &path_rcounter, p_rcounter, 0, __ATOMIC_SEQ_CST, __ATOMIC_RELAXED))
-                // ANOTHER ACK HAPPENED SIMULTANEOUSLY, AND THIS ONE WILL BE DISCARDED
-                return PSTATS_I_PING_RACED;
-
-        } else {
-            // path->rcounter ==
-            //      a) COUNTER_LISTENING (DESDE O KEEPER - START)
-            //      b) COUNTER_ACCEPTING (AQUI MESMO, RACED)
-            u64 path_rcounter_listening = COUNTER_LISTENING;
-
-            if (__atomic_compare_exchange_n(&path->rcounter, &path_rcounter_listening, COUNTER_ACCEPTING, 0, __ATOMIC_ACQUIRE, __ATOMIC_RELAXED)) {
-                // a) WE ARE THE SERVER, AND THIS IS THE FIRST PING THE CLIENT SENT WITH OUR COUNTER
-                // DISCOVER THE CLIENT PATH
-                    in_discover(path, iskb, &path->skel);
-                // DISCOVER THE CLIENT COUNTER
-                    __atomic_store_n(&node->rcounter, p_rcounter, __ATOMIC_RELAXED);
-                // START SENDING PINGS
-                    __atomic_store_n(&path->rcounter, p_rcounter, __ATOMIC_RELEASE);
-            } else
-                // b) RACED COM OUTRO ACCEPT
-                return PSTATS_I_PING_RACED;
-        }
-
-        u64 K[K_LEN];
-
-        secret_derivate_random_as_key(node->secret, ping->rnd, K);
-
-        // FAZ ISSO PRIMEIRO ANTES DE LIBERAR O PATH PARA ENVIAR
-        // NOTE: A CADA INTERVALO SAO ENVIADOS PINGS POR TODOS OS PATHS,
-        //       ENTAO PODE ACABAR TENDO RACE CONDITION AQUI.
-        // POR PRECAUCAO O IDEAL É TER MAIS ENTRADAS NA ARRAY DO QUE PROCESSADORES/THREADS
-        const uint o = __atomic_add_fetch(&node->oCycle, 1, __ATOMIC_ACQUIRE) % O_KEYS_DYNAMIC;
-                                           node->oVersions[o] = BE8(ping->ver);
-                                    memcpy(node->oKeys[o], K, sizeof(K));
-                         __atomic_store_n(&node->oIndex,   o,          __ATOMIC_RELAXED);
-                         __atomic_store_n(&node->rcounter, p_rcounter, __ATOMIC_RELEASE);
 
         skel = &path->skel;
     }
@@ -448,12 +200,8 @@ _is_xgw:
 
     const u64 now = get_current_ms();
 
-    // NOTE: WHEN SETTING A COUNTER-SYN, IT MUST BE generated > COUNTER_SYN_MIN
-    // NOTE: WHEN SETTING A COUNTER-SYN, IT MUST BE generated > COUNTER_SYN_MAX
-
-    // NOTE: WHEN SETTING A COUNTER, IT MUST BE ABS_DIFF(generated, path->counterSyn) > 32
-    // NOTE: WHEN SETTING A COUNTER, IT MUST BE generated > XGW_TIME_MIN
-    // NOTE: WHEN SETTING A COUNTER, IT MUST BE generated < XGW_TIME_MAX
+    // NOTE: WHEN SETTING A COUNTER-SYN, IT MUST BE > COUNTER_SYN_MIN
+    // NOTE: WHEN SETTING A COUNTER-SYN, IT MUST BE > COUNTER_SYN_MAX
 
     if (i >= I_KEYS_DYNAMIC && size != PING_SIZE)
         // BAD SIZE FOR A PING PACKET
@@ -463,21 +211,21 @@ _is_xgw:
     s64 tdiff   = atomic_get(&path->tdiff);
     u64 rtime   = atomic_get(&path->rtime);
 
-    if (rtime >= PATH_RTIME_ESTABLISHED) {
+    if (rtime >= RTIME_ESTABLISHED) {
         if (i == I_KEY_SYN)
             // ESTABLISHED RECEBE TUDO MENOS SYN
             ret_path(PSTATS_I_ESTABLISHED_SYN);
-    } elif (rtime == PATH_RTIME_CONNECTING) {
+    } elif (rtime == RTIME_CONNECTING) {
         if (i != I_KEY_PONG)
             // CONNECTING SO RECEBE PONGS
             ret_path(PSTATS_I_NOT_PONG);
-    } elif (rtime == PATH_RTIME_LISTENING) {
+    } elif (rtime == RTIME_LISTENING) {
         if (i != I_KEY_SYN &&
             i != I_KEY_PING)
             // LISTENING SO RECEBE SYN E PING
             ret_path(PSTATS_I_NOT_SYN_OR_PING);
     } else { // RACED WITH AN ACCEPTING
-        ASSERT(rtime == PATH_RTIME_ACCEPTING);
+        ASSERT(rtime == RTIME_ACCEPTING);
         ret_path(PSTATS_I_WHILE_ACCEPTING);
     }
 
@@ -503,12 +251,12 @@ _is_xgw:
         // HIS RAW TIME
         u64 p_rtime = BE64(PKT_PING_TIME(pkt));
 
-        if (p_rtime < XGW_TIME_MIN
-         || p_rtime > XGW_TIME_MAX)
+        if (p_rtime < RTIME_MIN
+         || p_rtime > RTIME_MAX)
             // INVALID RTIME
             ret_path(PSTATS_I_RTIME_INVALID);
 
-        if (rtime >= PATH_RTIME_ESTABLISHED){
+        if (rtime >= RTIME_ESTABLISHED){
             // JA CONHEÇO O TIME DELE, O DIFF E O LATENCY
             if (p_rtime <= rtime)
                 // HIS RAW TIME CANNOT GO DOWN OR REPEAT
@@ -522,84 +270,115 @@ _is_xgw:
                 ret_path(PSTATS_I_RTIME_LESADO);
         }
 
+        // FAZ ISSO PRIMEIRO ANTES DE LIBERAR O PATH PARA ENVIAR
+        // NOTE: A CADA INTERVALO SAO ENVIADOS PINGS POR TODOS OS PATHS,
+        //       ENTAO PODE ACABAR TENDO RACE CONDITION AQUI.
+        // POR PRECAUCAO O IDEAL É TER MAIS ENTRADAS NA ARRAY DO QUE PROCESSADORES/THREADS
+        const uint o = __atomic_add_fetch(&node->oCycle, 1, __ATOMIC_ACQUIRE) % O_KEYS_DYNAMIC;
+                                           node->oVersions[o] = BE8(ping->ver);
+                                    memcpy(node->oKeys[o], K, sizeof(K));
+                         __atomic_store_n(&node->oIndex,   o,          __ATOMIC_RELAXED);
+                         __atomic_store_n(&node->rcounter, p_rcounter, __ATOMIC_RELEASE);
+
         if (i == I_KEY_PONG) {
             // CONNECTING / ESTABLISHED
 
-            if (__atomic_compare_exchange_n(&path->pingSent, &p_ltime, 0, 0, __ATOMIC_SEQ_CST, __ATOMIC_RELAXED)) {
-                // CONFIRMOU QUE ESTA RESPOSTA SE REFERE AO ULTIMO PING ENVIADO, E LIMPOU ELE: NAO VAI ACEITAR OUTRO
-                u64 latency = (latency + (now - p_ltime)/2) / 2;
-                // ELE NOS MANDOU O TIME DELE DE QUANDO ELE RECEBEU.
-                // MAS CONSIDERA O TIME QUE ELE TINHA QUANDO ENVIAMOS.
-                // E ENTAO PEGA A COMPARAÇÃO ENTRE *LOCAL TIME WHEN I SENT* COM *REMOTE TIME WHEN I SENT*
-                s64 tdiff = (tdiff + LTIME_DIFF_RTIME(p_ltime, p_rtime - latency)) / 2;
-                // ESTE AQUI DEVERIA SER COMPARE, EXCHANGE, MAS:
-                // SÓ PODE ACONTECER UM RACE SE ENTRARMOS NESTE BLOCO E AO MESMO TEMPO O KEEPER GERAR UM NOVO path->pingSent,
-                // E A RESPOSTA VIR TELEPATICAMENTE E SER PROCESSADA AO MESMO TEMPO.
-                // O RESULTADO É QUE PODERIAMOS ESTAR ESCREVENDO ESTE P_RTIME ANTIGO POR CIMA DO NOVO.
-                // MAS DE QUALQUER JEITO, O NOVO É MAIOR DO QUE O ANTERIOR A ESTE, COMO CHECAMOS ACIMA.
-                __atomic_store_n(&path->rtime, p_rtime, __ATOMIC_RELAXED);
-                __atomic_store_n(&path->tdiff, tdiff, __ATOMIC_RELAXED);
-                __atomic_store_n(&path->rtt, rtt, __ATOMIC_RELAXED);
-                __atomic_store_n(&path->pongReceived, now, __ATOMIC_SEQ_CST); // <-- THIS MOVES FROM CONNECTING -> ESTABLISHED
-            }
+            // TODO: LIMITAR A QUANTIDADE DE SYNS RECEBIVEIS A CADA KEEPER INTERVAL
 
-            ret_path(PSTATS_I_RTIME_BACKWARDS); //goto pong_ok;
+
+            if (!__atomic_compare_exchange_n(&path->pingSent, &p_ltime, 0, 0, __ATOMIC_SEQ_CST, __ATOMIC_RELAXED))
+                ret_path(PSTATS_I_PONG_RACED);
+
+            // CONFIRMOU QUE ESTA RESPOSTA SE REFERE AO ULTIMO PING ENVIADO, E LIMPOU ELE: NAO VAI ACEITAR OUTRO
+
+            const u64 latency = (latency + (now - p_ltime)/2) / 2;
+
+            // ELE NOS MANDOU O TIME DELE DE QUANDO ELE RECEBEU.
+            // MAS CONSIDERA O TIME QUE ELE TINHA QUANDO ENVIAMOS.
+            // E ENTAO PEGA A COMPARAÇÃO ENTRE *LOCAL TIME WHEN I SENT* COM *REMOTE TIME WHEN I SENT*
+            const s64 tdiff = (tdiff + LTIME_DIFF_RTIME(p_ltime, p_rtime - latency)) / 2;
+
+            // ESTE AQUI DEVERIA SER COMPARE, EXCHANGE, MAS:
+            // SÓ PODE ACONTECER UM RACE SE ENTRARMOS NESTE BLOCO E AO MESMO TEMPO O KEEPER GERAR UM NOVO path->pingSent,
+            // E A RESPOSTA VIR TELEPATICAMENTE E SER PROCESSADA AO MESMO TEMPO.
+            // O RESULTADO É QUE PODERIAMOS ESTAR ESCREVENDO ESTE P_RTIME ANTIGO POR CIMA DO NOVO.
+            // MAS DE QUALQUER JEITO, O NOVO É MAIOR DO QUE O ANTERIOR A ESTE, COMO CHECAMOS ACIMA.
+            __atomic_store_n(&path->rtime, p_rtime, __ATOMIC_RELAXED);
+            __atomic_store_n(&path->tdiff, tdiff, __ATOMIC_RELAXED);
+            __atomic_store_n(&path->rtt, rtt, __ATOMIC_RELAXED);
+            __atomic_store_n(&path->pongReceived, now, __ATOMIC_SEQ_CST); // <-- THIS MOVES FROM CONNECTING -> ESTABLISHED
+
+            // LEARN HIS INPUT KEYS (MY OUTPUT KEYS)
+            u64 K[K_LEN];
+
+            secret_derivate_random_as_key(node->secret, ping->rnd, K);
+
+            // NOW APPLY
+
+            ret_path(PSTATS_I_PONG_OK);
         }
 
         // THIS IS A PING
         pkt_s* skel; pkt_s temp_skel;
 
-        if (rtime == PATH_RTIME_LISTENING) {
+        if (rtime == RTIME_LISTENING) {
             // LISTENING
 
-            if (p_ltime == path->syn) // TODO: TEM QUE TER UM I_KEY_SYN
-                // RECEIVED A SYN, LEARN ON TEMP
-                skel = &temp_skel;
-            elif (__atomic(&path->rtime, &rtime, LOCKA))
-                // RECEIVED A ACK, LEARN ON PATH
-                // LOCK LISTENING -> ACCEPTING SUCCESSFUL
-                skel = &path->skel;
-            else
-                // RECEIVED A ACK, LEARN ON PATH
-                // LOCK LISTENING -> ACCEPTING FAILED
-                ret_path(PSTATS_I_RTIME_BACKWARDS); //goto err_raced_ack;
+            if (i == I_KEY_PING) {
+                // SYN-ACK
 
-                //
+                if (!__atomic_compare_exchange_n(&path->rtime, &rtime, RTIME_ACCEPTING, 0, __ATOMIC_SEQ_CST, __ATOMIC_RELAXED))
+                    // LOCK FAILED
+                    ret_path(PSTATS_I_ACCEPT_RACED);
+
+                // LOCKED - NINGUEM PODE TOCAR NO PATH
+                // LEARN ON PATH
+                skel = &path->skel;
+            } else
+                // SYN
+                // LEARN O PATH EM UM HEADER TEMPORARIO
+                // NAO APRENDE KEYS E NEM COUNTERS
+                skel = &temp_skel;
+
             in_discover(path, skb, skel);
 
-            if (skel == &path->skel) {
-                // RECEIVED A ACK, LEARNED ON PATH
-                // AGORA LIBERA O KEEPER
-                // NOTE: O KEEPER E NINGUEM PODE TOCAR NO PATH ENQUANTO LOCKADO NO MODO ACCEPTING
+            // OBS.: AQUI O PATH AINDA PODE ESTAR LOCKED
+            if (skel != &temp_skel) {
+                // UNLOCK E LIBERA O KEEPER
                 __atomic(&path->rcounterUpdated, get_jiffies64());
                 __atomic(&path->rtime, &rtime, p_rcounter);
             }
-        } else // ESTABLISHED
+        } else
+            // ESTABLISHED
             skel = &path->skel;
 
-        // RESPONDE O PING DELE COM UM PONG
-        pkt->counter = p_rtime;
-    //  PKT_PING_VER(pkt) &= BE64(~((u64)0xFF));
-    //  PKT_PING_VER(pkt) |= BE64(ver);
-        PKT_PING_CTR(pkt) = now;
+        // RESPONDE COM UM PONG
 
-        ret_path(PSTATS_I_RTIME_BACKWARDS); // goto ping_ok;
+        // TODO: AQUI PELO MENOS PODEMOS ALINHAR - PTR(((uintptr_t)SKB_DATA(skb) + sizeof(u64) - 1) % sizeof(u64))
+        ping_s* const ping = SKB_DATA(skb) + 64 + PKT_SIZE + PKT_ALIGN_SIZE;
+
+        // A CADA PING A INPUT KEY MAIS ANTIGA É EXPIRADA
+        const uint i = node->iCycle = ((uint)node->iCycle + 1) % I_KEYS_DYNAMIC;
+
+        // GERA AS KEYS
+        random64_n(PTR(ping), PING_RANDOMS_N, SUFFIX_ULL(CONFIG_XGW_RANDOM_PING));
+
+        // SEM ATOMICITY/BARRIER POR QUE O PEER SO VAI REFERENCIAR ESSE NOSSO INPUT INDEX QUANDO ELE RECEBER
+        secret_derivate_random_as_key(node->secret, ping->rnd, node->iKeys[i]);
+
+        pkt->time = BE64(p_rtime);
+
+        PKT_PING_VER(pkt) &= BE64(~((u64)0xFF));
+        PKT_PING_VER(pkt) |= BE64(i); // OVERWRITE WITH THE VERSION
+        PKT_PING_TIME(pkt) = BE64(now);
+
+        ret_path(PSTATS_I_PING_OK);
     }
-
-
-    //
-    if (pkt_decrypt(node, i, pkt, size) != hash)
-        ret_path(PSTATS_I_COUNTER_NOT_SYN); // PSTATS_I_HASH_MISMATCH
 
     // REPLAY/CORRUPTION/FORGING/EXPIRATION PROTECTION
     // NOTE: LEMBRANDO QUE O TEMPO TODO AMBOS FICAM AJUSTANDO O NODE->DIFF,
     //       ENTAO NAO DA PARA LEVAR AO PE DA LETRA ESSES TIMES
     // NOTE: O PACOTE PODE TER LEVADO UM TEMPO A CHEGAR, SER PROCESSADO ETC
-
-    if (i >= I_KEY_PING) {
-        // PING/PONG
-
-    }
 
     // NORMAL PACKET
 

@@ -643,6 +643,9 @@ static ssize_t __cold_as_ice __optimize_size cmd (struct file *file, const char 
                     (node->info & N_SECRET  ) ? " SECRET"  : ""
             );
 
+            for_count (i, K_LEN / 8) printk("XGW: %s: IKEYS SYN  %016llX %016llX %016llX %016llX %016llX %016llX %016llX %016llX\n", node->name, _PRINT_KEYS(node->iKeys[I_KEY_SYN], i));
+            for_count (i, K_LEN / 8) printk("XGW: %s: OKEYS SYN  %016llX %016llX %016llX %016llX %016llX %016llX %016llX %016llX\n", node->name, _PRINT_KEYS(node->oKeys[O_KEY_SYN], i));
+
             for_count (i, K_LEN / 8) printk("XGW: %s: IKEYS PING %016llX %016llX %016llX %016llX %016llX %016llX %016llX %016llX\n", node->name, _PRINT_KEYS(node->iKeys[I_KEY_PING], i));
             for_count (i, K_LEN / 8) printk("XGW: %s: OKEYS PING %016llX %016llX %016llX %016llX %016llX %016llX %016llX %016llX\n", node->name, _PRINT_KEYS(node->oKeys[O_KEY_PING], i));
 
@@ -816,6 +819,7 @@ static ssize_t __cold_as_ice __optimize_size cmd (struct file *file, const char 
             node->dev = xgw;
 
             //
+            node->oVersions[O_KEY_SYN ] = I_KEY_SYN;
             node->oVersions[O_KEY_PING] = I_KEY_PING;
             node->oVersions[O_KEY_PONG] = I_KEY_PONG;
 

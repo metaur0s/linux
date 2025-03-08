@@ -138,6 +138,7 @@ static inline u64 get_current_ms (void) {
 #include "pkt.c"
 #include "crypto.c"
 #include "out.c"
+#include "in_discover.c"
 #include "in.c"
 #include "keeper.c"
 #include "stats.c"

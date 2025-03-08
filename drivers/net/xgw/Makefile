@@ -23,9 +23,10 @@ CFLAGS_xgw.o += -Wno-c23-extensions
 
 CFLAGS_xgw.o += -mpopcnt
 
-ifneq ($(CONFIG_XGW_ABM),)
-CFLAGS_xgw.o += -mabm
-endif
+# TODO: CLANG NAO TEM ABM
+#ifneq ($(CONFIG_XGW_ABM),)
+#CFLAGS_xgw.o += -mabm
+#endif
 
 ifneq ($(CONFIG_XGW_TBM),)
 CFLAGS_xgw.o += -mtbm

@@ -285,17 +285,10 @@ static void keeper (struct timer_list* const timer) {
                     // TODO: AQUI PELO MENOS PODEMOS ALINHAR - PTR(((uintptr_t)SKB_DATA(skb) + sizeof(u64) - 1) % sizeof(u64))
                     ping_s* const ping = SKB_DATA(skb) + 64 + PKT_SIZE + PKT_ALIGN_SIZE;
 
-                    // A CADA PING A INPUT KEY MAIS ANTIGA É EXPIRADA
-                    const uint i = node->iCycle = ((uint)node->iCycle + 1) % I_KEYS_DYNAMIC;
-
                     //
                     random64_n(PTR(ping), PING_RANDOMS_N, SUFFIX_ULL(CONFIG_XGW_RANDOM_PING));
 
-                    // OVERWRITE WITH THE VERSION
-                    ping->ver = BE8(i);
-
-                    // SEM ATOMICITY/BARRIER POR QUE O PEER SO VAI REFERENCIAR ESSE NOSSO INPUT INDEX QUANDO ELE RECEBER
-                    secret_derivate_random_as_key(node->secret, ping->rnd, node->iKeys[i]);
+                    ping->ltime = BE64(ltime);
 
                     // BUILD THE PING FROM THE SKEL
                     pkt_encapsulate(node, O_KEY_PING, // ELE VAI MANDAR SYN ATÉ RECEBER O PRIMEIRO PING, O QUAL MARCARA O RCOUNTER
