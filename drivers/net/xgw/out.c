@@ -385,7 +385,7 @@ static netdev_tx_t out (skb_s* const skb, net_device_s* const dev) {
         burst_new = ((now + atomic_get(&path->latency) + atomic_get(&path->latency_var) + 16) * PATHS_N) + pid;
 
         // STORE STREAM TIMEOUT + PID
-    } while (!__atomic_compare_exchange_n(conn, &burst, burst_new, 0, __ATOMIC_SEQ_CST, __ATOMIC_RELAXED));
+    } while (!__atomic_compare_exchange_n(conn, &burst, burst_new, 0, __ATOMIC_RELAXED, __ATOMIC_RELAXED));
 
 #if 1
     if (skb->ip_summed == CHECKSUM_PARTIAL)
