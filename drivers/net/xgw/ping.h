@@ -7,9 +7,10 @@
 // KEYS, VERSION
 #define PING_RANDOMS_N 9
 
-// NOTE: AO ENVIAR UM PONG, O PKT->COUNTER É O RCOUNTER SENDO RESPONDIDO
-
-#define PKT_PING_K(pkt)     (pkt->p + PKT_ALIGN_RANDOMS)
-#define PKT_PING_SEC(pkt)   (pkt->p[PKT_ALIGN_RANDOMS + K_LEN]) // >> (64 - 8)
-#define PKT_PING_VER(pkt)   (pkt->p[PKT_ALIGN_RANDOMS + K_LEN]) // 0xFF
-#define PKT_PING_TIME(pkt)  (pkt->p[PKT_ALIGN_RANDOMS + K_LEN + 1])
+struct ping_s {
+    u64 rnd [K_LEN];
+    u8 _ [6];
+    u8 sec;
+    u8 ver;
+    u64 time;
+};
