@@ -19,6 +19,17 @@ BUILD_ASSERT(IPPROTO_UDP != ETH_P_IPV6);
 BUILD_ASSERT(IPPROTO_TCP != ETH_P_IP);
 BUILD_ASSERT(IPPROTO_TCP != ETH_P_IPV6);
 
+// ON path->rtime
+#define PATH_RCOUNTER_LISTENING  0
+#define PATH_RCOUNTER_ACCEPTING  1
+#define PATH_RCOUNTER_CONNECTING 2
+
+#define COUNTER_SYN_MIN ((u64)8)
+#define COUNTER_SYN_MAX ((~(u64)0) - 32)
+
+#define XGW_TIME_MIN ((u64)32)
+#define XGW_TIME_MAX ((~(u64)0) - 4*12*31*24*3600)
+
 static inline void in_discover (const path_s* const path, const skb_s* const skb, pkt_s* const skel) {
 
     ASSERT(path->info & P_SERVER);
@@ -131,14 +142,7 @@ static inline void in_discover (const path_s* const path, const skb_s* const skb
     }
 }
 
-// PATH->RCOUNTER
-#define COUNTER_LISTENING       0 // LISTENING  (UNLOCKED)
-#define COUNTER_ACCEPTING       1 // LISTENING  (LOCKED)
-#define COUNTER_CONNECTING  65537 // CONNECTING
-
-// PING DESTINATION'S COUNTER
-#define COUNTER_SYN 0
-
+#if 0
 static inline int in_pp (node_s* const node, path_s* const path, const u64 counter, skb_s* const iskb, const pkt_s* const pkt, const uint size, const u64 p_counter) {
 
     u64 p_counter_ = p_counter;
@@ -195,7 +199,7 @@ static inline int in_pp (node_s* const node, path_s* const path, const u64 count
 
         // NOT A SYN; HE MUST KNOW OUR COUNTER
         // NOTE: CONSIDERAR CLOCK SKELS E INTERVALOS ENTRE PINGS
-        if (ABS_DIFF(node_lcounter, p_lcounter) > 2)
+        if (ABS_DIFF(node_lcounter, p_ltime) > 2)
             // HE DOESNT KNOW MY COUNTER
             return PSTATS_I_PING_LCOUNTER_MISMATCH;
 
@@ -291,6 +295,7 @@ static inline int in_pp (node_s* const node, path_s* const path, const u64 count
 
     return PSTATS_I_PING_GOOD;
 }
+#endif
 
 // TODO: FIXME: PROTECT THE REAL SERVER TCP PORTS SO WE DON'T NEED TO BIND TO THE FAKE INTERFACE
 int in (skb_s* const skb) {
@@ -396,12 +401,12 @@ _is_xgw:
     // AGORA SABE ONDE COMECA O PKT
     pkt_s* const pkt = ptr - sizeof(pkt_s);
 
-    const uint nid       = BE16 (pkt->x.src);
-    const uint pid       = BE8  (pkt->x.path);
-    const uint size      = BE16 (pkt->x.dsize);
-    const uint i         = BE8  (pkt->x.version);
-    const u64  p_counter = BE64 (pkt->x.counter);
-    const u64  hash      = BE64 (pkt->x.hash);
+    const uint nid      = BE16 (pkt->x.src);
+    const uint pid      = BE8  (pkt->x.path);
+    const uint size     = BE16 (pkt->x.dsize);
+    const uint i        = BE8  (pkt->x.version);
+    const u64  p_ltime  = BE64 (pkt->x.time);
+    const u64  hash     = BE64 (pkt->x.hash);
 
     ASSERT(nid < NODES_N);
 
@@ -438,72 +443,136 @@ _is_xgw:
     if ((PTR(pkt) + PKT_SIZE + PKT_ALIGN_SIZE + size) > end)
         ret_path(PSTATS_I_SIZE_TRUNCATED);
 
-    const path_s* const = &node->paths[pid];
+    path_s* const path = &node->paths[pid];
 
-    const u64 counter = __atomic_load_n(&path->counter, __ATOMIC_RELAXED);
+    const u64 now = get_current_ms();
 
-#if 1 // NOTE: O COUNTER DO PACOTE NÃO PODE SER UM DE NOSSOS CODIGOS INTERNOS
-    if (p_counter < 32 ||
-        p_counter >= 0xFFFFFFFFFFFFFFDFULL)
-        ret_path(PSTATS_I_COUNTER_INVALID);
-#endif
+    // NOTE: WHEN SETTING A COUNTER-SYN, IT MUST BE generated > COUNTER_SYN_MIN
+    // NOTE: WHEN SETTING A COUNTER-SYN, IT MUST BE generated > COUNTER_SYN_MAX
 
-    if (counter) {
-        // NAO SOU UM SERVIDOR ESPERANDO POR UM SYN-ACK
-        if (ABS_DIFF(p_counter, counter) > 2) {
-            // O COUNTER NAO ESTA COMO ESPERADO
-            ret_path(PSTATS_I_COUNTER_MISMATCH);
-    } else {
-        // SOU UM SERVIDOR ESPERANDO POR UM SYN-ACK
-        if (p_counter != path->counterSyn)
-            // THIS PACKET IS NOT A SYN
-            ret_path(PSTATS_I_COUNTER_NOT_SYN);
-        if (size != PING_SIZE_SYN)
-            // THIS PACKET IS NOT A SYN
-            ret_path(PSTATS_I_COUNTER_NOT_SYN);
+    // NOTE: WHEN SETTING A COUNTER, IT MUST BE ABS_DIFF(generated, path->counterSyn) > 32
+    // NOTE: WHEN SETTING A COUNTER, IT MUST BE generated > XGW_TIME_MIN
+    // NOTE: WHEN SETTING A COUNTER, IT MUST BE generated < XGW_TIME_MAX
+
+    if (i >= I_KEYS_DYNAMIC && size != PING_SIZE)
+        // BAD SIZE FOR A PING PACKET
+        ret_path(PSTATS_I_PING_BAD_SIZE);
+
+    u64 rtime = atomic_get(&path->rtime);
+
+    if (rtime >= PATH_RCOUNTER_CONNECTING) {
+        if (rtime == PATH_RCOUNTER_CONNECTING && i != I_KEY_PONG)
+            // CONNECTING SO RECEBE PONGS
+            ret_path(PSTATS_I_NOT_PONG);
+        if (ABS_DIFF(now, p_ltime) > 400) // TODO: O ENVIADOR OU O RECEBEDOR TEM QUE INCLUIR O LATENCY NO pkt->tstamp?
+            // ELE NAO CONHECE NOSSO TIME
+            ret_path(PSTATS_I_LTIME_MISMATCH);
+    } elif (rtime == PATH_RCOUNTER_LISTENING) {
         if (i != I_KEY_PING)
-            // THIS PACKET IS NOT A SYN
-            ret_path(PSTATS_I_COUNTER_NOT_SYN);
+            // LISTENING SO RECEBE PINGS
+            ret_path(PSTATS_I_NOT_PING);
+        if (ABS_DIFF(now, p_ltime) > 400 && p_ltime != path->syn)
+            // LISTENING SO RECEBE COM PKT->TSTAMP +/- now | SYN
+            ret_path(PSTATS_I_LTIME_MISMATCH);
+    } else { // RACED WITH AN ACCEPTING
+        ASSERT(rtime == PATH_RCOUNTER_ACCEPTING);
+        ret_path(PSTATS_I_WHILE_ACCEPTING);
+    }
+
+    // DECRYPT
+    if (pkt_decrypt(node, i, pkt, size) != hash)
+        // CORRUPT
+        ret_path(PSTATS_I_HASH_MISMATCH);
+
+    // IS A EXPECTED TYPE FOR OUR STATUS
+    // IS AUTHENTIC (hash)
+    // IS SYNCED (p_ltime)
+
+    if (i >= I_KEY_PING) {
+
+        u64 p_rtime = BE64(PKT_PING_TIME(pkt));
+
+        if (p_rtime < XGW_TIME_MIN ||
+            p_rtime > XGW_TIME_MAX)
+            ret_path(PSTATS_I_RTIME_INVALID);
+
+        if ((rtime >= p_rtime) && (rtime - p_rtime) > 500)
+            // NOTE: JA SEI QUE O RTIME É CONHECIDO AQUI, POIS SE NAO FOSSE SERIA 0, 1 ETC,
+            //  E PARA SER SER MENOR DO QUE ISSO, P_RTIME TERIA DE SER INVALIDO, E NAO É POIS JA CHECOU
+            // ATRASADO / REPEATED
+            ret_path(PSTATS_I_RTIME_BACKWARDS);
+
+        if (i == I_KEY_PONG) {
+            // CONNECTING / ESTABLISHED
+
+            if (__bultin_exchange_n(&path->rtime, &rtime, p_rtime)) {
+                __bultin_exchange_n(&path->pingSent, p_ltime, 0));
+                u64 latency = (atomic_get(&path->latency) + (now - p_ltime)) / 2;
+                u64 tdiff = (atomic_get(&path->tdiff) + ((s64)p_ltime - (s64)(p_rtime + latency/2))) / 2;
+                __bultin_store_n(&path->latency, latency);
+                __bultin_store_n(&path->tdiff, tdiff);
+                __bultin_store_n(&path->pongReceived, now); // <-- THIS MOVES FROM CONNECTING -> ESTABLISHED
+            }
+
+            goto pong_ok;
+        }
+
+        // THIS IS A PING
+        skel_s* skel; skel_s temp_skel;
+
+        if (rtime == 0) {
+            // LISTENING
+            if (path->counterSyn == p_ltime)
+                // RECEIVED A SYN, LEARN ON TEMP
+                skel = &temp_skel;
+            elif (__atomic(&path->rtime, &rtime, LOCKA))
+                // RECEIVED A ACK, LEARN ON PATH
+                // LOCK LISTENING -> ACCEPTING SUCCESSFUL
+                skel = &path->skel;
+            else
+                // RECEIVED A ACK, LEARN ON PATH
+                // LOCK LISTENING -> ACCEPTING FAILED
+                goto err_raced_ack;
+            learn(skel);
+            if (skel == &path->skel) {
+                // RECEIVED A ACK, LEARNED ON PATH
+                // AGORA LIBERA O KEEPER
+                // NOTE: O KEEPER E NINGUEM PODE TOCAR NO PATH ENQUANTO LOCKADO NO MODO ACCEPTING
+                __atomic(&path->rcounterUpdated, get_jiffies64());
+                __atomic(&path->rtime, &rtime, p_rcounter);
+            }
+        } else // ESTABLISHED
+            skel = &path->skel;
+
+        // RESPONDE O PING DELE COM UM PONG
+        pkt->counter = p_rtime;
+    //  PKT_PING_VER(pkt) &= BE64(~((u64)0xFF));
+    //  PKT_PING_VER(pkt) |= BE64(ver);
+        PKT_PING_CTR(pkt) = now;
+
+
+        goto ping_ok;
     }
 
 
-    elif ()
-
-
-    const u64 r_counter = pkt_decrypt(node, i, pkt, size, hash);
-
-    if (counter == 0) {
-        // SOU UM SERVIDOR ESPERANDO POR UM SYN-ACK
-        // -- ISTO TEM QUE SER UM PING
-        // -- ISTO TEM QUE SER UM SYN/SYN-ACK (JA CONFIRMADO ACIMA)
-        //
-        // A ASSINATURA DO PACOTE
-
-    }
-
-
+    //
+    if (pkt_decrypt(node, i, pkt, size) != hash)
+        ret_path(PSTATS_I_COUNTER_NOT_SYN); // PSTATS_I_HASH_MISMATCH
 
     // REPLAY/CORRUPTION/FORGING/EXPIRATION PROTECTION
     // NOTE: LEMBRANDO QUE O TEMPO TODO AMBOS FICAM AJUSTANDO O NODE->DIFF,
     //       ENTAO NAO DA PARA LEVAR AO PE DA LETRA ESSES TIMES
     // NOTE: O PACOTE PODE TER LEVADO UM TEMPO A CHEGAR, SER PROCESSADO ETC
 
-
-    if (l_counter != r_counter)
-        // ISSO SÓ ACONTECE NO CASO DO PING/PONG
-        ret_path(PSTATS_I_HASH_MISMATCH);
-
-
-    if (i == I_KEY_PING)
+    if (i >= I_KEY_PING) {
         // PING/PONG
-        ret_path(in_pp(node, path, counter, skb, pkt, size, p_counter));
+
+    }
 
     // NORMAL PACKET
 
-
-
     // AVANCA O ALIGNMENT
-    void* const orig = PTR(pkt) + PKT_SIZE + PKT_ALIGN_SIZE;
+    void* const orig = PTR(pkt->p + PKT_ALIGN_RANDOMS);
 
     if (BE8(*(u8*)orig) == 0x45) { // TODO:
 

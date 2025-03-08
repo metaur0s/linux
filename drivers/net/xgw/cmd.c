@@ -984,7 +984,6 @@ static ssize_t __cold_as_ice __optimize_size cmd (struct file *file, const char 
             ASSERT(path->dPortIndex  == 0);
             ASSERT(path->sPorts[0]   == 0);
             ASSERT(path->dPorts[0]   == 0);
-            ASSERT(path->rtts[0]     == 0);
             ASSERT(path->name[0]     == 0);
 
             path->info   = P_EXIST;

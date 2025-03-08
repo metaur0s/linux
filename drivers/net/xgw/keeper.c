@@ -165,14 +165,10 @@ static void keeper (struct timer_list* const timer) {
                     path->last       = now;
                     path->starts    += 1;
                     path->rtt        = path->rtt_max + path->rtt_var;
-                    path->rtt_index  = 0;
                  // path->sent      -> 0  --- SERA SETADO ABAIXO
                  // path->lcounter  -> 0  --- SERA SETADO ABAIXO
                  // path->rcounter  -> a) COUNTER_CONNECTING (KEEPER - START)
                  //                    b) COUNTER DO PEER (IN - PING)
-
-                    for_count (i, PATH_RTTS_N)
-                        path->rtts[i] = path->rtt;
 
                     // QUANDO FIZER PINGS, VAI MANDAR
                     const uint q = path->skel.phys->ifindex % PING_QUEUES_N;

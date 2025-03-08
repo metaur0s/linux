@@ -64,7 +64,7 @@ static inline u16 udp_checksum6 (const void* ip, uint size) {
 // TODO: AQUI ENCRIPTA E NAO RETORNA NADA xD
 // TODO: SE ESSA PORRA COMPUTAR CHECKSUM TCP/UDP,
 // ENTAO VAI TER QUE SER DEPOIS DE ENCRYPTAR
-static void pkt_encapsulate (const node_s* const node, const uint o, const u64 counter, const pkt_s* const skel, skb_s* const skb, void* const restrict orig, const uint size) {
+static void pkt_encapsulate (const node_s* const node, const uint o, const u64 rtime, const pkt_s* const skel, skb_s* const skb, void* const restrict orig, const uint size) {
 
     ASSERT(size >= XGW_PAYLOAD_MIN);
     ASSERT(size <= XGW_PAYLOAD_MAX);
@@ -136,8 +136,8 @@ static void pkt_encapsulate (const node_s* const node, const uint o, const u64 c
     //
     pkt->x.dsize   = BE16(size);
     pkt->x.version = BE8(node->oVersions[o]);
-    pkt->x.counter = BE64(counter);
-    pkt->x.hash    = BE64(pkt_encrypt(node, o, pkt, size, counter));
+    pkt->x.time    = BE64(rtime);
+    pkt->x.hash    = BE64(pkt_encrypt(node, o, pkt, size));
 
     switch (type) {
 
@@ -389,9 +389,10 @@ static netdev_tx_t out (skb_s* const skb, net_device_s* const dev) {
     if ((PTR(p) - (path->skel.hsize + PKT_ALIGN_SIZE)) < SKB_HEAD(skb))
         ret_path(PSTATS_O_DATA_NO_HEADROOM);
 
+    // TODO: USAR O GET JIFFIES ACIMA
     pkt_encapsulate(node,
         __atomic_load_n(&node->oIndex,  __ATOMIC_RELAXED),
-        __atomic_load_n(&path->counter, __ATOMIC_RELAXED),
+        get_current_ms() + atomic_get(&path->tdiff),
         &path->skel, skb, p, size
     );
 

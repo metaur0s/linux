@@ -114,6 +114,17 @@ static void keeper (struct timer_list* const timer);
 
 int in (skb_s* const skb);
 
+// get_jiffies_64()
+// jiffies64_to_msecs()
+static inline u64 get_current_ms (void) {
+    u64 j = get_jiffies_64();
+#if HZ <= MSEC_PER_SEC && !(MSEC_PER_SEC % HZ)
+	return (MSEC_PER_SEC / HZ) * j;
+#else
+	return div_u64(j * HZ_TO_MSEC_NUM, HZ_TO_MSEC_DEN);
+#endif
+}
+
 #include "alloc.c"
 #ifdef CONFIG_XGW_BEEP
 #include "beep.c"

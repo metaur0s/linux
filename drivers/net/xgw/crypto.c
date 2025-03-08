@@ -211,10 +211,10 @@ static void reset_node_ping_keys (node_s* const node, const uint self, const uin
             // E AQUI COPIA PARA o synCounters
             //
             // TODO: ISSO É AO ATIVAR O PATH
-            node->paths[pid].counterSyn = x;
+            node->paths[pid].syn = x;
         }
 
-        x += y ^= swap64q(x, popcount(y));
+        x += y ^= swap64(x) + y;
     }
 }
 
@@ -294,7 +294,7 @@ static void secret_derivate_from_password (u64 S[SECRET_KEYS_N][K_LEN], const u8
 // - DATA
 
 // NOTE: QUALQUER ALTERAÇÃO EM UM BIT DO PATH ID OU DO RCOUNTER TEM QUE RESULTAR EM ALGO DIFERENTE AQUI
-#define _PKT_SEED(pkt) BE64(pkt->x.info ^ pkt->x.counter)
+#define _PKT_SEED(pkt) BE64(pkt->x.info ^ pkt->x.time)
 
 // A IDÉIA É ASSUMIR QUE O SIZE É SEMPRE MULTIPLO DE 64-BITS.
 // DAÍ O RESTO QUE PASSAR DISSO, É "EXPULSO" DO ALIGN, FAZENDO ELE COMECAR MAIS PARA FRENTE.

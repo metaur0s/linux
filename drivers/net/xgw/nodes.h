@@ -124,7 +124,7 @@ BUILD_ASSERT((PATH_RTT_MAX + PATH_RTT_VAR_MAX) <= PATH_RTT_EFFECTIVE_MAX);
 BUILD_ASSERT(PATH_RTT_EFFECTIVE_MAX < ((85 * KEEPER_INTERVAL) / 100));
 
 //
-#define PATH_SIZE 320
+#define PATH_SIZE 256
 
 struct path_s {
 // 64 -- KEEPER / IN
@@ -139,25 +139,22 @@ struct path_s {
     u16 rtt_max; // CONFIG
     u16 rtt_var; // CONFIG
     // --
-    u64 counter;  // COUNTER, GERADO PELO CLIENTE, MANTIDO LOCALMENTE
-    u64 counterSyn; // O PKT->COUNTER QUE O CLIENTE VAI USAR, ENQUANTO NAO DESCOBRE ELE; O COUNTER QUE O SERVER INICIALIZA SEU COUNTER
+    u64 acks;     // KEEPER - HISTORY
+    u64 syn; // O PKT->TSTAMP QUE O CLIENTE VAI USAR, ENQUANTO NAO DESCOBRE ELE
     u64 pingSent;     // QUANDO ENVIEI O PING
     u64 pongReceived; // QUANDO RECEBI O PONG
-    u64 acks;     // KEEPER - HISTORY
+    u64 rtime;  // LAST PING->TSTAMP RECEIVED (HIS RAW TIME)
+    s64 tdiff;  // ltime - rtime
+// 32 -- KEEPER / PING
     u16 rtt;      // KEEPER WRITE / OUT READ  <<---- VAI TER QUE ENFIAR ESSA PORRA ENTÃO DENTRO DO CACHE LINE DO SKEL, OU NO NODE
-    u8  rtt_index;
-    u8  dhcp; // ADDR/DHCP ID
     u8  tos;
     u8  ttl;
-    u16 reserved16;
-// 32 -- KEEPER / PING
-    skb_s* _skb;
-    path_s* next; // NA LISTA DE PINGS - ONLY VALID WHEN PATH STATUS >= K_UNSTABLE
-    u32 reserved32;
     u8  sPortIndex;
     u8  sPortsN;
     u8  dPortIndex;
     u8  dPortsN;
+    skb_s* _skb;
+    path_s* next; // NA LISTA DE PINGS - ONLY VALID WHEN PATH STATUS >= K_UNSTABLE
     // SÓ PODE USAR PSTATS SE TEVE PATH-> !!!
     volatile stat_s* pstats; // TODO: UMA ARRAY AQUI MESMO?
     // TODO: SEMANTICA DE memset(PATH, 0) AO DELETAR O PATH, E ESSES STATS
@@ -169,13 +166,11 @@ struct path_s {
     u16 dPorts [PATH_PORTS_N];
 // 112 -- IN READ, OUT READ, IN WRITE (ON RECEIVE PING, WHILE OUT IS DISABLED)
     pkt_s skel;
-// 64 -- KEEPER
-    u32 rtts [PATH_RTTS_N];
 };
 
 //
 BUILD_ASSERT(offsetof(path_s,   info) % CACHE_LINE_SIZE == 0);
-BUILD_ASSERT(offsetof(path_s,   _skb) % CACHE_LINE_SIZE == 0);
+BUILD_ASSERT(offsetof(path_s,    rtt) % CACHE_LINE_SIZE == 0);
 BUILD_ASSERT(offsetof(path_s, sPorts) % CACHE_LINE_SIZE == 0);
 
 BUILD_ASSERT(sizeof(path_s) == PATH_SIZE);
@@ -259,7 +254,7 @@ struct node_s { // DEIXA TUDO NO MESMO CACHE LINE PARA A ITERACAO DO KEEPER
     char name [NODE_NAME_SIZE];
 // 128 --
     u64 synCounters [PATHS_N]; // THE DEFAULT ONES
-// 5120 -- PATHS
+// 4096 -- PATHS
     path_s paths [PATHS_N];
 // 16384 --
     volatile stat_s pstats [PATHS_N] [64]; // TODO: DIMINUIR ISSO, MAS MANTER ALINHADO
@@ -280,7 +275,7 @@ BUILD_ASSERT(sizeof(((node_s*)NULL)->oKeys)  == (O_KEYS_ALL * K_SIZE));
 BUILD_ASSERT(sizeof(((node_s*)NULL)->iKeys)  == (I_KEYS_ALL * K_SIZE));
 BUILD_ASSERT(sizeof(((node_s*)NULL)->secret) == (SECRET_KEYS_N * K_SIZE));
 BUILD_ASSERT(sizeof(((node_s*)NULL)->synCounters) == 128);
-BUILD_ASSERT(sizeof(((node_s*)NULL)->paths)  == 5120);
+BUILD_ASSERT(sizeof(((node_s*)NULL)->paths)  == 4096);
 BUILD_ASSERT(sizeof(((node_s*)NULL)->pstats) == 16384);
 
 BUILD_ASSERT(offsetof(node_s, opaths)      % CACHE_LINE_SIZE == 0);

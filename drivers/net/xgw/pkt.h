@@ -92,8 +92,8 @@ struct hdr_x_s { // WIRE
             u16 dsize; // SIZE OF THE PAYLOAD (WIRE) OR HEADER (RUNTIME)
         };  u64 info;
     };
-    u64 counter; // PATH'S ESTABLISHED COUNTER (IF PING SYN, ITS THE COUNTERSYN)
-    u64 hash; // SENDER'S LCOUNTER (ENCRYPTED WITH INFO, COUNTER AND DATA)
+    u64 time; // DESTINATION'S TIME (NO CASO DO PING, UMA COPIA EXATA DO PING->TSTAMP)
+    u64 hash;
 };
 
 //
