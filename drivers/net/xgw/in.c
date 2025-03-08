@@ -492,8 +492,8 @@ _is_xgw:
 
         u64 p_rtime = BE64(PKT_PING_TIME(pkt));
 
-        if (p_rtime < XGW_TIME_MIN ||
-            p_rtime > XGW_TIME_MAX)
+        if (!(XGW_TIME_MIN <= p_rtime && p_rtime <= XGW_TIME_MAX))
+            // INVALID RTIME
             ret_path(PSTATS_I_RTIME_INVALID);
 
         if ((rtime >= p_rtime) && (rtime - p_rtime) > 500)
@@ -505,16 +505,16 @@ _is_xgw:
         if (i == I_KEY_PONG) {
             // CONNECTING / ESTABLISHED
 
-            if (__bultin_exchange_n(&path->rtime, &rtime, p_rtime)) {
+            if (__atomic_compare_exchange_n(&path->rtime, &rtime, p_rtime, 0, __ATOMIC_ACQUIRE, __ATOMIC_RELAXED)) {
                 __bultin_exchange_n(&path->pingSent, p_ltime, 0));
                 u64 latency = (atomic_get(&path->latency) + (now - p_ltime)) / 2;
                 u64 tdiff = (atomic_get(&path->tdiff) + ((s64)p_ltime - (s64)(p_rtime + latency/2))) / 2;
-                __bultin_store_n(&path->latency, latency);
-                __bultin_store_n(&path->tdiff, tdiff);
-                __bultin_store_n(&path->pongReceived, now); // <-- THIS MOVES FROM CONNECTING -> ESTABLISHED
+                __atomic_store_n(&path->latency, latency, __ATOMIC_RELAXED);
+                __atomic_store_n(&path->tdiff, tdiff, __ATOMIC_RELAXED);
+                __atomic_store_n(&path->pongReceived, now, __ATOMIC_RELAXED); // <-- THIS MOVES FROM CONNECTING -> ESTABLISHED
             }
 
-            goto pong_ok;
+            ret_path(PSTATS_I_RTIME_BACKWARDS); //goto pong_ok;
         }
 
         // THIS IS A PING
@@ -522,6 +522,7 @@ _is_xgw:
 
         if (rtime == 0) {
             // LISTENING
+
             if (path->counterSyn == p_ltime)
                 // RECEIVED A SYN, LEARN ON TEMP
                 skel = &temp_skel;
@@ -532,8 +533,11 @@ _is_xgw:
             else
                 // RECEIVED A ACK, LEARN ON PATH
                 // LOCK LISTENING -> ACCEPTING FAILED
-                goto err_raced_ack;
-            learn(skel);
+                ret_path(PSTATS_I_RTIME_BACKWARDS); //goto err_raced_ack;
+
+                //
+            in_discover(path, skb, skel);
+
             if (skel == &path->skel) {
                 // RECEIVED A ACK, LEARNED ON PATH
                 // AGORA LIBERA O KEEPER
@@ -550,8 +554,7 @@ _is_xgw:
     //  PKT_PING_VER(pkt) |= BE64(ver);
         PKT_PING_CTR(pkt) = now;
 
-
-        goto ping_ok;
+        ret_path(PSTATS_I_RTIME_BACKWARDS); // goto ping_ok;
     }
 
 
