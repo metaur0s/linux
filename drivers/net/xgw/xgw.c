@@ -68,6 +68,10 @@
         }     o->ptr = NULL; \
     }
 
+#define LTIME_DIFF_RTIME(ltime, rtime) ((s64)(ltime) - (s64)(rtime))
+#define RTIME_TO_LTIME(rtime, tdiff) ((u64)((rtime) + (tdiff)))
+#define LTIME_TO_RTIME(ltime, tdiff) ((u64)((ltime) - (tdiff)))
+
 #include "base.h"
 #include "types.h"
 #include "ports.h"
