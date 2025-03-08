@@ -120,13 +120,12 @@ static void keeper (struct timer_list* const timer) {
                     // TODO: TEM QUE REPENSAR O CRYPTO DERIVATE, POIS SENAO SE MUDAR O SELF, TERA DE SETAR NOVAMENTE O SECRET
                     path->skel.x.src  = BE16(nodeSelf);
 
-                    path->rcounter   = COUNTER_CONNECTING;
+                    path->rtime      = RTIME_CONNECTING;
                 } else {
                     printk("XGW: %s [%s]: LISTENING\n", node->name, path->name);
                     path->skel.type  = 0; //
-                    path->rcounter   = COUNTER_LISTENING;
-                }   path->lcounter   = 0; // AINDA NAO RECEBI PONG
-                    path->sent       = 0; // AINDA NAO CONSTRUI PING
+                    path->rtime      = RTIME_LISTENING;
+                }   path->sent       = 0; // AINDA NAO CONSTRUI PING
                     path->since      = 0; // AINDA NAO RECEBI O PRIMEIRO [MEU COUNTER]
                     path->info      ^= K_START | K_LISTEN;
 
@@ -137,7 +136,7 @@ static void keeper (struct timer_list* const timer) {
 
             if (path->info & K_LISTEN) {
 
-                if (__atomic_load_n(&path->rcounter, __ATOMIC_SEQ_CST) >= COUNTER_CONNECTING) {
+                if (__atomic_load_n(&path->rtime, __ATOMIC_SEQ_CST) >= RTIME_CONNECTING) {
 
                     if (path->info & P_SERVER)
                         printk("XGW: %s [%s]: ACCEPTED ON PHYS %s\n", node->name, path->name, path->skel.phys->name);

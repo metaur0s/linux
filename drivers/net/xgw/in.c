@@ -216,7 +216,7 @@ _is_xgw:
     if (i >= I_KEY_PING) {
 
         // HIS RAW TIME
-        ping_s* const ping = PKT_DATA(pkt);
+        const ping_s* const ping = PKT_DATA(pkt);
 
         const u64 p_rtime = BE64(ping->time);
 
