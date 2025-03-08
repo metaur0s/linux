@@ -362,10 +362,10 @@ static netdev_tx_t out (skb_s* const skb, net_device_s* const dev) {
 
     const path_s* path; u64 burst, burst_new; uint pid;
 
-    do { // NEED THIS ATOMICITY LOOP IN CASE SOMEONE ELSE USE THE CURRENT (OR OTHER ONE) AND OVERWRITE WHAT WE JUST SET
+    // LOAD STREAM TIMEOUT + PID
+    burst = atomic_get(conn);
 
-        // LOAD STREAM TIMEOUT + PID
-        burst = atomic_get(conn);
+    do { // NEED THIS ATOMICITY LOOP IN CASE SOMEONE ELSE USE THE CURRENT (OR OTHER ONE) AND OVERWRITE WHAT WE JUST SET
 
         pid = ( // CHOOSE A PATH
             burst // STARTING FROM CURRENT,
@@ -383,7 +383,7 @@ static netdev_tx_t out (skb_s* const skb, net_device_s* const dev) {
 
         // CONSIDERAR O LATENCY (SÓ DE IDA) + CPU BUSY TIME + IMPRECISOES
         burst_new = ((now + atomic_get(&path->latency) + atomic_get(&path->latency_var) + 16) * PATHS_N) + pid;
-
+ //__atomic_compare_exchange_n!!! If they are not equal, the operation is
         // STORE STREAM TIMEOUT + PID
     } while (!__atomic_compare_exchange_n(conn, &burst, burst_new, 0, __ATOMIC_RELAXED, __ATOMIC_RELAXED));
 
