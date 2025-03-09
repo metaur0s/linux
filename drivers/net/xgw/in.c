@@ -59,11 +59,16 @@ static inline void pong_send (node_s* const node, path_s* const path, const pkt_
     atomic_inc(&path->pstats[stat].count);
 }
 
-static noinline void in_ping (node_s* const node, path_s* const path, pkt_s* const pkt) {
+static noinline uint in_ping (node_s* const node, path_s* const path, const skb_s* const skb, pkt_s* const pkt) {
+
+    const u64 now = get_current_ms();
 
     uint latency = atomic_get(&path->latency);
     s64 tdiff    = atomic_get(&path->tdiff);
     u64 rtime    = atomic_get(&path->rtime);
+
+    uint i        = BE8  (pkt->x.version);
+    u64  p_ltime  = BE64 (pkt->x.time);
 
     // HIS RAW TIME
     const ping_s* const ping = PKT_DATA(pkt);
@@ -73,13 +78,13 @@ static noinline void in_ping (node_s* const node, path_s* const path, pkt_s* con
     if (p_rtime < RTIME_MIN
      || p_rtime > RTIME_MAX)
         // INVALID RTIME
-        ret_path(PSTATS_I_RTIME_INVALID);
+        return PSTATS_I_RTIME_INVALID;
 
     if (rtime >= RTIME_ESTABLISHED){
         // JA CONHEÇO O TIME DELE, O DIFF E O LATENCY
         if (p_rtime <= rtime)
             // HIS RAW TIME CANNOT GO DOWN OR REPEAT
-            ret_path(PSTATS_I_RTIME_BACKWARDS);
+            return PSTATS_I_RTIME_BACKWARDS;
         // O QUANTO
         //      (O RELOGIO DELE COMO ELE DIZ QUE ESTA (APROXIMADO))
         //          (LEVANDO EM CONTA QUE ISTO FOI UM SNAPSHOT DELE HA *LATENCY* ATÉ RECEBERMOS)
@@ -89,9 +94,9 @@ static noinline void in_ping (node_s* const node, path_s* const path, pkt_s* con
         // A IMPRECISÃO NÃO PODE SER TÃO GRANDE ASSIM:
         // NOTE: CONSIDERAR PATH->LATENCY_VAR
         if (diff > 2000) // PEER AFOBADO
-            ret_path(PSTATS_I_RTIME_SKEW_UP);
+            return PSTATS_I_RTIME_SKEW_UP;
         if (diff < -2000) // PEER LESADO
-            ret_path(PSTATS_I_RTIME_SKEW_DOWN);
+            return PSTATS_I_RTIME_SKEW_DOWN;
     }
 
     if (i == I_KEY_PONG) {
@@ -117,7 +122,7 @@ static noinline void in_ping (node_s* const node, path_s* const path, pkt_s* con
         if (!__atomic_compare_exchange_n(&path->pingSent, &p_ltime, 0, 0, __ATOMIC_SEQ_CST, __ATOMIC_RELAXED))
             // THIS PONG WAS ALREADY PROCESSED, OR
             // ANOTHER PING WAS SENT (AND A NEW PONG IS EXPECTED)
-            ret_path(PSTATS_I_PONG_RACED);
+            return PSTATS_I_PONG_RACED;
 
         // CONFIRMOU QUE ESTE PONG RESPONDEU O ULTIMO PING ENVIADO
         // LIMPOU ELE: NAO VAI ACEITAR OUTRO
@@ -146,7 +151,7 @@ static noinline void in_ping (node_s* const node, path_s* const path, pkt_s* con
                                     memcpy(node->oKeys[o], K, sizeof(K));
                          __atomic_store_n(&node->oUse, o,  __ATOMIC_RELEASE);
 
-        ret_path(PSTATS_I_PONG_GOOD);
+        return PSTATS_I_PONG_GOOD;
     }
 
     // THIS IS A PING
@@ -163,7 +168,7 @@ static noinline void in_ping (node_s* const node, path_s* const path, pkt_s* con
             // LEARN ON PATH
             skel = &path->skel;
         } else // LOCK FAILED
-            ret_path(PSTATS_I_PING_GOOD_ACCEPT_RACED);
+            return PSTATS_I_PING_GOOD_ACCEPT_RACED;
 
         in_discover(path, skb, skel);
 
@@ -181,7 +186,7 @@ static noinline void in_ping (node_s* const node, path_s* const path, pkt_s* con
     // RESPONDE COM UM PONG
     pong_send(node, path, skel, p_rtime, now);
 
-    ret_path(PSTATS_I_PING_GOOD);
+    return PSTATS_I_PING_GOOD;
 }
 
 // TODO: FIXME: PROTECT THE REAL SERVER TCP PORTS SO WE DON'T NEED TO BIND TO THE FAKE INTERFACE
@@ -405,7 +410,7 @@ _is_xgw:
     // IS SYNCED (p_ltime)
 
     if (i >= I_KEY_SYN)
-        ret_path(in_ping(node, path, pkt));
+        ret_path(in_ping(node, path, skb, pkt));
 
     // REPLAY/CORRUPTION/FORGING/EXPIRATION PROTECTION
     // NOTE: LEMBRANDO QUE O TEMPO TODO AMBOS FICAM AJUSTANDO O NODE->DIFF,
