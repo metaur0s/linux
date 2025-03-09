@@ -45,13 +45,6 @@ static const u32 cmdSizes [CMDS_N] = {
 #include "cmd_sizes.c"
 };
 
-#if 0
-// grep CMD_ '{print $1}' cmds.h | grep = | awk -F , | awk '{print "["$1"] = |"$1"|,"}' | tr '|' '"' > cmd_names.h
-static const char* const cmdNames [CMDS_N] = {
-#include "cmd_names.c"
-};
-#endif
-
 static ssize_t __cold_as_ice __optimize_size cmd (struct file *file, const char __user *ubuf, size_t size, loff_t *ppos) {
 
     // TODO:

@@ -147,6 +147,7 @@ static inline u64 get_current_ms (void) {
 #include "keeper.c"
 #include "stats.c"
 #include "dev.c"
+#include "cmd_names.c"
 #include "cmd.c"
 #include "asserts.h"
 
