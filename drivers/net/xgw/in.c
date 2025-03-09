@@ -59,16 +59,21 @@ static inline void pong_send (node_s* const node, path_s* const path, const pkt_
     atomic_inc(&path->pstats[stat].count);
 }
 
-static noinline uint in_ping (node_s* const node, path_s* const path, const skb_s* const skb, pkt_s* const pkt) {
+// IT MUST BE NOT INLINED, AS THE WHOLE INTENTION OF SEPARATING IT AS A FUNCTION IS TO MINIMIZE THE IN FUNCTION
+// WE DARE TO REDO SOME THINGS HERE, SO IF WE INLINE, THOSE WILL BE SURPLEFUOUS.
+static noinline uint in_ping (node_s* const node, const skb_s* const skb, pkt_s* const pkt) {
 
     const u64 now = get_current_ms();
+
+    const uint pid      = BE8  (pkt->x.path);
+    const uint i        = BE8  (pkt->x.version);
+          u64  p_ltime  = BE64 (pkt->x.time);
+
+    path_s* const path = &node->paths[pid];
 
     uint latency = atomic_get(&path->latency);
     s64 tdiff    = atomic_get(&path->tdiff);
     u64 rtime    = atomic_get(&path->rtime);
-
-    uint i        = BE8  (pkt->x.version);
-    u64  p_ltime  = BE64 (pkt->x.time);
 
     // HIS RAW TIME
     const ping_s* const ping = PKT_DATA(pkt);
