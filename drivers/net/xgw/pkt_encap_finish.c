@@ -1,5 +1,5 @@
 
-static inline void deal (pkt_s* const pkt, const uint size) {
+static inline void pkt_encap_finish (pkt_s* const pkt, const uint size) {
 
     const enum H_TYPE type = pkt->type;
 
