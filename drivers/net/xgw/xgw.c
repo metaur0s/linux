@@ -135,10 +135,10 @@ static inline u64 get_current_ms (void) {
 #endif
 #include "random.c"
 #include "ports.c"
+#include "crypto.c"
 #include "pkt_skels.c"
 #include "pkt_encap_finish.c"
 #include "pkt_encap.c"
-#include "crypto.c"
 #include "out.c"
 #include "in_discover.c"
 #include "in.c"

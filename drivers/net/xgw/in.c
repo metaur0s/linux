@@ -327,8 +327,7 @@ _is_xgw:
                 // SYN-ACK
                 // LEARN ON PATH
                 skel = &path->skel;
-            } else
-                // LOCK FAILED
+            } else // LOCK FAILED
                 ret_path(PSTATS_I_ACCEPT_RACED);
 
             in_discover(path, skb, skel);
