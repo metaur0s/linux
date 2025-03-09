@@ -10,6 +10,56 @@
 #define COUNTER_SYN_MIN ((u64)8)
 #define COUNTER_SYN_MAX ((~(u64)0) - 32)
 
+static inline void (const node_s* const node, path_s* const path, const skel_s* const skel) {
+
+    uint stat;
+
+    skb_s* const oskb = alloc_skb(64 + PKT_SIZE + PKT_ALIGN_SIZE + PING_SIZE + 64, GFP_ATOMIC);
+
+    if (oskb) {
+
+
+        // TODO: USA O SKB_DATA ALIGNED
+        ping_s* const pong = SKB_DATA(oskb) + 64 + PKT_SIZE + PKT_ALIGN_SIZE;
+
+        // GERA AS KEYS
+        random64_n(PTR(pong), PING_RANDOMS_N, SUFFIX_ULL(CONFIG_XGW_RANDOM_PING));
+
+        // A CADA PONG O SLOT MAIS ANTIGO É RECICLADO.
+        // ENTÃO AS KEYS MAIS ANTIGAS SÃO AUTOMATICAMENTE DESCARTADAS.
+        // OVERFLOWS SERAO PROBLEMAS, ENTAO TEM QUE USAR PALAVRA GRANDE.
+        const uint i = __atomic_add_fetch(&node->iCycle, 1, __ATOMIC_RELAXED) % I_KEYS_DYNAMIC;
+
+     // pong->sec -> JA GERADO PELO RANDOM
+        pong->ver  = BE16(i); // OVERWRITE WITH THE VERSION
+        pong->time = BE64(now);
+
+        // O RANDOM GEROU QUAL SEC USAREMOS
+        const uint sec = BE16(pong->sec);
+
+        // SEM ATOMICITY/BARRIER POR QUE O PEER SO VAI REFERENCIAR ESSE NOSSO INPUT INDEX QUANDO ELE RECEBER
+        secret_derivate_random_as_key(node->secret[sec], pong->rnd, node->iKeys[i]);
+
+        // USA O RAW RTIME QUE RECEBEU
+        // TODO: O ALIGN COM RANDOM TEM QUE SER COLOCADO FORA DO ENCAPSULATE, POIS NO CASO DO PING/PONG NAO VAMOS USAR
+        pkt_encapsulate(node, O_KEY_PONG, p_rtime, skel, oskb, pong, PING_SIZE);
+
+        oskb->ip_summed = CHECKSUM_NONE;
+
+        if (dev_queue_xmit(oskb))
+            // FAILED TO SEND THE SKB
+            // NOTE: THE SKB WAS ALREADY CONSUMED
+            stat = PSTATS_O_PONG_SEND_FAILED;
+        else
+            stat = PSTATS_O_PONG_OK;
+    } else // FAILED TO ALLOCATE SKB
+        stat = PSTATS_O_PONG_SKB_FAILED;
+
+    // NOTE: WE WILL INFORM THE TOTAL SIZE SENT THROUGHT THE PHYSICAL INTERFACE
+    atomic_add(&path->pstats[stat].bytes, skel->hsize + PKT_ALIGN_SIZE + PING_SIZE);
+    atomic_inc(&path->pstats[stat].count);
+}
+
 // TODO: FIXME: PROTECT THE REAL SERVER TCP PORTS SO WE DON'T NEED TO BIND TO THE FAKE INTERFACE
 int in (skb_s* const skb) {
 
@@ -346,48 +396,7 @@ _is_xgw:
             skel = &path->skel;
 
         // RESPONDE COM UM PONG
-
-        skb_s* const oskb = alloc_skb(64 + PKT_SIZE + PKT_ALIGN_SIZE + PING_SIZE + 64, GFP_ATOMIC);
-
-        if (oskb == NULL)
-            // FAILED TO ALLOCATE SKB
-            ret_path(PSTATS_I_PING_GOOD_ANSWER_SKB_ALLOC_FAILED);
-
-        // TODO: USA O SKB_DATA ALIGNED
-        ping_s* const pong = SKB_DATA(oskb) + 64 + PKT_SIZE + PKT_ALIGN_SIZE;
-
-        // GERA AS KEYS
-        random64_n(PTR(pong), PING_RANDOMS_N, SUFFIX_ULL(CONFIG_XGW_RANDOM_PING));
-
-        // A CADA PONG O SLOT MAIS ANTIGO É RECICLADO.
-        // ENTÃO AS KEYS MAIS ANTIGAS SÃO AUTOMATICAMENTE DESCARTADAS.
-        // OVERFLOWS SERAO PROBLEMAS, ENTAO TEM QUE USAR PALAVRA GRANDE.
-        const uint i = __atomic_add_fetch(&node->iCycle, 1, __ATOMIC_RELAXED) % I_KEYS_DYNAMIC;
-
-     // pong->sec -> JA GERADO PELO RANDOM
-        pong->ver  = BE16(i); // OVERWRITE WITH THE VERSION
-        pong->time = BE64(now);
-
-        // O RANDOM GEROU QUAL SEC USAREMOS
-        const uint sec = BE16(pong->sec);
-
-        // SEM ATOMICITY/BARRIER POR QUE O PEER SO VAI REFERENCIAR ESSE NOSSO INPUT INDEX QUANDO ELE RECEBER
-        secret_derivate_random_as_key(node->secret[sec], pong->rnd, node->iKeys[i]);
-
-        // USA O RAW RTIME QUE RECEBEU
-        // TODO: O ALIGN COM RANDOM TEM QUE SER COLOCADO FORA DO ENCAPSULATE, POIS NO CASO DO PING/PONG NAO VAMOS USAR
-        pkt_encapsulate(node, O_KEY_PONG, p_rtime, skel, oskb, pong, PING_SIZE);
-
-        oskb->ip_summed = CHECKSUM_NONE;
-
-        if (dev_queue_xmit(oskb))
-            // FAILED TO SEND THE SKB
-            // NOTE: THE SKB WAS ALREADY CONSUMED
-            ret_path(PSTATS_I_PING_GOOD_ANSWER_SEND_FAILED);
-
-        // NOTE: WE WILL INFORM THE TOTAL SIZE SENT THROUGHT THE PHYSICAL INTERFACE
-        atomic_add(&path->pstats[PSTATS_O_PONG_OK].bytes, skel->hsize + PKT_ALIGN_SIZE + PING_SIZE);
-        atomic_inc(&path->pstats[PSTATS_O_PONG_OK].count);
+        pong_send(node, path, skel);
 
         ret_path(PSTATS_I_PING_GOOD);
     }
