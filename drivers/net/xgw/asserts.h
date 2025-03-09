@@ -98,8 +98,9 @@ BUILD_ASSERT(sizeof(((node_s*)NULL)->pstats) == 16384);
 
 // -- NAO PRECISAREMOS CHECAR LIMITES, POIS NAO CABEM MESMO
 // -- E TEM QUE CABER TODOS
-BUILD_ASSERT(~(typeof(((hdr_x_s*)NULL)->src))0 == NID_MAX);
-BUILD_ASSERT(~(typeof(((hdr_x_s*)NULL)->dst))0 == NID_MAX);
+BUILD_ASSERT(~(typeof(((hdr_x_s*)NULL)->src))0     == NID_MAX);
+BUILD_ASSERT(~(typeof(((hdr_x_s*)NULL)->dst))0     == NID_MAX);
+BUILD_ASSERT(~(typeof(((hdr_x_s*)NULL)->version))0 == I_KEY_MAX);
 
 // THE TYPES MUST BE ABLE TO HOLD THE VALUES
 BUILD_ASSERT((typeof(((path_s*)NULL)->nid))         NID_MAX          == NID_MAX);

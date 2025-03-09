@@ -34,7 +34,6 @@ static const struct {
         __STAT(PSTATS_I_WHILE_ACCEPTING),
         __STAT(PSTATS_I_NOT_PING),
         __STAT(PSTATS_I_NOT_PONG),
-        __STAT(PSTATS_I_BAD_VERSION),
         __STAT(PSTATS_I_PING_BAD_SIZE),
         __STAT(PSTATS_I_ESTABLISHED_SYN),
         __STAT(PSTATS_I_LTIME_NOT_SYN),

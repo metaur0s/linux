@@ -166,9 +166,9 @@ _is_xgw:
         // BAD SIZE FOR A PING PACKET
         ret_path(PSTATS_I_PING_BAD_SIZE);
 
-    u16 latency = atomic_get(&path->latency);
-    s64 tdiff   = atomic_get(&path->tdiff);
-    u64 rtime   = atomic_get(&path->rtime);
+    uint latency = atomic_get(&path->latency);
+    s64 tdiff    = atomic_get(&path->tdiff);
+    u64 rtime    = atomic_get(&path->rtime);
 
     if (rtime >= RTIME_ESTABLISHED) {
         if (i == I_KEY_SYN)
@@ -187,10 +187,6 @@ _is_xgw:
         ASSERT(rtime == RTIME_ACCEPTING);
         ret_path(PSTATS_I_WHILE_ACCEPTING);
     }
-
-    if (i >= I_KEYS_ALL)
-        //
-        ret_path(PSTATS_I_BAD_VERSION);
 
     if (i == I_KEY_SYN) {
         if (p_ltime != path->syn)
@@ -335,9 +331,9 @@ _is_xgw:
         // GERA AS KEYS
         random64_n(PTR(pong), PING_RANDOMS_N, SUFFIX_ULL(CONFIG_XGW_RANDOM_PING));
 
-        // A CADA PONG A INPUT KEY MAIS ANTIGA É EXPIRADA
-        // OVERFLOWS NAO TERAO PROBLEMAS
-        // O % É PARA QUE POSSAMOS USAR PALAVRAS MAIORES
+        // A CADA PONG O SLOT MAIS ANTIGO É RECICLADO.
+        // ENTÃO AS KEYS MAIS ANTIGAS SÃO AUTOMATICAMENTE DESCARTADAS.
+        // OVERFLOWS SERAO PROBLEMAS, ENTAO TEM QUE USAR PALAVRA GRANDE.
         const uint i = __atomic_add_fetch(&node->iCycle, 1, __ATOMIC_RELAXED) % I_KEYS_DYNAMIC;
 
      // pong->sec -> JA GERADO PELO RANDOM
