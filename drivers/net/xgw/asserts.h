@@ -96,6 +96,11 @@ BUILD_ASSERT(sizeof(((node_s*)NULL)->synCounters) == 128);
 BUILD_ASSERT(sizeof(((node_s*)NULL)->paths)  == 4096);
 BUILD_ASSERT(sizeof(((node_s*)NULL)->pstats) == 16384);
 
+// -- NAO PRECISAREMOS CHECAR LIMITES, POIS NAO CABEM MESMO
+// -- E TEM QUE CABER TODOS
+BUILD_ASSERT(~(typeof(((hdr_x_s*)NULL)->src))0 == NID_MAX);
+BUILD_ASSERT(~(typeof(((hdr_x_s*)NULL)->dst))0 == NID_MAX);
+
 // THE TYPES MUST BE ABLE TO HOLD THE VALUES
 BUILD_ASSERT((typeof(((path_s*)NULL)->nid))         NID_MAX          == NID_MAX);
 BUILD_ASSERT((typeof(((path_s*)NULL)->pid))         PID_MAX          == PID_MAX);

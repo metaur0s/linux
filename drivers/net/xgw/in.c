@@ -122,10 +122,6 @@ _is_xgw:
           u64  p_ltime  = BE64 (pkt->x.time);
     const u64  hash     = BE64 (pkt->x.hash);
 
-    // NAO PRECISAREMOS CHECAR LIMITES, POIS NAO CABEM MESMO
-    BUILD_ASSERT(~(typeof(pkt->x.src))0 < NODES_N);
-    BUILD_ASSERT(~(typeof(pkt->x.dst))0 < NODES_N);
-
     if (nid == nodeSelf)
         ret_dev(DSTATS_I_FROM_SELF);
 
@@ -187,7 +183,7 @@ _is_xgw:
             i != I_KEY_PING)
             // LISTENING SO RECEBE SYN E PING
             ret_path(PSTATS_I_NOT_SYN_OR_PING);
-    } else { // RACED WITH AN ACCEPTING
+    } else { // LISTENING, MAS EM ESTADO DE ACCEPTING
         ASSERT(rtime == RTIME_ACCEPTING);
         ret_path(PSTATS_I_WHILE_ACCEPTING);
     }
