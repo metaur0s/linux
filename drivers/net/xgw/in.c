@@ -317,23 +317,19 @@ _is_xgw:
         pkt_s* skel; pkt_s temp_skel;
 
         if (rtime == RTIME_LISTENING) {
-            // LISTENING
+            // LISTENING - PATH HAS NO SKEL
 
-            if (i == I_KEY_PING) {
-                // SYN-ACK
-
-                // LOCK PATH
-                if (!__atomic_compare_exchange_n(&path->rtime, &rtime, RTIME_ACCEPTING, 0, __ATOMIC_SEQ_CST, __ATOMIC_RELAXED))
-                    // LOCK FAILED
-                    ret_path(PSTATS_I_ACCEPT_RACED);
-
-                // LEARN ON PATH
-                skel = &path->skel;
-            } else
-                // SYN
+            if (i == I_KEY_SYN) {
                 // LEARN O PATH EM UM HEADER TEMPORARIO
                 // TODO: LIMITAR A QUANTIDADE DE SYNS RECEBIVEIS A CADA KEEPER INTERVAL
                 skel = &temp_skel;
+            } elif (__atomic_compare_exchange_n(&path->rtime, &rtime, RTIME_ACCEPTING, 0, __ATOMIC_SEQ_CST, __ATOMIC_RELAXED))
+                // SYN-ACK
+                // LEARN ON PATH
+                skel = &path->skel;
+            } else
+                // LOCK FAILED
+                ret_path(PSTATS_I_ACCEPT_RACED);
 
             in_discover(path, skb, skel);
 
