@@ -192,7 +192,7 @@ _is_xgw:
         ret_path(PSTATS_I_WHILE_ACCEPTING);
     }
 
-    // LTIME
+    // PACKET TYPE VS LTIME
     if (i != I_KEY_SYN) { // THE SYN LTIME CHECK WAS MOVED ABOVE
 
         if (p_ltime < RTIME_MIN
@@ -258,22 +258,25 @@ _is_xgw:
                 ret_path(PSTATS_I_RTIME_SKEW_DOWN);
         }
 
-        //
-        latency = (3*latency + (now - p_ltime)/2) / 4;
-
-        // CAP TO CONFIGURED LIMITS
-        if (latency > path->latency_max)
-            latency = path->latency_max;
-        elif (latency < path->latency_min)
-              latency = path->latency_min;
-
-        // ELE NOS MANDOU O TIME DELE DE QUANDO ELE RECEBEU.
-        // MAS CONSIDERA O TIME QUE ELE TINHA QUANDO ENVIAMOS.
-        // E ENTAO PEGA A COMPARAÇÃO ENTRE *LOCAL TIME WHEN I SENT* COM *REMOTE TIME WHEN I SENT*
-        tdiff = (tdiff + LTIME_DIFF_RTIME(p_ltime, p_rtime - latency)) / 2;
-
         if (i == I_KEY_PONG) {
             // CONNECTING / ESTABLISHED
+
+            // p_ltime IS THE TIME WE SENT
+            // WE USE THE HALF, BECAUSE THIS TIME ELAPSED WAS TO GO AND GET BACK
+            latency = (3*latency + (now - p_ltime)/2) / 4;
+
+            // CAP TO CONFIGURED LIMITS
+            if (latency > path->latency_max)
+                latency = path->latency_max;
+            elif (latency < path->latency_min)
+                  latency = path->latency_min;
+
+            // ELE NOS MANDOU O TIME DELE DE QUANDO ELE RECEBEU.
+            // MAS CONSIDERA O TIME QUE ELE TINHA QUANDO ENVIAMOS.
+            // E ENTAO PEGA A COMPARAÇÃO ENTRE *LOCAL TIME WHEN I SENT* COM *REMOTE TIME WHEN I SENT*
+            // LTIME_DIFF_RTIME(p_ltime + latency, p_rtime)
+            // LTIME_DIFF_RTIME(now, p_rtime + latency)
+            tdiff = (tdiff + LTIME_DIFF_RTIME(now, p_rtime + latency)) / 2;
 
             if (!__atomic_compare_exchange_n(&path->pingSent, &p_ltime, 0, 0, __ATOMIC_SEQ_CST, __ATOMIC_RELAXED))
                 // THIS PONG WAS ALREADY PROCESSED, OR
