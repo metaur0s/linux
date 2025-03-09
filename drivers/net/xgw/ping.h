@@ -15,5 +15,3 @@ struct ping_s {
     u16 sec;
     u64 time;
 };
-
-BUILD_ASSERT(sizeof(ping_s) == PING_SIZE);

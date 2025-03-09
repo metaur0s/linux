@@ -98,16 +98,6 @@ struct hdr_x_s { // WIRE
     u64 hash;
 };
 
-//
-BUILD_ASSERT(sizeof(hdr_eth_s)  == 14);
-BUILD_ASSERT(sizeof(hdr_vlan_s) ==  4);
-BUILD_ASSERT(sizeof(hdr_ppp_s)  ==  8);
-BUILD_ASSERT(sizeof(hdr_ip4_s)  == 20);
-BUILD_ASSERT(sizeof(hdr_ip6_s)  == 40);
-BUILD_ASSERT(sizeof(hdr_udp_s)  ==  8);
-BUILD_ASSERT(sizeof(hdr_tcp_s)  == 20);
-BUILD_ASSERT(sizeof(hdr_x_s)    == 24);
-
 // PAYLOAD
 // PURPOSE: READ VERSION, SIZE, NAT, COMPUTE CHECKSUMS
 
@@ -316,49 +306,6 @@ struct pkt_s {
     };
     u64 p []; // ALIGN | PING / PONG / PAYLOAD
 };
-
-//
-BUILD_ASSERT(sizeof(encap_eth_s)              == ENCAP_SIZE);
-BUILD_ASSERT(sizeof(encap_eth_ip4_s)          == ENCAP_SIZE);
-BUILD_ASSERT(sizeof(encap_eth_ip6_s)          == ENCAP_SIZE);
-BUILD_ASSERT(sizeof(encap_eth_ip4_udp_s)      == ENCAP_SIZE);
-BUILD_ASSERT(sizeof(encap_eth_ip6_udp_s)      == ENCAP_SIZE);
-BUILD_ASSERT(sizeof(encap_eth_vlan_s)         == ENCAP_SIZE);
-BUILD_ASSERT(sizeof(encap_eth_vlan_ip4_s)     == ENCAP_SIZE);
-BUILD_ASSERT(sizeof(encap_eth_vlan_ip6_s)     == ENCAP_SIZE);
-BUILD_ASSERT(sizeof(encap_eth_vlan_ip4_udp_s) == ENCAP_SIZE);
-BUILD_ASSERT(sizeof(encap_eth_vlan_ip6_udp_s) == ENCAP_SIZE);
-BUILD_ASSERT(sizeof(encap_eth_vlan_ppp_s)     == ENCAP_SIZE);
-BUILD_ASSERT(sizeof(encap_eth_vlan_ppp_ip4_s) == ENCAP_SIZE);
-BUILD_ASSERT(sizeof(encap_eth_vlan_ppp_ip6_s) == ENCAP_SIZE);
-BUILD_ASSERT(sizeof(encap_eth_ppp_s)          == ENCAP_SIZE);
-BUILD_ASSERT(sizeof(encap_eth_ppp_ip4_s)      == ENCAP_SIZE);
-BUILD_ASSERT(sizeof(encap_eth_ppp_ip6_s)      == ENCAP_SIZE);
-BUILD_ASSERT(sizeof(encap_ip4_s)              == ENCAP_SIZE);
-BUILD_ASSERT(sizeof(encap_ip4_udp_s)          == ENCAP_SIZE);
-BUILD_ASSERT(sizeof(encap_ip4_tcp_s)          == ENCAP_SIZE);
-BUILD_ASSERT(sizeof(encap_ip6_s)              == ENCAP_SIZE);
-BUILD_ASSERT(sizeof(encap_ip6_udp_s)          == ENCAP_SIZE);
-BUILD_ASSERT(sizeof(encap_ip6_tcp_s)          == ENCAP_SIZE);
-
-//
-BUILD_ASSERT(offsetof(pkt_s, x) == ENCAP_SIZE);
-
-//
-BUILD_ASSERT(offsetof(pkt_s, encap_raw) == 0);
-
-//
-BUILD_ASSERT(sizeof(pkt_s) == (ENCAP_SIZE + sizeof(hdr_x_s)));
-
-//
-//BUILD_ASSERT(sizeof(*(((pkt_s*)NULL)->p)) * PING_WORDS_N == PING_SIZE);
-
-BUILD_ASSERT(sizeof(hdr_x_s) == PKT_X_SIZE);
-BUILD_ASSERT(sizeof(pkt_s) == PKT_SIZE);
-
-//
-BUILD_ASSERT(sizeof(ip4_s) == (sizeof(hdr_ip4_s) + 2 * sizeof(u16)));
-BUILD_ASSERT(sizeof(ip6_s) == (sizeof(hdr_ip6_s) + 2 * sizeof(u16)));
 
 // TODO: TODOS OS ENCAP_S TEM QUE SER < ENCAP_MAX
 

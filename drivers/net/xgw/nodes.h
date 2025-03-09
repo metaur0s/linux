@@ -87,41 +87,21 @@
 // TODO: P_DHCP ?
 #define __P_TYPE_CLR (P_MAC_SRC | P_MAC_DST | P_ADDR_SRC | P_ADDR_DST | P_VPROTO | P_VID | P_DHCP)
 
-//
-#define PATH_LATENCYS_N 16
+#define LATENCY_MIN 10
+#define LATENCY_MAX 625
 
-// 10ms - 625ms
-#define PATH_LATENCY_MIN (HZ / 100)
-#define PATH_LATENCY_MAX ((25 * HZ) / 40)
+#define LATENCY_VAR_MIN 10
+#define LATENCY_VAR_MAX 120
 
-// 10ms - 120ms
-#define PATH_LATENCY_VAR_MIN (HZ / 100)
-#define PATH_LATENCY_VAR_MAX ((3 * HZ) / 25)
-
-// 15ms - 750ms
-#define PATH_LATENCY_EFFECTIVE_MIN (HZ / 64)
-#define PATH_LATENCY_EFFECTIVE_MAX ((75 * HZ) / 100)
+// ITS THE LATENCY + LATENCY_VAR
+#define LATENCY_EFFECTIVE_MIN 650
+#define LATENCY_EFFECTIVE_MAX 650
 
 // NOTE: NAO ADIANTA SER MUITO LONGO POIS OS KEYS PODEM ACABAR SENDO INUTILIZADOS
 // NOTE: NAO ADIANTA SER LONGO POIS FICARA UM TEMPAO TRAVADO (SERVER)
 // NOTE: NAO ADIANTA SER LONGO POIS FICARA UM TEMPAO TRAVADO (CLIENT)
 #define PATH_TIMEOUT_MIN   1
 #define PATH_TIMEOUT_MAX 255
-
-//
-BUILD_ASSERT(PATH_LATENCY_MIN     >= 1);
-BUILD_ASSERT(PATH_LATENCY_VAR_MIN >= 1);
-
-BUILD_ASSERT(PATH_LATENCY_MIN     < PATH_LATENCY_MAX);
-BUILD_ASSERT(PATH_LATENCY_VAR_MIN < PATH_LATENCY_VAR_MAX);
-BUILD_ASSERT(PATH_TIMEOUT_MIN < PATH_TIMEOUT_MAX);
-
-//
-BUILD_ASSERT((PATH_LATENCY_MIN + PATH_LATENCY_VAR_MIN) >= PATH_LATENCY_EFFECTIVE_MIN);
-BUILD_ASSERT((PATH_LATENCY_MAX + PATH_LATENCY_VAR_MAX) <= PATH_LATENCY_EFFECTIVE_MAX);
-
-// TEM QUE TER UMA FOLGUINHA...
-BUILD_ASSERT(PATH_LATENCY_EFFECTIVE_MAX < ((85 * KEEPER_INTERVAL) / 100));
 
 //
 #define PATH_SIZE 256
@@ -141,8 +121,8 @@ struct path_s {
     // --
     u64 acks;     // KEEPER - HISTORY
     u64 syn; // O PKT->TSTAMP QUE O CLIENTE VAI USAR, ENQUANTO NAO DESCOBRE ELE
-    u64 asked_ms;    // QUANDO ENVIEI O PING
-    u64 answered_hz; // QUANDO RECEBI O PONG
+    u64 pingSent;    // QUANDO ENVIEI O PING
+    u64 pongReceived; // QUANDO RECEBI O PONG
     u64 rtime;  // LAST PING->TSTAMP RECEIVED (HIS RAW TIME)
     s64 tdiff;  // ltime - rtime
 // 32 -- KEEPER / PING
@@ -167,36 +147,6 @@ struct path_s {
 // 112 -- IN READ, OUT READ, IN WRITE (ON RECEIVE PING, WHILE OUT IS DISABLED)
     pkt_s skel;
 };
-
-//
-BUILD_ASSERT(offsetof(path_s,    info) % CACHE_LINE_SIZE == 0);
-BUILD_ASSERT(offsetof(path_s, latency) % CACHE_LINE_SIZE == 0);
-BUILD_ASSERT(offsetof(path_s,  sPorts) % CACHE_LINE_SIZE == 0);
-
-BUILD_ASSERT(sizeof(path_s) == PATH_SIZE);
-
-//
-BUILD_ASSERT(PATH_LATENCY_MIN     >= 1);
-BUILD_ASSERT(PATH_LATENCY_VAR_MIN >= 1);
-
-BUILD_ASSERT((typeof(((path_s*)NULL)->nid))         NID_MAX              == NID_MAX);
-BUILD_ASSERT((typeof(((path_s*)NULL)->pid))         PID_MAX              == PID_MAX);
-BUILD_ASSERT((typeof(((path_s*)NULL)->latency))     PATH_LATENCY_MAX     == PATH_LATENCY_MAX);
-BUILD_ASSERT((typeof(((path_s*)NULL)->latency_min)) PATH_LATENCY_MAX     == PATH_LATENCY_MAX);
-BUILD_ASSERT((typeof(((path_s*)NULL)->latency_max)) PATH_LATENCY_MAX     == PATH_LATENCY_MAX);
-BUILD_ASSERT((typeof(((path_s*)NULL)->latency_var)) PATH_LATENCY_VAR_MAX == PATH_LATENCY_VAR_MAX);
-BUILD_ASSERT((typeof(((path_s*)NULL)->timeout))     PATH_TIMEOUT_MAX     == PATH_TIMEOUT_MAX);
-BUILD_ASSERT((typeof(((path_s*)NULL)->info))        P_INFO               == P_INFO);
-BUILD_ASSERT((typeof(((path_s*)NULL)->info))        K_ESTABLISHED        == K_ESTABLISHED);
-BUILD_ASSERT((typeof(((path_s*)NULL)->weight))      PATH_WEIGHT_MAX      == PATH_WEIGHT_MAX);
-BUILD_ASSERT((typeof(((path_s*)NULL)->weight_acks)) ACKS_N               == ACKS_N);
-BUILD_ASSERT((typeof(((path_s*)NULL)->sPortsN))     PATH_PORTS_N         == PATH_PORTS_N);
-BUILD_ASSERT((typeof(((path_s*)NULL)->dPortsN))     PATH_PORTS_N         == PATH_PORTS_N);
-BUILD_ASSERT((typeof(((path_s*)NULL)->sPortIndex))  (PATH_PORTS_N-1)     == (PATH_PORTS_N-1));
-BUILD_ASSERT((typeof(((path_s*)NULL)->dPortIndex))  (PATH_PORTS_N-1)     == (PATH_PORTS_N-1));
-
-//
-BUILD_ASSERT((sizeof(((path_s*)NULL)->acks)*8) == ACKS_N);
 
 // A ARRAY DE OUTPUT É PARA NAO PRECISAR DE LOCK
 #define O_KEYS_ALL     19
@@ -268,44 +218,6 @@ struct node_s { // DEIXA TUDO NO MESMO CACHE LINE PARA A ITERACAO DO KEEPER
 // -- RO
     u64 secret [SECRET_KEYS_N] [K_LEN]; // TODO: PARA SER DINAMICO, TERA QUE RESETAR TAMBEM O node->paths[*].pstats
 };
-
-BUILD_ASSERT(sizeof(((node_s*)NULL)->pstats)
-         >= (sizeof(((node_s*)NULL)->pstats[0][0]) * PSTATS_N));
-
-//
-BUILD_ASSERT(sizeof(((node_s*)NULL)->oKeys)  == (O_KEYS_ALL * K_SIZE));
-BUILD_ASSERT(sizeof(((node_s*)NULL)->iKeys)  == (I_KEYS_ALL * K_SIZE));
-BUILD_ASSERT(sizeof(((node_s*)NULL)->secret) == (SECRET_KEYS_N * K_SIZE));
-BUILD_ASSERT(sizeof(((node_s*)NULL)->synCounters) == 128);
-BUILD_ASSERT(sizeof(((node_s*)NULL)->paths)  == 4096);
-BUILD_ASSERT(sizeof(((node_s*)NULL)->pstats) == 16384);
-
-BUILD_ASSERT(offsetof(node_s, opaths)      % CACHE_LINE_SIZE == 0);
-BUILD_ASSERT(offsetof(node_s, ptr)         % CACHE_LINE_SIZE == 0);
-BUILD_ASSERT(offsetof(node_s, synCounters) % CACHE_LINE_SIZE == 0);
-BUILD_ASSERT(offsetof(node_s, paths)       % CACHE_LINE_SIZE == 0);
-BUILD_ASSERT(offsetof(node_s, pstats)      % CACHE_LINE_SIZE == 0);
-BUILD_ASSERT(offsetof(node_s, oKeys)       % CACHE_LINE_SIZE == 0);
-BUILD_ASSERT(offsetof(node_s, iKeys)       % CACHE_LINE_SIZE == 0);
-BUILD_ASSERT(offsetof(node_s, secret)      % CACHE_LINE_SIZE == 0);
-
-// THE TYPES MUST BE ABLE TO HOLD THE VALUES
-BUILD_ASSERT((typeof(((node_s*)NULL)->nid))NID_MAX == NID_MAX);
-BUILD_ASSERT((typeof(((node_s*)NULL)->mtu))MTU_MAX == MTU_MAX);
-//BUILD_ASSERT((typeof(((node_s*)NULL)->info))N_INFO == N_INFO);
-//BUILD_ASSERT((typeof(((node_s*)NULL)->connsN))CONNS_N_MAX == CONNS_N_MAX);
-BUILD_ASSERT((typeof(((node_s*)NULL)->weights))(PATHS_N * PATH_WEIGHT_MAX) == (PATHS_N * PATH_WEIGHT_MAX));
-
-BUILD_ASSERT((typeof(((node_s*)NULL)->kpaths))KPATH(PID_MAX) == KPATH(PID_MAX));
-BUILD_ASSERT((typeof(((node_s*)NULL)->opaths))OPATH(PID_MAX) == OPATH(PID_MAX));
-BUILD_ASSERT((typeof(((node_s*)NULL)->ipaths))IPATH(PID_MAX) == IPATH(PID_MAX));
-
-BUILD_ASSERT((typeof(((node_s*)NULL)->kpaths))KPATHS == KPATHS);
-BUILD_ASSERT((typeof(((node_s*)NULL)->opaths))OPATHS == OPATHS);
-BUILD_ASSERT((typeof(((node_s*)NULL)->ipaths))IPATHS == IPATHS);
-
-BUILD_ASSERT(sizeof(((node_s*)NULL)->secret[0]) == K_SIZE);
-BUILD_ASSERT(sizeof(((node_s*)NULL)->secret) == SECRET_SIZE);
 
 #define node_is_off(node)  (((uintptr_t)(node)) & 1)
 

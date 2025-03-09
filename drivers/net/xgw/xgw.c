@@ -120,7 +120,8 @@ int in (skb_s* const skb);
 
 // get_jiffies_64()
 // jiffies64_to_msecs()
-static inline u64 hz_as_ms (const u64 j) {
+static inline u64 get_current_ms (void) {
+    const u64 j = get_jiffies_64();
 #if HZ <= MSEC_PER_SEC && !(MSEC_PER_SEC % HZ)
 	return (MSEC_PER_SEC / HZ) * j;
 #else
@@ -134,7 +135,9 @@ static inline u64 hz_as_ms (const u64 j) {
 #endif
 #include "random.c"
 #include "ports.c"
-#include "pkt.c"
+#include "pkt_skels.c"
+#include "pkt_encap_finish.c"
+#include "pkt_encap.c"
 #include "crypto.c"
 #include "out.c"
 #include "in_discover.c"
@@ -143,6 +146,7 @@ static inline u64 hz_as_ms (const u64 j) {
 #include "stats.c"
 #include "dev.c"
 #include "cmd.c"
+#include "asserts.h"
 
 /*
 

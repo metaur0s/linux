@@ -1,6 +1,4 @@
 
-#define __ct1(x) __ctz(~(x))
-
 static void keeper (struct timer_list* const timer) {
 
 #ifdef CONFIG_XGW_BEEP
@@ -13,11 +11,9 @@ static void keeper (struct timer_list* const timer) {
 
     spin_lock_irqsave(&xlock, iflags);
 
-    //const uint up = !!(xgw->flags & IFF_UP); // == N_ON & P_ON
-
     timer->expires = jiffies + KEEPER_INTERVAL;
 
-    const u64 now_hz = get_jiffies_64();
+    const u64 now = get_current_ms();
 
     for (node_s* node = knodes; node; node = node->next) {
 
@@ -159,7 +155,7 @@ static void keeper (struct timer_list* const timer) {
 
                     path->info      ^= K_LISTEN | K_ESTABLISHED;
                     path->acks       = 0;
-                    path->since      = now_hz;
+                    path->since      = now;
                     path->starts    += 1;
                  // path->sent      -> 0  --- SERA SETADO ABAIXO
                  // path->lcounter  -> 0  --- SERA SETADO ABAIXO
@@ -183,7 +179,7 @@ static void keeper (struct timer_list* const timer) {
 
                 const u64 pongReceived = atomic_get(&path->pongReceived);
 
-                if ((pongReceived + path->timeout * HZ) < now_hz) {
+                if ((pongReceived + path->timeout * HZ) < now) {
                     // TIMED OUT WAITING FOR PONGS
                     printk("XGW: %s [%s]: TIMED OUT\n", node->name, path->name);
                     goto _suspend;
@@ -239,7 +235,7 @@ static void keeper (struct timer_list* const timer) {
                         O_KEY_SYN : O_KEY_PING;
 
                     const u64 rtime = (o == O_KEY_SYN) ?
-                        path->syn : RTIME(hz_as_ms(now_hz), atomic_get(&path->tdiff));
+                        path->syn : RTIME(hz_as_ms(now), atomic_get(&path->tdiff));
 
                     // ENCAPSULATE THE PING
                     pkt_encapsulate(node, o, rtime, &path->skel, skb, ping, PING_SIZE);
