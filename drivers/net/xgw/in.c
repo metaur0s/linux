@@ -170,6 +170,7 @@ _is_xgw:
     s64 tdiff    = atomic_get(&path->tdiff);
     u64 rtime    = atomic_get(&path->rtime);
 
+    // SITUATION VS PACKET TYPE
     if (rtime >= RTIME_ESTABLISHED) {
         if (i == I_KEY_SYN)
             // ESTABLISHED RECEBE TUDO MENOS SYN
@@ -179,8 +180,11 @@ _is_xgw:
             // CONNECTING SO RECEBE PONGS
             ret_path(PSTATS_I_NOT_PONG);
     } elif (rtime == RTIME_LISTENING) {
-        if (i != I_KEY_SYN &&
-            i != I_KEY_PING)
+        if (i == I_KEY_SYN) {
+            if (p_ltime != path->syn)
+                // ELE NAO CONHECE NOSSO CODIGO
+                ret_path(PSTATS_I_LTIME_NOT_SYN);
+        } elif (i != I_KEY_PING)
             // LISTENING SO RECEBE SYN E PING
             ret_path(PSTATS_I_NOT_SYN_OR_PING);
     } else { // LISTENING, MAS EM ESTADO DE ACCEPTING
@@ -188,22 +192,30 @@ _is_xgw:
         ret_path(PSTATS_I_WHILE_ACCEPTING);
     }
 
-    if (i == I_KEY_SYN) {
-        if (p_ltime != path->syn)
-            // ELE NAO CONHECE NOSSO CODIGO
-            ret_path(PSTATS_I_LTIME_NOT_SYN);
-    } elif (p_ltime < RTIME_MIN
-         || p_ltime > RTIME_MAX) {
+    // LTIME
+    if (i != I_KEY_SYN) { // THE SYN LTIME CHECK WAS MOVED ABOVE
+
+        if (p_ltime < RTIME_MIN
+         || p_ltime > RTIME_MAX)
             // INVALID LTIME
             ret_path(PSTATS_I_LTIME_INVALID);
-    } else { const s64 diff = (s64)p_ltime - (s64)now;
-        if (!(-10000 <= diff && diff <= 10000))
-            // ELE NAO CONHECE NOSSO TIME
-            ret_path(PSTATS_I_LTIME_MISMATCH);
-        if (diff > 1280) // PEER AFOBADO
-            ret_path(PSTATS_I_LTIME_SKEW_UP);
-        if (diff < -1280) // PEER LESADO
-            ret_path(PSTATS_I_LTIME_SKEW_DOWN);
+
+        if (i == I_KEY_PONG) {
+            if (p_ltime != atomic_get(&path->pingSent))
+                ret_path(PSTATS_I_LTIME_MISMATCH_PING_SENT);
+        } else { // PING / DATA
+
+            // OBS: CONSIDERA LATENCY
+            const s64 diff = (s64)(p_ltime + latency) - (s64)now;
+
+            if (!(-10000 <= diff && diff <= 10000))
+                // ELE NAO CONHECE NOSSO TIME
+                ret_path(PSTATS_I_LTIME_MISMATCH);
+            if (diff > 1280) // PEER AFOBADO
+                ret_path(PSTATS_I_LTIME_SKEW_UP);
+            if (diff < -1280) // PEER LESADO
+                ret_path(PSTATS_I_LTIME_SKEW_DOWN);
+        }
     }
 
     // DECRYPT
@@ -237,7 +249,7 @@ _is_xgw:
             //          (LEVANDO EM CONTA QUE ISTO FOI UM SNAPSHOT DELE HA *LATENCY* ATÉ RECEBERMOS)
             // ESTÁ EM RELAÇÃO A
             //      (O RELOGIO DELE COMO ELE DEVE ESTAR (APROXIMADO))
-            const s64 diff = (p_rtime + latency) - RTIME(now, tdiff);
+            const s64 diff = (s64)(p_rtime + latency) - (s64)RTIME(now, tdiff);
             // A IMPRECISÃO NÃO PODE SER TÃO GRANDE ASSIM:
             // NOTE: CONSIDERAR PATH->LATENCY_VAR
             if (diff > 2000) // PEER AFOBADO
@@ -246,8 +258,14 @@ _is_xgw:
                 ret_path(PSTATS_I_RTIME_SKEW_DOWN);
         }
 
-        // TODO: CONSIDER MIN/MAX CONFIGURED
-        latency = (latency + (now - p_ltime)/2) / 2;
+        //
+        latency = (3*latency + (now - p_ltime)/2) / 4;
+
+        // CAP TO CONFIGURED LIMITS
+        if (latency > path->latency_max)
+            latency = path->latency_max;
+        elif (latency < path->latency_min)
+              latency = path->latency_min;
 
         // ELE NOS MANDOU O TIME DELE DE QUANDO ELE RECEBEU.
         // MAS CONSIDERA O TIME QUE ELE TINHA QUANDO ENVIAMOS.
