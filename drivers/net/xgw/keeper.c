@@ -1,37 +1,25 @@
 
-static inline void keeper_assert_node (const node_s* const node) {
-
-    ASSERT(!node_is_off(node));
-
-    ASSERT(*node->ptr == node);
-
-    // PARAMETERS
-    ASSERT(node->info & N_CONNS_N);
-    ASSERT(node->info & N_MTU);
-    ASSERT(node->info & N_NAME);
-
-    ASSERT(node->mtu >= MTU_MIN);
-    ASSERT(node->mtu <= MTU_MAX);
-
-    ASSERT(node->connsN >= CONNS_MIN);
-    ASSERT(node->connsN <= CONNS_MAX);
-
-    ASSERT((node->info   & N_INFO) == node->info);
-    ASSERT((node->opaths & OPATHS) == node->opaths);
-    ASSERT((node->ipaths & IPATHS) == node->ipaths);
-    ASSERT((node->kpaths & KPATHS) == node->kpaths);
-
-    ASSERT((node->opaths & (node->kpaths * OPATH_0)) == node->opaths);
-    ASSERT((node->ipaths & (node->kpaths * IPATH_0)) == node->ipaths);
-
+#define keeper_assert_node \
+    ASSERT(!node_is_off(node)); \
+    ASSERT(*node->ptr == node); \
+    ASSERT(node->info & N_CONNS_N); \
+    ASSERT(node->info & N_MTU); \
+    ASSERT(node->info & N_NAME); \
+    ASSERT(node->mtu >= MTU_MIN); \
+    ASSERT(node->mtu <= MTU_MAX); \
+    ASSERT(node->connsN >= CONNS_MIN); \
+    ASSERT(node->connsN <= CONNS_MAX); \
+    ASSERT((node->info   & N_INFO) == node->info); \
+    ASSERT((node->opaths & OPATHS) == node->opaths); \
+    ASSERT((node->ipaths & IPATHS) == node->ipaths); \
+    ASSERT((node->kpaths & KPATHS) == node->kpaths); \
+    ASSERT((node->opaths & (node->kpaths * OPATH_0)) == node->opaths); \
+    ASSERT((node->ipaths & (node->kpaths * IPATH_0)) == node->ipaths); \
     ASSERT(node->oVersions[O_KEY_PING] == I_KEY_PING);
-}
 
-static inline void keeper_assert_path (const path_s* const path) {
-
-    ASSERT(path->nid == node->nid);
+#define keeper_assert_path \
+    ASSERT(path->nid == node->nid); \
     ASSERT(path->pid == pid);
-}
 
 static inline void keeper_send_pings (void) {
 
@@ -89,7 +77,7 @@ static void keeper (struct timer_list* const timer) {
 
     for (node_s* node = knodes; node; node = node->next) {
 
-        keeper_assert_node(node);
+        keeper_assert_node;
 
 #ifdef CONFIG_XGW_BEEP // SITUACAO DESTE NODE, CONFORME OS PATHS
         uint stableWeights = 0, stableSum = 0;
@@ -105,7 +93,7 @@ static void keeper (struct timer_list* const timer) {
 
             path_s* const path = &node->paths[pid];
 
-            keeper_assert_path(path);
+            keeper_assert_path;
 
             if (path->info & K_START) { //231956
 
