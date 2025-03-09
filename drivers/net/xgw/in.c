@@ -260,10 +260,10 @@ _is_xgw:
             // E A RESPOSTA VIR TELEPATICAMENTE E SER PROCESSADA AO MESMO TEMPO.
             // O RESULTADO É QUE PODERIAMOS ESTAR ESCREVENDO ESTE P_RTIME ANTIGO POR CIMA DO NOVO.
             // MAS DE QUALQUER JEITO, O NOVO É MAIOR DO QUE O ANTERIOR A ESTE, COMO CHECAMOS ACIMA.
-            __atomic_store_n(&path->latency,    latency,  __ATOMIC_RELAXED);
-            __atomic_store_n(&path->pongReceived, now,    __ATOMIC_RELAXED);
-            __atomic_store_n(&path->tdiff,        tdiff,  __ATOMIC_RELAXED);
-            __atomic_store_n(&path->rtime,       p_rtime, __ATOMIC_SEQ_CST); // RTIME_CONNECTING / RTIME_ESTABLISHED -> RTIME_ESTABLISHED
+            __atomic_store_n(&path->latency, (u16)latency, __ATOMIC_RELAXED);
+            __atomic_store_n(&path->pongReceived, now,     __ATOMIC_RELAXED);
+            __atomic_store_n(&path->tdiff,        tdiff,   __ATOMIC_RELAXED);
+            __atomic_store_n(&path->rtime,       p_rtime,  __ATOMIC_SEQ_CST); // RTIME_CONNECTING / RTIME_ESTABLISHED -> RTIME_ESTABLISHED
 
             // LEARN HIS INPUT KEYS (MY OUTPUT KEYS)
             const uint ver = BE16(ping->ver);
