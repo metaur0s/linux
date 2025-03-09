@@ -139,7 +139,7 @@ static noinline uint in_ping (node_s* const node, const skb_s* const skb, pkt_s*
         // MAS DE QUALQUER JEITO, O NOVO É MAIOR DO QUE O ANTERIOR A ESTE, COMO CHECAMOS ACIMA.
         __atomic_store_n(&path->latency, (u16)latency, __ATOMIC_RELAXED);
         __atomic_store_n(&path->pongReceived, now,     __ATOMIC_RELAXED);
-        __atomic_store_n(&path->tdiff,        tdiff,   __ATOMIC_RELAXED);
+        __atomic_store_n(&path->tdiff,        tdiff,   __ATOMIC_RELAXED); // TEM QUE SER ESCRITO ANTES DO RTIME
         __atomic_store_n(&path->rtime,       p_rtime,  __ATOMIC_SEQ_CST); // RTIME_CONNECTING / RTIME_ESTABLISHED -> RTIME_ESTABLISHED
 
         // LEARN HIS INPUT KEYS (MY OUTPUT KEYS)
@@ -181,6 +181,8 @@ static noinline uint in_ping (node_s* const node, const skb_s* const skb, pkt_s*
             // AGORA JA PODE USAR O PATH->SKEL
             // LIBERA O KEEPER PARA ENVIAR PINGS
             // LIBERA O OUT PARA ENVIAR DADOS
+            // OBS.: CUIDADO COM ESTE LATENCY AQUI, POIS AINDA NAO FOI DESCOBERTO O REAL
+            tdiff = LTIME_DIFF_RTIME(now, p_rtime + latency);
             __atomic_store_n(&path->tdiff,  tdiff,  __ATOMIC_RELAXED);
             __atomic_store_n(&path->rtime, p_rtime, __ATOMIC_SEQ_CST); // RTIME_ACCEPTING -> RTIME_ESTABLISHED
         }
