@@ -192,23 +192,10 @@ static void reset_node_ping_keys (node_s* const node, const uint self, const uin
         }
     }
 
-    //
+    // SET THE DEFAULT SYN CODES FOR THE PATHS
+    // AN ATTACKER ABLE TO WATCH ONE OF THEM CAN'T KNOW THE OTHER ONES
     for_count (pid, PATHS_N) {
-
-        // O CLIENTE VAI MANDAR CADA SYN COM ESTE DCOUNTER
-        // O SERVER VAI RECEVER O SYN COM ESTE DCOUNTER
-        node->synCounters[pid] = sum;
-
-        if (1) {
-            // THE PATH IS USING THE DEFAULT SYN COUNTER
-            // TODO: NO FUTURO, PERMITIR O USUARIO SETAR ISSO
-            // ENTAO ACIMA COLOCA NUMA ARRAY synCountersAuto
-            // E AQUI COPIA PARA o synCounters
-            //
-            // TODO: ISSO É AO ATIVAR O PATH
-            node->paths[pid].syn = sum;
-        }
-
+        node->syns[pid] = sum + popcount(sum) * sum;
         sum += swap64(sum);
     }
 }

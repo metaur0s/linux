@@ -235,12 +235,12 @@ enum H_OFFSET {
 };
 
 // NOTE: ESSA PORRA DESSE ALINHAMENTO NAO ESTA DEIXANDO OS 64-BIT WORDS ALINHADOS PARA PROCESSARMOS
-#define XGW_HEADROOM (sizeof(pkt_s) + (PKT_ALIGN_RANDOMS * sizeof(u64)))
+#define XGW_HEADROOM (sizeof(pkt_s) + (PKT_ALIGN_WORDS * sizeof(u64)))
 
 // ESTAMOS PEGANDO TODOS OS ENCAPSULAMENTOS QUE O SISTEMA JA USA, E AUMENTANDO ISSO:
-//  PAD_NO_ENCAP + sizeof(hdr_x_s) + PKT_ALIGN_RANDOMS*sizeof(u64)
+//  PAD_NO_ENCAP + sizeof(hdr_x_s) + PKT_ALIGN_WORDS*sizeof(u64)
 // PORTANTO:
-//      32 + sizeof(hdr_x_s) + PKT_ALIGN_RANDOMS*sizeof(u64) = 64
+//      32 + sizeof(hdr_x_s) + PKT_ALIGN_WORDS*sizeof(u64) = 64
 // DEVERA INFLUENCIAR:
 //  -   LL_MAX_HEADER
 //  -   MAX_HEADER
@@ -252,7 +252,7 @@ BUILD_ASSERT(LL_MAX_HEADER == 196 );
 BUILD_ASSERT(MAX_HEADER == (196 + 48));
 
 // JA O MTU, INFLUENCIA
-// sizeof(hdr_x_s) + PKT_ALIGN_RANDOMS*sizeof(u64) = 40
+// sizeof(hdr_x_s) + PKT_ALIGN_WORDS*sizeof(u64) = 40
 
 #define __
 

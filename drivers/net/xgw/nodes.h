@@ -212,7 +212,7 @@ struct node_s { // DEIXA TUDO NO MESMO CACHE LINE PARA A ITERACAO DO KEEPER
 // 32 -- RO - NAME
     char name [NODE_NAME_SIZE];
 // 128 --
-    u64 synCounters [PATHS_N]; // THE DEFAULT ONES
+    u64 syns [PATHS_N]; // THE DEFAULT ONES
 // 4096 -- PATHS
     path_s paths [PATHS_N];
 // 16384 --

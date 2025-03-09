@@ -132,7 +132,7 @@ static void keeper (struct timer_list* const timer) {
                     } elif (path_is_ip6(path)) { hdr_ip6_s* const ip6 = PKT_IP6(&path->skel);
                         ip6->tos = BE8(path->tos);
                         ip6->ttl = BE8(path->ttl);
-                        ip6->flow = BE16(0x1111U * path->pid);
+                        ip6->flow = BE16((node->nid * PATHS_N) + path->pid);
                     }
 
                     // TODO: PRECOMPUTE TCP CHECKSUM
@@ -155,13 +155,13 @@ static void keeper (struct timer_list* const timer) {
                     path->rtime      = RTIME_CONNECTING;
                 } else {
                     printk("XGW: %s [%s]: LISTENING\n", node->name, path->name);
-                    path->skel.type  = 0; //
-                    path->rtime      = RTIME_LISTENING;
-                }   path->pingSent   = 0; // AINDA NAO CONSTRUI PING
+                    path->skel.type    = 0; //
+                    path->rtime        = RTIME_LISTENING;
+                }   path->pingSent     = 0; // AINDA NAO CONSTRUI PING
                     path->pongReceived = 0;
-                    path->tdiff      = 0;
-                    path->latency    = path->latency_max + path->latency_var;
-                    path->info      ^= K_START | K_LISTEN;
+                    path->tdiff        = 0;
+                    path->latency      = path->latency_max + path->latency_var;
+                    path->info        ^= K_START | K_LISTEN;
 
                 // ENABLE IN
                 // NOTE: AQUI ENTAO TEM UM RACE CONDITION, ELE PODE RECEBER UM PING/PONG E COMO SERÁ INTERPRETADO?
@@ -272,7 +272,7 @@ static void keeper (struct timer_list* const timer) {
                         O_KEY_SYN : O_KEY_PING;
 
                     const u64 rtime = (o == O_KEY_SYN) ?
-                        path->syn : RTIME(hz_as_ms(now), atomic_get(&path->tdiff));
+                        path->syn : RTIME(now, atomic_get(&path->tdiff));
 
                     // ENCAPSULATE THE PING
                     pkt_encapsulate(node, o, rtime, &path->skel, skb, ping, PING_SIZE);

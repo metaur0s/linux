@@ -583,6 +583,10 @@ static ssize_t __cold_as_ice __optimize_size cmd (struct file *file, const char 
                         pinfo &= ~P_MAC_DST;
                 }
 
+                // TODO:
+                if (0) // !(pinfo & P_SYN)
+                    path->syn = node->syns[pid];
+
                 // IF THE NODE IS ON, START THE PATH NOW
                 if (node->info & N_ON) {
                     node->kpaths |= KPATH(pid);
