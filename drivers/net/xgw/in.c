@@ -10,14 +10,13 @@
 #define COUNTER_SYN_MIN ((u64)8)
 #define COUNTER_SYN_MAX ((~(u64)0) - 32)
 
-static inline void (const node_s* const node, path_s* const path, const skel_s* const skel) {
+static inline void pong_send (node_s* const node, path_s* const path, const pkt_s* const skel, const u64 p_rtime, const u64 now) {
 
     uint stat;
 
     skb_s* const oskb = alloc_skb(64 + PKT_SIZE + PKT_ALIGN_SIZE + PING_SIZE + 64, GFP_ATOMIC);
 
     if (oskb) {
-
 
         // TODO: USA O SKB_DATA ALIGNED
         ping_s* const pong = SKB_DATA(oskb) + 64 + PKT_SIZE + PKT_ALIGN_SIZE;
@@ -396,7 +395,7 @@ _is_xgw:
             skel = &path->skel;
 
         // RESPONDE COM UM PONG
-        pong_send(node, path, skel);
+        pong_send(node, path, skel, p_rtime, now);
 
         ret_path(PSTATS_I_PING_GOOD);
     }
