@@ -83,7 +83,9 @@
 #include "stats.h"
 #include "nodes.h"
 #include "dhcp.h"
-#include "cmd.h"
+#include "cmd_codes.h"
+#include "cmd_errs.h"
+#include "cmd_args_types.h"
 
 DEFINE_SPINLOCK(xlock);
 
