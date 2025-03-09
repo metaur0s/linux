@@ -1,4 +1,32 @@
 
+static inline void (const node_s* const node) {
+
+    ASSERT(!node_is_off(node));
+
+    ASSERT(*node->ptr == node);
+
+    // PARAMETERS
+    ASSERT(node->info & N_CONNS_N);
+    ASSERT(node->info & N_MTU);
+    ASSERT(node->info & N_NAME);
+
+    ASSERT(node->mtu >= MTU_MIN);
+    ASSERT(node->mtu <= MTU_MAX);
+
+    ASSERT(node->connsN >= CONNS_MIN);
+    ASSERT(node->connsN <= CONNS_MAX);
+
+    ASSERT((node->info   & N_INFO) == node->info);
+    ASSERT((node->opaths & OPATHS) == node->opaths);
+    ASSERT((node->ipaths & IPATHS) == node->ipaths);
+    ASSERT((node->kpaths & KPATHS) == node->kpaths);
+
+    ASSERT((node->opaths & (node->kpaths * OPATH_0)) == node->opaths);
+    ASSERT((node->ipaths & (node->kpaths * IPATH_0)) == node->ipaths);
+
+    ASSERT(node->oVersions[O_KEY_PING] == I_KEY_PING);
+}
+
 static void keeper (struct timer_list* const timer) {
 
 #ifdef CONFIG_XGW_BEEP
@@ -17,30 +45,7 @@ static void keeper (struct timer_list* const timer) {
 
     for (node_s* node = knodes; node; node = node->next) {
 
-        ASSERT(!node_is_off(node));
-
-        ASSERT(*node->ptr == node);
-
-        // PARAMETERS
-        ASSERT(node->info & N_CONNS_N);
-        ASSERT(node->info & N_MTU);
-        ASSERT(node->info & N_NAME);
-
-        ASSERT(node->mtu >= MTU_MIN);
-        ASSERT(node->mtu <= MTU_MAX);
-
-        ASSERT(node->connsN >= CONNS_MIN);
-        ASSERT(node->connsN <= CONNS_MAX);
-
-        ASSERT((node->info   & N_INFO) == node->info);
-        ASSERT((node->opaths & OPATHS) == node->opaths);
-        ASSERT((node->ipaths & IPATHS) == node->ipaths);
-        ASSERT((node->kpaths & KPATHS) == node->kpaths);
-
-        ASSERT((node->opaths & (node->kpaths * OPATH_0)) == node->opaths);
-        ASSERT((node->ipaths & (node->kpaths * IPATH_0)) == node->ipaths);
-
-        ASSERT(node->oVersions[O_KEY_PING] == I_KEY_PING);
+        keeper_assert_node(node);
 
 #ifdef CONFIG_XGW_BEEP // SITUACAO DESTE NODE, CONFORME OS PATHS
         uint stableWeights = 0, stableSum = 0;
