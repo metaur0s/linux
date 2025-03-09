@@ -330,7 +330,7 @@ _is_xgw:
                 // LEARN ON PATH
                 skel = &path->skel;
             } else // LOCK FAILED
-                ret_path(PSTATS_I_ACCEPT_RACED);
+                ret_path(PSTATS_I_PING_GOOD_ACCEPT_RACED);
 
             in_discover(path, skb, skel);
 
