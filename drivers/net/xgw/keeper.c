@@ -11,7 +11,7 @@ static void keeper (struct timer_list* const timer) {
 
     spin_lock_irqsave(&xlock, iflags);
 
-    timer->expires = jiffies + KEEPER_INTERVAL;
+    timer->expires = jiffies + KEEPER_INTERVAL_JIFFIES;
 
     const u64 now = get_current_ms();
 

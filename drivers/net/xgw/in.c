@@ -174,7 +174,7 @@ _is_xgw:
     if (rtime >= RTIME_ESTABLISHED) {
         if (i == I_KEY_SYN)
             // ESTABLISHED RECEBE TUDO MENOS SYN
-            ret_path(PSTATS_I_ESTABLISHED_SYN);
+            ret_path(PSTATS_I_SYN_WHILE_ESTABLISHED);
     } elif (rtime == RTIME_CONNECTING) {
         if (i != I_KEY_PONG)
             // CONNECTING SO RECEBE PONGS
@@ -183,7 +183,7 @@ _is_xgw:
         if (i == I_KEY_SYN) {
             if (p_ltime != path->syn)
                 // ELE NAO CONHECE NOSSO CODIGO
-                ret_path(PSTATS_I_LTIME_NOT_SYN);
+                ret_path(PSTATS_I_LTIME_MISMATCH_SYN);
         } elif (i != I_KEY_PING)
             // LISTENING SO RECEBE SYN E PING
             ret_path(PSTATS_I_NOT_SYN_OR_PING);
@@ -310,7 +310,7 @@ _is_xgw:
                                         memcpy(node->oKeys[o], K, sizeof(K));
                              __atomic_store_n(&node->oUse, o,  __ATOMIC_RELEASE);
 
-            ret_path(PSTATS_I_PONG_OK);
+            ret_path(PSTATS_I_PONG_GOOD);
         }
 
         // THIS IS A PING
@@ -321,9 +321,11 @@ _is_xgw:
 
             if (i == I_KEY_SYN) {
                 // LEARN O PATH EM UM HEADER TEMPORARIO
-                // TODO: LIMITAR A QUANTIDADE DE SYNS RECEBIVEIS A CADA KEEPER INTERVAL
+                if (0)
+                    // LIMITAR A QUANTIDADE DE SYNS RECEBIVEIS A CADA KEEPER INTERVAL
+                    ret_path(PSTATS_I_SYN_TOO_MANY);
                 skel = &temp_skel;
-            } elif (__atomic_compare_exchange_n(&path->rtime, &rtime, RTIME_ACCEPTING, 0, __ATOMIC_SEQ_CST, __ATOMIC_RELAXED))
+            } elif (__atomic_compare_exchange_n(&path->rtime, &rtime, RTIME_ACCEPTING, 0, __ATOMIC_SEQ_CST, __ATOMIC_RELAXED)) {
                 // SYN-ACK
                 // LEARN ON PATH
                 skel = &path->skel;
