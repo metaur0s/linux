@@ -27,6 +27,12 @@ static inline void keeper_assert_node (const node_s* const node) {
     ASSERT(node->oVersions[O_KEY_PING] == I_KEY_PING);
 }
 
+static inline void keeper_assert_path (const path_s* const path) {
+
+    ASSERT(path->nid == node->nid);
+    ASSERT(path->pid == pid);
+}
+
 static inline void keeper_send_pings (void) {
 
     // SEND PINGS
@@ -99,8 +105,7 @@ static void keeper (struct timer_list* const timer) {
 
             path_s* const path = &node->paths[pid];
 
-            ASSERT(path->nid == node->nid);
-            ASSERT(path->pid == pid);
+            keeper_assert_path(path);
 
             if (path->info & K_START) { //231956
 
