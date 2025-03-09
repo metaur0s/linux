@@ -415,7 +415,7 @@ _is_xgw:
     // IS SYNCED (p_ltime)
 
     if (i >= I_KEY_SYN)
-        ret_path(in_ping(node, path, skb, pkt));
+        ret_path(in_ping(node, skb, pkt));
 
     // REPLAY/CORRUPTION/FORGING/EXPIRATION PROTECTION
     // NOTE: LEMBRANDO QUE O TEMPO TODO AMBOS FICAM AJUSTANDO O NODE->DIFF,
