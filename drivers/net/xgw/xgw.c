@@ -21,7 +21,8 @@
 #define CACHE_LINE_SIZE 64
 
 //
-#define KEEPER_INTERVAL ((9 * HZ) / 10)
+#define KEEPER_INTERVAL_MS 900
+#define KEEPER_INTERVAL_HZ ((9 * HZ) / 10)
 
 // HASHEIA E AGRUPA POR INTERFACE INDEX
 // NOTE: SE MUDAR DE INTERFACE VAI TER QUE REMOVER DA LISTA PRIMEIRO, E SÓ DEPOIS JOGAR PARA OUTRO
@@ -118,7 +119,6 @@ static void keeper (struct timer_list* const timer);
 
 int in (skb_s* const skb);
 
-// get_jiffies_64()
 // jiffies64_to_msecs()
 static inline u64 get_current_ms (void) {
     const u64 j = get_jiffies_64();

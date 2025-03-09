@@ -256,6 +256,8 @@ _is_xgw:
             // CONNECTING / ESTABLISHED
 
             if (!__atomic_compare_exchange_n(&path->pingSent, &p_ltime, 0, 0, __ATOMIC_SEQ_CST, __ATOMIC_RELAXED))
+                // THIS PONG WAS ALREADY PROCESSED, OR
+                // ANOTHER PING WAS SENT (AND A NEW PONG IS EXPECTED)
                 ret_path(PSTATS_I_PONG_RACED);
 
             // CONFIRMOU QUE ESTE PONG RESPONDEU O ULTIMO PING ENVIADO

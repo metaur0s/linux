@@ -131,6 +131,3 @@ typedef struct net_device_ops net_device_ops_s;
 #define atomic_add(ptr, v)   __atomic_add_fetch(ptr, v, __ATOMIC_RELAXED)
 #define atomic_sub(ptr, v)   __atomic_sub_fetch(ptr, v, __ATOMIC_RELAXED)
 #define atomic_inc(ptr)      __atomic_add_fetch(ptr, 1, __ATOMIC_RELAXED)
-
-#define atomic_from_to(ptr, old, new)  __atomic_compare_exchange_n(ptr, old, new, 0, __ATOMIC_RELAXED, __ATOMIC_RELAXED)
-#define acquire_from_to(ptr, old, new) __atomic_compare_exchange_n(ptr, old, new, 0, __ATOMIC_ACQUIRE, __ATOMIC_RELAXED)

@@ -177,9 +177,10 @@ static void keeper (struct timer_list* const timer) {
                     goto _suspend;
                 }
 
+                const uint latency = atomic_get(&path->latency);
                 const u64 pongReceived = atomic_get(&path->pongReceived);
 
-                if ((pongReceived + path->timeout * HZ) < now) {
+                if (((pongReceived ?: path->since) + path->timeout) < now) {
                     // TIMED OUT WAITING FOR PONGS
                     printk("XGW: %s [%s]: TIMED OUT\n", node->name, path->name);
                     goto _suspend;
@@ -189,7 +190,7 @@ static void keeper (struct timer_list* const timer) {
                 // TODO: ELE TEM QUE TER RECEBIDO TAMBEM UM PING, HA PELO MENOS 2 KEEPER INTERVALS
                 // TODO: E A INTERFACE ESTA UP
                 // TODO: E A INTERFACE ESTA COM CARRIER
-                const u64 acks = (path->acks << 1) | (pongReceived <= (path->pingSent + 2*atomic_get(&path->latency) + path->latency_var));
+                const u64 acks = (path->acks << 1) | (pongReceived <= (path->pingSent + 2*latency + path->latency_var));
 
                 if (path->acks != acks) {
                     path->acks = acks;
@@ -206,7 +207,7 @@ static void keeper (struct timer_list* const timer) {
                     }
 
                     if (str)
-                        printk("XGW: %s [%s]: %s WITH LATENCY %u\n", node->name, path->name, str, (uint)atomic_get(&path->latency));
+                        printk("XGW: %s [%s]: %s WITH LATENCY %u\n", node->name, path->name, str, latency);
                 }
 
                 // DOS PIORES AOS MELHORES

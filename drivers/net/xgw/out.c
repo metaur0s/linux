@@ -160,8 +160,13 @@ static netdev_tx_t out (skb_s* const skb, net_device_s* const dev) {
 
         // CONSIDERAR O LATENCY (SÓ DE IDA) + CPU BUSY TIME + IMPRECISOES
         burst_new = ((now + atomic_get(&path->latency) + atomic_get(&path->latency_var) + 16) * PATHS_N) + pid;
- //__atomic_compare_exchange_n!!! If they are not equal, the operation is
+
         // STORE STREAM TIMEOUT + PID
+        // IF THIS COMPARE EXCHANGE FAIL, IT'S BECAUSE SOME OTHER OUT RUNNED FOR THIS STREAM HASH, AND:
+        //      a) THE PATH IS NOT ON OPATHS ANYMORE, AND CHANGED TO OTHER ONE
+        //      b) THE SAME PATH WAS JUST USED ON THIS STREAM,
+        //         AND WE WILL RE-READ AND END USING IT ANYWAY, MAY BE OVERWRITING THE TIME BY OUR LOWER VALUE.
+        //         IT'S NO PROBLEM, AS IT'S A MINIMUM TIME DIFFERENCE (AND NO TIMEOUT AND CHANGE MAY OCCUR BECAUSE OF THIS)
     } while (!__atomic_compare_exchange_n(conn, &burst, burst_new, 0, __ATOMIC_RELAXED, __ATOMIC_RELAXED));
 
 #if 1
