@@ -192,9 +192,19 @@ _is_xgw:
         if (p_ltime != path->syn)
             // ELE NAO CONHECE NOSSO CODIGO
             ret_path(PSTATS_I_LTIME_NOT_SYN);
-    } elif (ABS_DIFF(now, p_ltime) > 400)
-        // ELE NAO CONHECE NOSSO TIME
-        ret_path(PSTATS_I_LTIME_MISMATCH);
+    } elif (p_ltime < RTIME_MIN
+         || p_ltime > RTIME_MAX) {
+            // INVALID LTIME
+            ret_path(PSTATS_I_LTIME_INVALID);
+    } else { const s64 diff = (s64)p_ltime - (s64)now;
+        if (!(-10000 <= diff && diff <= 10000))
+            // ELE NAO CONHECE NOSSO TIME
+            ret_path(PSTATS_I_LTIME_MISMATCH);
+        if (diff > 1280) // PEER AFOBADO
+            ret_path(PSTATS_I_LTIME_SKEW_UP);
+        if (diff < -1280) // PEER LESADO
+            ret_path(PSTATS_I_LTIME_SKEW_DOWN);
+    }
 
     // DECRYPT
     if (pkt_decrypt(node, i, pkt, size) != hash)
