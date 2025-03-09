@@ -1,5 +1,5 @@
 
-static inline void (const node_s* const node) {
+static inline void keeper_assert_node (const node_s* const node) {
 
     ASSERT(!node_is_off(node));
 
@@ -25,6 +25,44 @@ static inline void (const node_s* const node) {
     ASSERT((node->ipaths & (node->kpaths * IPATH_0)) == node->ipaths);
 
     ASSERT(node->oVersions[O_KEY_PING] == I_KEY_PING);
+}
+
+static inline void keeper_send_pings (void) {
+
+    // SEND PINGS
+    for_count (q, PING_QUEUES_N) {
+
+        path_s** ptr = &pings[q]; path_s* path;
+
+        while ((path = *ptr)) {
+            if (path->info & K_ESTABLISHED) {
+                //
+
+                skb_s* const skb = path->_skb; uint len; uint s;
+
+                if (skb) {
+                    path->_skb = NULL;
+                    path->pingSent = get_current_ms();
+
+                    // TEM QUE LER ANTES POIS O SKB SERA PERTIDO
+                    len = skb->len;
+
+                    skb->ip_summed = CHECKSUM_NONE;
+                    if (dev_queue_xmit(skb)) // TODO: SAME ON DEV_OUT(), BUT THE SKB IS CONSUMED!!!
+                         s = PSTATS_O_PING_FAILED;
+                    else s = PSTATS_O_PING_OK;
+                }   else { s = PSTATS_O_PING_SKB_FAILED; len = 0; } // PING WAS NOT MADE (BECAUSE SKB WASNT RELEASED BY DEVICE)
+// PSTATS_O_PING_PHYS_DOWN
+                // NOTE: WE WILL INFORM THE TOTAL SIZE SENT THROUGHT THE PHYSICAL INTERFACE
+                atomic_add(&path->pstats[s].bytes, len);
+                atomic_inc(&path->pstats[s].count);
+
+                //
+                ptr = &path->next;
+            } else
+               *ptr =  path->next; // NOTE: NOW PATH->NEXT IS INVALID
+        }
+    }
 }
 
 static void keeper (struct timer_list* const timer) {
@@ -340,40 +378,7 @@ _skip:
 
     spin_unlock_irqrestore(&xlock, iflags);
 
-    // SEND PINGS
-    for_count (q, PING_QUEUES_N) {
-
-        path_s** ptr = &pings[q]; path_s* path;
-
-        while ((path = *ptr)) {
-            if (path->info & K_ESTABLISHED) {
-                //
-
-                skb_s* const skb = path->_skb; uint len; uint s;
-
-                if (skb) {
-                    path->_skb = NULL;
-                    path->pingSent = get_current_ms();
-
-                    // TEM QUE LER ANTES POIS O SKB SERA PERTIDO
-                    len = skb->len;
-
-                    skb->ip_summed = CHECKSUM_NONE;
-                    if (dev_queue_xmit(skb)) // TODO: SAME ON DEV_OUT(), BUT THE SKB IS CONSUMED!!!
-                         s = PSTATS_O_PING_FAILED;
-                    else s = PSTATS_O_PING_OK;
-                }   else { s = PSTATS_O_PING_SKB_FAILED; len = 0; } // PING WAS NOT MADE (BECAUSE SKB WASNT RELEASED BY DEVICE)
-// PSTATS_O_PING_PHYS_DOWN
-                // NOTE: WE WILL INFORM THE TOTAL SIZE SENT THROUGHT THE PHYSICAL INTERFACE
-                atomic_add(&path->pstats[s].bytes, len);
-                atomic_inc(&path->pstats[s].count);
-
-                //
-                ptr = &path->next;
-            } else
-               *ptr =  path->next; // NOTE: NOW PATH->NEXT IS INVALID
-        }
-    }
+    keeper_send_pings();
 
     // TODO: IF XGW IS DOWN, STOP BEEP
 #ifdef CONFIG_XGW_BEEP
