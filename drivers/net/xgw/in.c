@@ -7,6 +7,12 @@
 #define RTIME_MIN ((u64)8192)
 #define RTIME_MAX ((u64)(8ULL*12*31*24*3600*1000))
 
+#define LTIME_MIN ((u64)8192)
+#define LTIME_MAX ((u64)(8ULL*12*31*24*3600*1000))
+
+#define TDIFF_MIN ((s64)(-8LL*12*31*24*3600*1000))
+#define TDIFF_MAX ((s64)( 8LL*12*31*24*3600*1000))
+
 #define COUNTER_SYN_MIN ((u64)8)
 #define COUNTER_SYN_MAX ((~(u64)0) - 32)
 

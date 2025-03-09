@@ -5,8 +5,6 @@ typedef struct path_s path_s;
 typedef struct node_s node_s;
 typedef struct stat_s stat_s;
 
-typedef union cmd_arg_s cmd_arg_s;
-
 typedef struct ip4_s ip4_s;
 typedef struct ip6_s ip6_s;
 

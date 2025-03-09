@@ -90,9 +90,9 @@ enum CMD {
     CMD_PATH_SET_CLIENT,
     CMD_PATH_SET_SERVER,
     CMD_PATH_SET_TIMEOUT,
-    CMD_PATH_SET_RTT_MIN,
-    CMD_PATH_SET_RTT_MAX,
-    CMD_PATH_SET_RTT_VAR,
+    CMD_PATH_SET_LATENCY_MIN,
+    CMD_PATH_SET_LATENCY_MAX,
+    CMD_PATH_SET_LATENCY_VAR,
     CMD_PATH_SET_DHCP,
     CMD_PATH_SET_PHYS, // SET THE PATH PHYS
     CMD_PATH_SET_TYPE, // SET THE PATH ENCAPSULATING TYPE
@@ -184,126 +184,55 @@ enum CMD {
 //      VAI TER QUE FORCAR TIPO DE PATH COMPATIVEL COM O TIPO DE DHCP, E VICE-VERSA
 //      COPIAR O DEV DO DHCP
 
-enum CMD_ERRS {
-    CMD_ERR_ALLOC_CONNS,
-    CMD_ERR_ALLOC_NODE,
-    CMD_ERR_ALLOC_SKB,
-    CMD_ERR_INVALID_CONNS_N,
-    CMD_ERR_INVALID_MTU,
-    CMD_ERR_INVALID_NID,
-    CMD_ERR_INVALID_PID,
-    CMD_ERR_INVALID_DID,
-    CMD_ERR_INVALID_NODE_NAME,
-    CMD_ERR_INVALID_PATH_NAME,
-    CMD_ERR_INVALID_PHYS,
-    CMD_ERR_INVALID_DHCP_IP,
-    CMD_ERR_INVALID_PORTS_N,
-    CMD_ERR_INVALID_PASSWORD_LEN,
-    CMD_ERR_INVALID_TYPE,
-    CMD_ERR_INVALID_TOS,
-    CMD_ERR_INVALID_TTL,
-    CMD_ERR_INVALID_VPROTO,
-    CMD_ERR_INVALID_VID,
-    CMD_ERR_INVALID_SESSION,
-    CMD_ERR_INVALID_WEIGHT,
-    CMD_ERR_INVALID_TIMEOUT,
-    CMD_ERR_INVALID_RTT,
-    CMD_ERR_INVALID_RTT_VAR,
-    CMD_ERR_INVALID_RTT_RANGE,
-    CMD_ERR_PATH_USE_DHCP_NOT_IP,
-    CMD_ERR_PATH_USE_DHCP_NOT_IP_4,
-    CMD_ERR_PATH_USE_DHCP_NOT_IP_6,
-    CMD_ERR_NODE_EXIST,
-    CMD_ERR_NODE_DONT_EXIST,
-    CMD_ERR_NODE_IS_OFF,
-    CMD_ERR_NODE_IS_ON,
-    CMD_ERR_NODE_IS_SELF,
-    CMD_ERR_NODE_IS_STOPPING,
-    CMD_ERR_NODE_NOT_CONFIGURED,
-    CMD_ERR_PATH_EXIST,
-    CMD_ERR_PATH_DONT_EXIST,
-    CMD_ERR_PATH_IS_OFF,
-    CMD_ERR_PATH_IS_ON,
-    CMD_ERR_PATH_IS_STOPPING,
-    CMD_ERR_PATH_NEED_NAME,
-    CMD_ERR_PATH_NEED_CLT_SRV,
-    CMD_ERR_PATH_NEED_TIMEOUT,
-    CMD_ERR_PATH_NEED_RTT_MIN,
-    CMD_ERR_PATH_NEED_RTT_MAX,
-    CMD_ERR_PATH_NEED_RTT_VAR,
-    CMD_ERR_PATH_NEED_PHYS,
-    CMD_ERR_PATH_NEED_TOS,
-    CMD_ERR_PATH_NEED_TTL,
-    CMD_ERR_PATH_NEED_MAC_SRC,
-    CMD_ERR_PATH_NEED_MAC_DST,
-    CMD_ERR_PATH_NEED_ADDR_SRC,
-    CMD_ERR_PATH_NEED_ADDR_DST,
-    CMD_ERR_PATH_NEED_PORT_SRC,
-    CMD_ERR_PATH_NEED_PORT_DST,
-    CMD_ERR_PATH_NEED_VLAN_PROTO,
-    CMD_ERR_PATH_NEED_VLAN_ID,
-    CMD_ERR_PATH_NEED_PPP_SESSION, // TODO:
-    CMD_ERR_PATH_NOT_SERVER,
-    CMD_ERR_PATH_NOT_ETH,
-    CMD_ERR_PATH_NOT_VLAN,
-    CMD_ERR_PATH_NOT_PPP,
-    CMD_ERR_PATH_NOT_IP,
-    CMD_ERR_PATH_NOT_IP4,
-    CMD_ERR_PATH_NOT_IP6,
-    CMD_ERR_PATH_NOT_UDP,
-    CMD_ERR_PATH_NOT_TCP,
-    CMD_ERR_PHYS_IS_BAD,
-    CMD_ERR_PHYS_IS_XGW,
-    CMD_ERR_PHYS_NOT_FOUND,
-    CMD_ERR_PHYS_NOT_HOOKED,
-    CMD_ERR_GWS_FULL,
-    CMD_ERR_GWS_NID_NOT_FOUND,
-    CMD_ERR_GWS_NID_ALREADY,
-    CMD_ERR_ALLOC_CMD,
-    CMD_ERR_INVALID_CMD_CODE,
-    CMD_ERR_INVALID_CMD_SIZE,
-    CMD_ERR_COPY_CMD,
-    CMD_ERRS_N
-};
+#include "cmd_errs.h"
 
-#define CMD_SIZE_MIN  1 // CODE
-#define CMD_SIZE_MAX (4 + sizeof(cmd_arg_s)) // CODE | NID | PID | ARG
+// CHECK IF THE COMMAND MESSAGE IS COMPLETE
+#define _CMD_ARG_SIZE(a, b, c) sizeof(a ## b ## c)
+#define CMD_ARG_SIZE(arg) _CMD_ARG_SIZE(cmd_arg_, arg, _t)
 
-union cmd_arg_s {
-    u8 code;
-    u16 nid;
-    u8 pid;
-    u8 did;
-    u32 connsN;
-    u16 mtu;
-    u16 eProto;
-    u16 vID;
-    u8 tos;
-    u8 ttl;
-    u8 type;
-    u8 weight_node;
-    u8 weight_acks;
-    u8 timeout; // SECONDS
-    u16 rtt; // (MILLISECONDS) MIN / MAX /VAR
-    char nname [NODE_NAME_SIZE]; // VAI PRECISAR DO FLAG ->SIZES
-    char pname [PATH_NAME_SIZE];
-    char dname [DHCP_NAME_SIZE];
-    char phys [IFNAMSIZ];
-    u16 ports [PORTS_N]; // TODO: PATH_PORTS_N
-    u8 mac [ETH_ALEN];
-    u8 addr4 [4];
-    u16 addr6 [8];
-    u8 password [PASSWORD_SIZE_MAX];
-    u16 session; // PPP SESSION ID
-};
+#define _CMD_VALUE(a, b, c) (*(a ## b ## c)cmd)
+#define CMD_VALUE(arg) _CMD_ARG_SIZE(cmd_arg_, arg, _t)
 
-BUILD_ASSERT(offsetof(cmd_arg_s, code)   == 0);
-BUILD_ASSERT(offsetof(cmd_arg_s, nid)    == 0);
-BUILD_ASSERT(offsetof(cmd_arg_s, pid)    == 0);
-BUILD_ASSERT(offsetof(cmd_arg_s, ttl)    == 0);
-BUILD_ASSERT(offsetof(cmd_arg_s, tos)    == 0);
-BUILD_ASSERT(offsetof(cmd_arg_s, ports)  == 0);
-BUILD_ASSERT(offsetof(cmd_arg_s, type)   == 0);
-BUILD_ASSERT(offsetof(cmd_arg_s, vID)    == 0);
-BUILD_ASSERT(offsetof(cmd_arg_s, eProto) == 0);
-BUILD_ASSERT(offsetof(cmd_arg_s, mtu)    == 0);
+#define _CMD_CONSUME(_type) { \
+    ASSERT(size >= CMD_ARG_SIZE(_type)); \
+    size -= CMD_ARG_SIZE(_type); \
+    cmd = PTR(cmd) + CMD_ARG_SIZE(_type); \
+}
+
+#define CMD_SIZE_MIN  CMD_ARG_SIZE(code)
+#define CMD_SIZE_MAX (CMD_ARG_SIZE(code) + CMD_ARG_SIZE(nid) + CMD_ARG_SIZE(password))
+
+typedef u8  cmd_arg_code_t;
+typedef u16 cmd_arg_nid_t;
+typedef u8  cmd_arg_pid_t;
+typedef u8  cmd_arg_did_t;
+typedef u32 cmd_arg_connsN_t;
+typedef u16 cmd_arg_mtu_t;
+typedef u16 cmd_arg_eProto_t;
+typedef u16 cmd_arg_vID_t;
+typedef u8  cmd_arg_tos_t;
+typedef u8  cmd_arg_ttl_t;
+typedef u8  cmd_arg_type_t;
+typedef u8  cmd_arg_weight_node_t;
+typedef u8  cmd_arg_weight_acks_t;
+typedef u8  cmd_arg_timeout_t;
+typedef u16 cmd_arg_latency_t;
+typedef u16 cmd_arg_latency_var_t;
+typedef u16 cmd_arg_ppp_session_t;
+
+typedef struct { char _[NODE_NAME_SIZE];    } cmd_arg_nname_t;
+typedef struct { char _[PATH_NAME_SIZE];    } cmd_arg_pname_t;
+typedef struct { char _[DHCP_NAME_SIZE];    } cmd_arg_dname_t;
+typedef struct { char _[IFNAMSIZ];          } cmd_arg_phys_t;
+typedef struct { u8   _[PASSWORD_SIZE_MAX]; } cmd_arg_password_t;
+typedef struct { u8   _[ETH_ALEN];          } cmd_arg_mac_t;
+typedef struct { u16  _[PATH_PORTS_N];      } cmd_arg_path_ports_t;
+typedef struct { u8   _[4];                 } cmd_arg_addr4_t;
+typedef struct { u16  _[8];                 } cmd_arg_addr6_t;
+typedef struct { u16  _[PORTS_N];           } cmd_arg_ports_t;
+
+// CMD SIZES:
+// AQUELES QUE USAM PORTA: CONSIDERA O TAMANHO MINIMO DE 1 PORTA, MAS EMBAIXO CHECA TAMBEM O MAXIMO
+// SECRET_SET: SIZE:  // LEMBRAR DE VERIFICAR EMBAIXO TAMBEM,
+typedef struct { u16 _[1]; } cmd_arg_ports_min_t;
+typedef struct { u8 _[16]; } cmd_arg_secret_min_t;

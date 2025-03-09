@@ -41,15 +41,6 @@ static inline uint gid_of_nid (const uint nid) {
 #define NOTHING_CMD_ERR(x) { e = ___JOIN(CMD_ERR_, x) - 200; goto failed_nothing; }
 #define     CMD_SUCCESS()                                    goto failed
 
-#define _CMD_CONSUME(_member) { \
-    ASSERT(size >= sizeof(cmd->_member)); \
-    size -= sizeof(cmd->_member); \
-    cmd = PTR(cmd) + sizeof(cmd->_member); \
-}
-
-// CHECK IF THE COMMAND MESSAGE IS COMPLETE
-#define CMD_ARG_SIZE(arg) sizeof(((cmd_arg_s*)NULL)->arg)
-
 static const u32 cmdSizes [CMDS_N] = {
 #include "cmd_sizes.c"
 };
@@ -87,9 +78,11 @@ static ssize_t __cold_as_ice __optimize_size cmd (struct file *file, const char 
     if (copy_from_user(buff, ubuf, size))
         FREE_CMD_ERR(COPY_CMD);
 
-    const cmd_arg_s* cmd = buff;
+    const void* cmd = buff;
 
-    const uint C = cmd->code;
+    const uint C = CMD_VALUE(code);
+
+    _CMD_CONSUME(code);
 
     if (C >= CMDS_N)
         FREE_CMD_ERR(INVALID_CMD_CODE);
@@ -101,30 +94,31 @@ static ssize_t __cold_as_ice __optimize_size cmd (struct file *file, const char 
     if (cmdSizes[C] > size)
         FREE_CMD_ERR(INVALID_CMD_SIZE);
 
-    _CMD_CONSUME(code);
-
     if (C_USE_NID(C)) {
-        if ((nid = cmd->nid) >= NODES_N)
+        if ((nid = CMD_VALUE(nid)) >= NODES_N)
             FREE_CMD_ERR(INVALID_NID);
         _CMD_CONSUME(nid);
     }
 
     if (C_USE_PID(C)) {
-        if ((pid = cmd->pid) >= PATHS_N)
+        if ((pid = CMD_VALUE(pid)) >= PATHS_N)
             FREE_CMD_ERR(INVALID_PID);
         _CMD_CONSUME(pid);
     }
 
     if (C_USE_PORTS(C)) {
-        if (size % sizeof(cmd->ports[0]))
+        if (size % sizeof(u16))
             FREE_CMD_ERR(INVALID_CMD_SIZE);
-        portsN = size / sizeof(cmd->ports[0]);
+        portsN = size / sizeof(u16);
+        // NOTE: NAO ESTA USANDO _CMD_CONSUME() POIS DEPOIS DESTE NÃO VAI LER MAIS NADA
     }
 
     // LOCK
     unsigned long iflags;
 
     spin_lock_irqsave(&xlock, iflags);
+
+    const u64 now = get_current_ms();
 
     if (C_USE_NODE(C)) {
         // REFERS TO A NODE ENTRY
@@ -236,11 +230,12 @@ static ssize_t __cold_as_ice __optimize_size cmd (struct file *file, const char 
 
     if (C_USE_PHYS(C)) {
         // MUST HAVE A VALID NAME
-        if (!cmd->phys[0] ||
-             cmd->phys[IFNAMSIZ - 1])
+        const char* const itfc = cmd;
+        if (itfc[0] == '\0' || // EMPTY
+            itfc[IFNAMSIZ - 1] != '\0') // TOO LONG
             CMD_ERR(INVALID_PHYS);
         // LOOKUP IT, OWNED
-        phys = dev_get_by_name(&init_net, cmd->phys);
+        phys = dev_get_by_name(&init_net, itfc);
         // MUST EXIST
         if (phys == NULL)
             CMD_ERR(PHYS_NOT_FOUND);
@@ -252,18 +247,6 @@ static ssize_t __cold_as_ice __optimize_size cmd (struct file *file, const char 
             CMD_ERR(PHYS_IS_BAD);
         _CMD_CONSUME(phys);
     }
-
-    //
-    BUILD_ASSERT(sizeof(cmd->nname) == sizeof(node->name));
-    BUILD_ASSERT(sizeof(cmd->pname) == sizeof(path->name));
-
-    BUILD_ASSERT(sizeof(cmd->addr4) == sizeof(path->skel.encap_ip4.ip4.saddr));
-    BUILD_ASSERT(sizeof(cmd->addr4) == sizeof(path->skel.encap_ip4.ip4.daddr));
-    BUILD_ASSERT(sizeof(cmd->addr6) == sizeof(path->skel.encap_ip6.ip6.saddr));
-    BUILD_ASSERT(sizeof(cmd->addr6) == sizeof(path->skel.encap_ip6.ip6.daddr));
-
-    BUILD_ASSERT(sizeof(cmd->mac) == sizeof(path->skel.encap_eth.eth.dmac));
-    BUILD_ASSERT(sizeof(cmd->mac) == sizeof(path->skel.encap_eth.eth.smac));
 
     //
     switch (C) {
@@ -351,14 +334,14 @@ static ssize_t __cold_as_ice __optimize_size cmd (struct file *file, const char 
         case CMD_PORT_ON: {
 
             while (portsN--)
-                ports_enable(cmd->ports[portsN]);
+                ports_enable(((u16*)cmd)[portsN]);
 
         } break;
 
         case CMD_PORT_OFF: {
 
             while (portsN--)
-                ports_disable(cmd->ports[portsN]);
+                ports_disable(((u16*)cmd)[portsN]);
 
         } break;
 
@@ -493,12 +476,12 @@ static ssize_t __cold_as_ice __optimize_size cmd (struct file *file, const char 
                 ASSERT((pinfo & (P_CLIENT | P_SERVER))
                              != (P_CLIENT | P_SERVER));
 
-                //
+                // ALGUMAS COISAS DEPENDEM DE OUTRAS E SÓ PODEM SER CHECADAS EM CONJUNTO
                 if (path->latency_min > path->latency_max)
                     CMD_ERR(INVALID_LATENCY_RANGE);
 
-                if ((path->latency_min + path->latency_var) < PATH_RTT_EFFECTIVE_MIN
-                 || (path->latency_max + path->latency_var) > PATH_RTT_EFFECTIVE_MAX)
+                if ((path->latency_min + path->latency_var) < LATENCY_EFFECTIVE_MIN
+                 || (path->latency_max + path->latency_var) > LATENCY_EFFECTIVE_MAX)
                     CMD_ERR(INVALID_LATENCY_RANGE);
 
                 const uint type = path->skel.type;
@@ -630,8 +613,6 @@ static ssize_t __cold_as_ice __optimize_size cmd (struct file *file, const char 
             printk("XGW: %s: MTU %u\n",           node->name, (uint  )node->mtu);
             printk("XGW: %s: CONNS N %u\n",       node->name, (uint  )node->connsN);
             printk("XGW: %s: WEIGHTS %u\n",       node->name, (uint  )node->weights);
-            printk("XGW: %s: LCOUNTER %016llX\n", node->name, (uintll)node->lcounter);
-            printk("XGW: %s: RCOUNTER %016llX\n", node->name, (uintll)node->rcounter);
 
             printk("XGW: %s: INFO: 0x%02X %s%s%s%s%s\n", node->name,
                (uint)node->info,
@@ -655,19 +636,23 @@ static ssize_t __cold_as_ice __optimize_size cmd (struct file *file, const char 
 
         case CMD_PATH_STATUS: {
 
-            printk("XGW: %s [%s]: WEIGHT %u\n",        node->name, path->name, (uint)path->weight);
-            printk("XGW: %s [%s]: SINCE %llu\n",       node->name, path->name, (uint)((get_current_ms() - path->since)/1000));
-            printk("XGW: %s [%s]: STARTS %u\n",        node->name, path->name, (uint)path->starts);
-            printk("XGW: %s [%s]: TOS ???\n",          node->name, path->name);
-            printk("XGW: %s [%s]: TTL %u\n",           node->name, path->name, (uint)path->ttl);
-            printk("XGW: %s [%s]: LATENCY %ujf\n",     node->name, path->name, (uint)path->latency);
-            printk("XGW: %s [%s]: LATENCY MIN %ujf\n", node->name, path->name, (uint)path->latency_min);
-            printk("XGW: %s [%s]: LATENCY MAX %ujf\n", node->name, path->name, (uint)path->latency_max);
-            printk("XGW: %s [%s]: LATENCY VAR %ujf\n", node->name, path->name, (uint)path->latency_var);
-            printk("XGW: %s [%s]: TIMEOUT %us\n",      node->name, path->name, (uint)path->timeout);
-
-            printk("XGW: %s [%s]: SPORT #%u OF %u\n", node->name, path->name, (uint)path->sPortIndex, (uint)path->sPortsN);
-            printk("XGW: %s [%s]: DPORT #%u OF %u\n", node->name, path->name, (uint)path->dPortIndex, (uint)path->dPortsN);
+            printk("XGW: %s [%s]: WEIGHT %u\n",          node->name, path->name, (uint)path->weight);
+            printk("XGW: %s [%s]: SINCE %llu\n",         node->name, path->name, (uintll)(path->since ?: now - path->since));
+            printk("XGW: %s [%s]: STARTS %u\n",          node->name, path->name, (uint)path->starts);
+            printk("XGW: %s [%s]: TOS ???\n",            node->name, path->name);
+            printk("XGW: %s [%s]: TTL %u\n",             node->name, path->name, (uint)path->ttl);
+            printk("XGW: %s [%s]: LATENCY %ujf\n",       node->name, path->name, (uint)path->latency);
+            printk("XGW: %s [%s]: LATENCY MIN %ujf\n",   node->name, path->name, (uint)path->latency_min);
+            printk("XGW: %s [%s]: LATENCY MAX %ujf\n",   node->name, path->name, (uint)path->latency_max);
+            printk("XGW: %s [%s]: LATENCY VAR %ujf\n",   node->name, path->name, (uint)path->latency_var);
+            printk("XGW: %s [%s]: TIMEOUT %us\n",        node->name, path->name, (uint)path->timeout);
+            printk("XGW: %s [%s]: PING SENT %llu\n",     node->name, path->name, (uintll)(path->pingSent ?: now - path->pingSent));
+            printk("XGW: %s [%s]: PONG RECEIVED %llu\n", node->name, path->name, (uintll)(path->pongReceived ?: now - path->pongReceived));
+            printk("XGW: %s [%s]: RTIME %016llX\n",      node->name, path->name, (uintll)path->rtime);
+            printk("XGW: %s [%s]: TDIFF %lld\n",         node->name, path->name, (intll)path->tdiff);
+            printk("XGW: %s [%s]: SYN %016llX\n",        node->name, path->name, (uintll)path->syn);
+            printk("XGW: %s [%s]: SPORT #%u OF %u\n",    node->name, path->name, (uint)path->sPortIndex, (uint)path->sPortsN);
+            printk("XGW: %s [%s]: DPORT #%u OF %u\n",    node->name, path->name, (uint)path->dPortIndex, (uint)path->dPortsN);
 
             printk("XGW: %s [%s]: INFO: 0x%02X%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s\n", node->name, path->name,
            (uint)path->info,
@@ -701,9 +686,6 @@ static ssize_t __cold_as_ice __optimize_size cmd (struct file *file, const char 
         (path->info & K_ESTABLISHED         ) ? " ESTABLISHED"    : "",
         (path->info & ~P_ALL                ) ? " UNKNOWN"        : ""
             );
-
-            printk("XGW: %s [%s]: LCOUNTER %016llX\n", node->name, path->name, (uintll)path->lcounter);
-            printk("XGW: %s [%s]: RCOUNTER %016llX\n", node->name, path->name, (uintll)path->rcounter);
 
             printk("XGW: %s [%s]: PHYS %s\n", node->name, path->name,
                 path->skel.phys ?
@@ -797,8 +779,6 @@ static ssize_t __cold_as_ice __optimize_size cmd (struct file *file, const char 
             ASSERT(node->info         == 0);
             ASSERT(node->weights      == 0);
             ASSERT(node->mtu          == 0);
-            ASSERT(node->lcounter     == 0);
-            ASSERT(node->rcounter     == 0);
             ASSERT(node->iCycle       == 0);
             ASSERT(node->oCycle       == 0);
             ASSERT(node->oIndex       == 0);

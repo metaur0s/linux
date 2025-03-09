@@ -1,3 +1,12 @@
+//
+BUILD_ASSERT(sizeof(cmd_arg_nname_t) == sizeof(((node_s*)NULL)->name));
+BUILD_ASSERT(sizeof(cmd_arg_pname_t) == sizeof(((path_s*)NULL)->name));
+BUILD_ASSERT(sizeof(cmd_arg_addr4_t) == sizeof(((path_s*)NULL)->skel.encap_ip4.ip4.saddr));
+BUILD_ASSERT(sizeof(cmd_arg_addr4_t) == sizeof(((path_s*)NULL)->skel.encap_ip4.ip4.daddr));
+BUILD_ASSERT(sizeof(cmd_arg_addr6_t) == sizeof(((path_s*)NULL)->skel.encap_ip6.ip6.saddr));
+BUILD_ASSERT(sizeof(cmd_arg_addr6_t) == sizeof(((path_s*)NULL)->skel.encap_ip6.ip6.daddr));
+BUILD_ASSERT(sizeof(cmd_arg_mac_t)   == sizeof(((path_s*)NULL)->skel.encap_eth.eth.dmac));
+BUILD_ASSERT(sizeof(cmd_arg_mac_t)   == sizeof(((path_s*)NULL)->skel.encap_eth.eth.smac));
 
 //
 BUILD_ASSERT(sizeof(hdr_eth_s)  == 14);
@@ -102,31 +111,36 @@ BUILD_ASSERT(~(typeof(((hdr_x_s*)NULL)->src))0     == NID_MAX);
 BUILD_ASSERT(~(typeof(((hdr_x_s*)NULL)->dst))0     == NID_MAX);
 BUILD_ASSERT(~(typeof(((hdr_x_s*)NULL)->version))0 == I_KEY_MAX);
 
-// THE TYPES MUST BE ABLE TO HOLD THE VALUES
-BUILD_ASSERT((typeof(((path_s*)NULL)->nid))         NID_MAX          == NID_MAX);
-BUILD_ASSERT((typeof(((path_s*)NULL)->pid))         PID_MAX          == PID_MAX);
-BUILD_ASSERT((typeof(((path_s*)NULL)->latency))     LATENCY_MAX      == LATENCY_MAX);
-BUILD_ASSERT((typeof(((path_s*)NULL)->latency_min)) LATENCY_MAX      == LATENCY_MAX);
-BUILD_ASSERT((typeof(((path_s*)NULL)->latency_max)) LATENCY_MAX      == LATENCY_MAX);
-BUILD_ASSERT((typeof(((path_s*)NULL)->latency_var)) LATENCY_VAR_MAX  == LATENCY_VAR_MAX);
-BUILD_ASSERT((typeof(((path_s*)NULL)->timeout))     PATH_TIMEOUT_MAX == PATH_TIMEOUT_MAX);
-BUILD_ASSERT((typeof(((path_s*)NULL)->info))        P_INFO           == P_INFO);
-BUILD_ASSERT((typeof(((path_s*)NULL)->info))        K_ESTABLISHED    == K_ESTABLISHED);
-BUILD_ASSERT((typeof(((path_s*)NULL)->weight))      PATH_WEIGHT_MAX  == PATH_WEIGHT_MAX);
-BUILD_ASSERT((typeof(((path_s*)NULL)->weight_acks)) ACKS_N           == ACKS_N);
-BUILD_ASSERT((typeof(((path_s*)NULL)->sPortsN))     PATH_PORTS_N     == PATH_PORTS_N);
-BUILD_ASSERT((typeof(((path_s*)NULL)->dPortsN))     PATH_PORTS_N     == PATH_PORTS_N);
-BUILD_ASSERT((typeof(((path_s*)NULL)->sPortIndex))  (PATH_PORTS_N-1) == (PATH_PORTS_N-1));
-BUILD_ASSERT((typeof(((path_s*)NULL)->dPortIndex))  (PATH_PORTS_N-1) == (PATH_PORTS_N-1));
-BUILD_ASSERT((typeof(((node_s*)NULL)->nid))         NID_MAX          == NID_MAX);
-BUILD_ASSERT((typeof(((node_s*)NULL)->mtu))         MTU_MAX          == MTU_MAX);
-BUILD_ASSERT((typeof(((node_s*)NULL)->weights))     NODE_WEIGHTS_MAX == NODE_WEIGHTS_MAX);
-BUILD_ASSERT((typeof(((node_s*)NULL)->kpaths))      KPATH(PID_MAX)   == KPATH(PID_MAX));
-BUILD_ASSERT((typeof(((node_s*)NULL)->opaths))      OPATH(PID_MAX)   == OPATH(PID_MAX));
-BUILD_ASSERT((typeof(((node_s*)NULL)->ipaths))      IPATH(PID_MAX)   == IPATH(PID_MAX));
-BUILD_ASSERT((typeof(((node_s*)NULL)->kpaths))      KPATHS           == KPATHS);
-BUILD_ASSERT((typeof(((node_s*)NULL)->opaths))      OPATHS           == OPATHS);
-BUILD_ASSERT((typeof(((node_s*)NULL)->ipaths))      IPATHS           == IPATHS);
+// THE TYPES MUST BE ABLE TO HOLD THEIR VALUES
+BUILD_ASSERT((typeof(((path_s*)NULL)->nid))          NID_MAX          == NID_MAX);
+BUILD_ASSERT((typeof(((path_s*)NULL)->pid))          PID_MAX          == PID_MAX);
+BUILD_ASSERT((typeof(((path_s*)NULL)->latency))      LATENCY_MAX      == LATENCY_MAX);
+BUILD_ASSERT((typeof(((path_s*)NULL)->latency_min))  LATENCY_MAX      == LATENCY_MAX);
+BUILD_ASSERT((typeof(((path_s*)NULL)->latency_max))  LATENCY_MAX      == LATENCY_MAX);
+BUILD_ASSERT((typeof(((path_s*)NULL)->latency_var))  LATENCY_VAR_MAX  == LATENCY_VAR_MAX);
+BUILD_ASSERT((typeof(((path_s*)NULL)->timeout))      PATH_TIMEOUT_MAX == PATH_TIMEOUT_MAX);
+BUILD_ASSERT((typeof(((path_s*)NULL)->since))        LTIME_MAX        == LTIME_MAX);
+BUILD_ASSERT((typeof(((path_s*)NULL)->pingSent))     LTIME_MAX        == LTIME_MAX);
+BUILD_ASSERT((typeof(((path_s*)NULL)->pongReceived)) LTIME_MAX        == LTIME_MAX);
+BUILD_ASSERT((typeof(((path_s*)NULL)->tdiff))        TDIFF_MIN        == TDIFF_MIN);
+BUILD_ASSERT((typeof(((path_s*)NULL)->tdiff))        TDIFF_MAX        == TDIFF_MAX);
+BUILD_ASSERT((typeof(((path_s*)NULL)->info))         P_INFO           == P_INFO);
+BUILD_ASSERT((typeof(((path_s*)NULL)->info))         K_ESTABLISHED    == K_ESTABLISHED);
+BUILD_ASSERT((typeof(((path_s*)NULL)->weight))       PATH_WEIGHT_MAX  == PATH_WEIGHT_MAX);
+BUILD_ASSERT((typeof(((path_s*)NULL)->weight_acks))  ACKS_N           == ACKS_N);
+BUILD_ASSERT((typeof(((path_s*)NULL)->sPortsN))      PATH_PORTS_N     == PATH_PORTS_N);
+BUILD_ASSERT((typeof(((path_s*)NULL)->dPortsN))      PATH_PORTS_N     == PATH_PORTS_N);
+BUILD_ASSERT((typeof(((path_s*)NULL)->sPortIndex))   (PATH_PORTS_N-1) == (PATH_PORTS_N-1));
+BUILD_ASSERT((typeof(((path_s*)NULL)->dPortIndex))   (PATH_PORTS_N-1) == (PATH_PORTS_N-1));
+BUILD_ASSERT((typeof(((node_s*)NULL)->nid))          NID_MAX          == NID_MAX);
+BUILD_ASSERT((typeof(((node_s*)NULL)->mtu))          MTU_MAX          == MTU_MAX);
+BUILD_ASSERT((typeof(((node_s*)NULL)->weights))      NODE_WEIGHTS_MAX == NODE_WEIGHTS_MAX);
+BUILD_ASSERT((typeof(((node_s*)NULL)->kpaths))       KPATH(PID_MAX)   == KPATH(PID_MAX));
+BUILD_ASSERT((typeof(((node_s*)NULL)->opaths))       OPATH(PID_MAX)   == OPATH(PID_MAX));
+BUILD_ASSERT((typeof(((node_s*)NULL)->ipaths))       IPATH(PID_MAX)   == IPATH(PID_MAX));
+BUILD_ASSERT((typeof(((node_s*)NULL)->kpaths))       KPATHS           == KPATHS);
+BUILD_ASSERT((typeof(((node_s*)NULL)->opaths))       OPATHS           == OPATHS);
+BUILD_ASSERT((typeof(((node_s*)NULL)->ipaths))       IPATHS           == IPATHS);
 
 BUILD_ASSERT(sizeof(((node_s*)NULL)->secret[0]) == K_SIZE);
 BUILD_ASSERT(sizeof(((node_s*)NULL)->secret) == SECRET_SIZE);
