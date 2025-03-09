@@ -174,22 +174,25 @@ _is_xgw:
     if (rtime >= RTIME_ESTABLISHED) {
         if (i == I_KEY_SYN)
             // ESTABLISHED RECEBE TUDO MENOS SYN
-            ret_path(PSTATS_I_SYN_WHILE_ESTABLISHED);
+            ret_path(PSTATS_I_ESTABLISHED_SYN);
     } elif (rtime == RTIME_CONNECTING) {
         if (i != I_KEY_PONG)
             // CONNECTING SO RECEBE PONGS
-            ret_path(PSTATS_I_NOT_PONG);
+            ret_path(PSTATS_I_CONNECTING_NOT_PONG);
     } elif (rtime == RTIME_LISTENING) {
         if (i == I_KEY_SYN) {
             if (p_ltime != path->syn)
                 // ELE NAO CONHECE NOSSO CODIGO
                 ret_path(PSTATS_I_LTIME_MISMATCH_SYN);
+            if (0)
+                // LIMITAR A QUANTIDADE DE SYNS RECEBIVEIS A CADA KEEPER INTERVAL
+                ret_path(PSTATS_I_LISTENING_SYN_TOO_MANY);
         } elif (i != I_KEY_PING)
             // LISTENING SO RECEBE SYN E PING
-            ret_path(PSTATS_I_NOT_SYN_OR_PING);
+            ret_path(PSTATS_I_LISTENING_NOT_SYN_OR_PING);
     } else { // LISTENING, MAS EM ESTADO DE ACCEPTING
         ASSERT(rtime == RTIME_ACCEPTING);
-        ret_path(PSTATS_I_WHILE_ACCEPTING);
+        ret_path(PSTATS_I_ACCEPTING);
     }
 
     // PACKET TYPE VS LTIME
@@ -321,9 +324,6 @@ _is_xgw:
 
             if (i == I_KEY_SYN) {
                 // LEARN O PATH EM UM HEADER TEMPORARIO
-                if (0)
-                    // LIMITAR A QUANTIDADE DE SYNS RECEBIVEIS A CADA KEEPER INTERVAL
-                    ret_path(PSTATS_I_SYN_TOO_MANY);
                 skel = &temp_skel;
             } elif (__atomic_compare_exchange_n(&path->rtime, &rtime, RTIME_ACCEPTING, 0, __ATOMIC_SEQ_CST, __ATOMIC_RELAXED)) {
                 // SYN-ACK
