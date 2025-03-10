@@ -360,31 +360,38 @@ _is_xgw:
 
     uint latency = atomic_get(&path->latency);
     s64 tdiff    = atomic_get(&path->tdiff);
-    u64 rtime    = atomic_get(&path->rtime);
 
     // SITUATION VS PACKET TYPE
-    if (rtime >= RTIME_ESTABLISHED) {
-        if (i == I_KEY_SYN)
-            // ESTABLISHED RECEBE TUDO MENOS SYN
-            ret_path(PSTATS_I_ESTABLISHED_SYN);
-    } elif (rtime == RTIME_CONNECTING) {
-        if (i != I_KEY_PONG)
-            // CONNECTING SO RECEBE PONGS
-            ret_path(PSTATS_I_CONNECTING_NOT_PONG);
-    } elif (rtime == RTIME_LISTENING) {
-        if (i == I_KEY_SYN) {
-            if (p_ltime != path->syn)
-                // ELE NAO CONHECE NOSSO CODIGO
-                ret_path(PSTATS_I_LTIME_MISMATCH_SYN);
-            if (0)
-                // LIMITAR A QUANTIDADE DE SYNS RECEBIVEIS A CADA KEEPER INTERVAL
-                ret_path(PSTATS_I_LISTENING_SYN_TOO_MANY);
-        } elif (i != I_KEY_PING)
-            // LISTENING SO RECEBE SYN E PING
-            ret_path(PSTATS_I_LISTENING_NOT_SYN_OR_PING);
-    } else { // LISTENING, MAS EM ESTADO DE ACCEPTING
-        ASSERT(rtime == RTIME_ACCEPTING);
-        ret_path(PSTATS_I_ACCEPTING);
+    switch (atomic_get(&path->rtime)) {
+        
+        case RTIME_CONNECTING:
+            if (i != I_KEY_PONG)
+                // CONNECTING SO RECEBE PONGS
+                ret_path(PSTATS_I_CONNECTING_NOT_PONG);
+            break;
+        
+        case RTIME_LISTENING:
+            if (i == I_KEY_SYN) {
+                if (p_ltime != path->syn)
+                    // ELE NAO CONHECE NOSSO CODIGO
+                    ret_path(PSTATS_I_LTIME_MISMATCH_SYN);
+                if (0)
+                    // LIMITAR A QUANTIDADE DE SYNS RECEBIVEIS A CADA KEEPER INTERVAL
+                    ret_path(PSTATS_I_LISTENING_SYN_TOO_MANY);
+            } elif (i != I_KEY_PING)
+                // LISTENING SO RECEBE SYN E PING
+                ret_path(PSTATS_I_LISTENING_NOT_SYN_OR_PING);
+            break;
+        
+        case RTIME_ACCEPTING:
+            // LISTENING, MAS EM ESTADO DE ACCEPTING
+            ret_path(PSTATS_I_ACCEPTING);
+            break;
+        
+        default: // >= RTIME_ESTABLISHED
+            if (i == I_KEY_SYN)
+                // ESTABLISHED RECEBE TUDO MENOS SYN
+                ret_path(PSTATS_I_ESTABLISHED_SYN);
     }
 
     // PACKET TYPE VS LTIME
