@@ -75,7 +75,7 @@ static ssize_t __cold_as_ice __optimize_size cmd (struct file *file, const char 
 
     const uint C = CMD_VALUE(code);
 
-    _CMD_CONSUME(code);
+    CMD_CONSUME(code);
 
     if (C >= CMDS_N)
         FREE_CMD_ERR(INVALID_CMD_CODE);
@@ -90,20 +90,20 @@ static ssize_t __cold_as_ice __optimize_size cmd (struct file *file, const char 
     if (C_USE_NID(C)) {
         if ((nid = CMD_VALUE(nid)) >= NODES_N)
             FREE_CMD_ERR(INVALID_NID);
-        _CMD_CONSUME(nid);
+        CMD_CONSUME(nid);
     }
 
     if (C_USE_PID(C)) {
         if ((pid = CMD_VALUE(pid)) >= PATHS_N)
             FREE_CMD_ERR(INVALID_PID);
-        _CMD_CONSUME(pid);
+        CMD_CONSUME(pid);
     }
 
     if (C_USE_PORTS(C)) {
         if (size % sizeof(u16))
             FREE_CMD_ERR(INVALID_CMD_SIZE);
         portsN = size / sizeof(u16);
-        // NOTE: NAO ESTA USANDO _CMD_CONSUME() POIS DEPOIS DESTE NÃO VAI LER MAIS NADA
+        // NOTE: NAO ESTA USANDO CMD_CONSUME() POIS DEPOIS DESTE NÃO VAI LER MAIS NADA
     }
 
     // LOCK
@@ -223,7 +223,7 @@ static ssize_t __cold_as_ice __optimize_size cmd (struct file *file, const char 
 
     if (C_USE_PHYS(C)) {
         // MUST HAVE A VALID NAME
-        const char* const itfc = cmd;
+        const char* const itfc = CMD_VALUE(phys);
         if (itfc[0] == '\0' || // EMPTY
             itfc[IFNAMSIZ - 1] != '\0') // TOO LONG
             CMD_ERR(INVALID_PHYS);
@@ -238,7 +238,7 @@ static ssize_t __cold_as_ice __optimize_size cmd (struct file *file, const char 
         // VALIDATE INTERFACE TYPE, FLAGS ETC
         if (0)
             CMD_ERR(PHYS_IS_BAD);
-        _CMD_CONSUME(phys);
+        CMD_CONSUME(phys);
     }
 
     //
@@ -761,28 +761,23 @@ static ssize_t __cold_as_ice __optimize_size cmd (struct file *file, const char 
             if (node == NULL)
                 CMD_ERR(ALLOC_NODE);
 
-            // INITIALIZE ZEROED
+            // INITIALIZE
+         // node->opaths       = 0
+         // node->ipaths       = 0
+         // node->kpaths       = 0
+         // node->conns        = NULL
+         // node->connsN       = 0
+         // node->info         = 0
+         // node->weights      = 0
+         // node->mtu          = 0
+         // node->iCycle       = 0
+         // node->oCycle       = 0
+         // node->oIndex       = 0
+         // node->ptr          = NULL
+         // node->next         = NULL
+         // node->name[*]      = '\0'
+         // node->oVersions[*] = 0
             memset(node, 0, NODE_SIZE_INIT);
-
-            ASSERT(node->opaths       == 0);
-            ASSERT(node->ipaths       == 0);
-            ASSERT(node->kpaths       == 0);
-            ASSERT(node->conns        == NULL);
-            ASSERT(node->connsN       == 0);
-            ASSERT(node->info         == 0);
-            ASSERT(node->weights      == 0);
-            ASSERT(node->mtu          == 0);
-            ASSERT(node->iCycle       == 0);
-            ASSERT(node->oCycle       == 0);
-            ASSERT(node->oIndex       == 0);
-            ASSERT(node->ptr          == NULL);
-            ASSERT(node->next         == NULL);
-            ASSERT(node->name[0]      == '\0');
-            ASSERT(node->oVersions[0] == 0);
-            ASSERT(node->oVersions[1] == 0);
-            ASSERT(node->oVersions[2] == 0);
-            ASSERT(node->oVersions[3] == 0);
-                // node->reserved [2];
 
             node->nid = nid;
 #ifdef CONFIG_XGW_NMAP
@@ -805,7 +800,9 @@ static ssize_t __cold_as_ice __optimize_size cmd (struct file *file, const char 
                 // O NODE JA TEM UMA INTERFACE PROPRIA
                 CMD_ERR(ALLOC_NODE); // TODO:
 
-            net_device_s* const dev = dev_create_node(cmd->phys, nid);
+            const char* const itfc = CMD_VALUE(phys);
+
+            net_device_s* const dev = dev_create_node(itfc, nid);
 
             if (dev == NULL)
                 CMD_ERR(ALLOC_NODE); // TODO:
@@ -839,13 +836,11 @@ static ssize_t __cold_as_ice __optimize_size cmd (struct file *file, const char 
                            != (N_NAME | N_SECRET | N_CONNS_N | N_MTU))
                 CMD_ERR(NODE_NOT_CONFIGURED);
 
-            // TODO: NEED AT LEAST ONE PATH?
-
             // READY TO START
-            node->info |= N_ON;
-          //node->rDiff    = 0;
-            node->lcounter = COUNTER_CONNECTING + 1 + (random64(0) % (0xFFFFFFFFFFFFFFFFULL - COUNTER_CONNECTING - 1 - 512*24*64*64*4));
-            node->rcounter = random64(0);
+            node->info   |= N_ON;
+            node->iCycle  = 0;
+            node->oCycle  = 0;
+            node->oIndex  = 0;
 
             // WAKE NODE
             __link(node, knodes);
@@ -899,7 +894,7 @@ static ssize_t __cold_as_ice __optimize_size cmd (struct file *file, const char 
              || size > PASSWORD_SIZE_MAX)
                 CMD_ERR(INVALID_PASSWORD_LEN);
 
-            secret_derivate_from_password(node->secret, cmd->password, size);
+            secret_derivate_from_password(node->secret, cmd, size);
 
             // TODO: TERA DE FAZER COM TODOS AO MODIFICAR O SELF
             reset_node_ping_keys(node, nodeSelf, nid);
@@ -910,7 +905,9 @@ static ssize_t __cold_as_ice __optimize_size cmd (struct file *file, const char 
 
         case CMD_NODE_SET_CONNS_N: {
 
-            const uint connsN = cmd->connsN;
+            const uint connsN = CMD_VALUE(connsN);
+
+            CMD_CONSUME(connsN);
 
             if (connsN < CONNS_MIN ||
                 connsN > CONNS_MAX)
@@ -935,42 +932,43 @@ static ssize_t __cold_as_ice __optimize_size cmd (struct file *file, const char 
 
         case CMD_PATH_NEW: {
 
-            ASSERT(path->info        == 0);
-            ASSERT(path->dhcp        == 0);
-            ASSERT(path->weight      == 0);
-            ASSERT(path->weight_acks == 0);
-            ASSERT(path->since       == 0);
-            ASSERT(path->starts      == 0);
-            ASSERT(path->timeout     == 0);
-            ASSERT(path->rtime       == 0);
-            ASSERT(path->tdiff       == 0);
-            ASSERT(path->tos         == 0);
-            ASSERT(path->ttl         == 0);
-            ASSERT(path->latency     == 0);
-            ASSERT(path->latency_min == 0);
-            ASSERT(path->latency_max == 0);
-            ASSERT(path->latency_var == 0);
-            ASSERT(path->next        == NULL);
-            ASSERT(path->_skb        == NULL);
-            ASSERT(path->skel.phys   == NULL);
-            ASSERT(path->skel.type   == 0);
-            ASSERT(path->sPortsN     == 0);
-            ASSERT(path->sPortIndex  == 0);
-            ASSERT(path->dPortsN     == 0);
-            ASSERT(path->dPortIndex  == 0);
-            ASSERT(path->sPorts[0]   == 0);
-            ASSERT(path->dPorts[0]   == 0);
-            ASSERT(path->name[0]     == 0);
+            // INITIALIZE
+         // path->info         = 0
+         // path->weight       = 0
+         // path->weight_acks  = 0
+         // path->since        = 0
+         // path->starts       = 0
+         // path->timeout      = 0
+         // path->acks         = 0
+         // path->pingSent     = 0
+         // path->pongReceived = 0
+         // path->syn          = 0
+         // path->rtime        = 0
+         // path->tdiff        = 0
+         // path->tos          = 0
+         // path->ttl          = 0
+         // path->latency      = 0
+         // path->latency_min  = 0
+         // path->latency_max  = 0
+         // path->latency_var  = 0
+         // path->next         = NULL
+         // path->_skb         = NULL
+         // path->skel.phys    = NULL
+         // path->skel.type    = 0
+         // path->sPortsN      = 0
+         // path->sPortIndex   = 0
+         // path->dPortsN      = 0
+         // path->dPortIndex   = 0
+         // path->sPorts[0]    = 0
+         // path->dPorts[0]    = 0
+         // path->name[*]      = 0
+         // path->skel.phys    = NULL
+            memset(path, 0, sizeof(path_s));
 
             path->info   = P_EXIST;
             path->nid    = nid;
             path->pid    = pid;
             path->pstats = &node->pstats[pid][0];
-         // path->lcounter  -- INITIALIZED NO KEEPER AO DAR START
-         // path->rcounter  -- INITIALIZED NO KEEPER AO DAR START
-         // path->last      -- INITIALIZED NO KEEPER AO DAR START
-         // path->sent      -- INITIALIZED NO KEEPER AO DAR START
-         // path->acks      -- INITIALIZED NO KEEPER AO DAR START
 
         } break;
 
@@ -989,7 +987,7 @@ static ssize_t __cold_as_ice __optimize_size cmd (struct file *file, const char 
         case CMD_PATH_SET_DHCP: {
 
             // NOTE: SO FAZ SENTIDO SE FOR CLIENTE
-            path->dhcp = cmd->did;
+         // path->dhcp = CMD_VALUE(did);
             path->info |= P_DHCP;
 
         } break;
@@ -998,7 +996,7 @@ static ssize_t __cold_as_ice __optimize_size cmd (struct file *file, const char 
 
             net_device_s* const phys = path->skel.phys;
 
-            const uint type = cmd->type;
+            const uint type = CMD_VALUE(type);
 
             switch (type) {
                 case H_TYPE_RAW:
@@ -1050,7 +1048,7 @@ static ssize_t __cold_as_ice __optimize_size cmd (struct file *file, const char 
 
         case CMD_PATH_SET_VLAN_PROTO: {
 
-            const uint eProto = cmd->eProto;
+            const uint eProto = CMD_VALUE(eth_proto);
 
             if (eProto != ETH_P_8021Q &&
                 eProto != ETH_P_8021AD)
@@ -1066,7 +1064,7 @@ static ssize_t __cold_as_ice __optimize_size cmd (struct file *file, const char 
 
         case CMD_PATH_SET_VLAN_ID: {
 
-            const uint vid = cmd->vID;
+            const uint vid = CMD_VALUE(vlan_id);
 
             if (vid > 0x7fff)
                 CMD_ERR(INVALID_VID);
@@ -1077,22 +1075,22 @@ static ssize_t __cold_as_ice __optimize_size cmd (struct file *file, const char 
 
         } break;
 
-        case CMD_PATH_SET_ETH_DST: { path->info |= P_MAC_DST; memcpy(PKT_ETH(&path->skel)->dmac, cmd->mac, sizeof(cmd->mac)); } break;
-        case CMD_PATH_SET_ETH_SRC: { path->info |= P_MAC_SRC; memcpy(PKT_ETH(&path->skel)->smac, cmd->mac, sizeof(cmd->mac)); } break;
+        case CMD_PATH_SET_ETH_DST: { path->info |= P_MAC_DST; memcpy(PKT_ETH(&path->skel)->dmac, CMD_VALUE(mac), CMD_ARG_SIZE(mac)); } break;
+        case CMD_PATH_SET_ETH_SRC: { path->info |= P_MAC_SRC; memcpy(PKT_ETH(&path->skel)->smac, CMD_VALUE(mac), CMD_ARG_SIZE(mac)); } break;
 
-        case CMD_PATH_SET_IP4_SRC: { path->info |= P_ADDR_SRC; memcpy(PKT_IP4(&path->skel)->saddr, cmd->addr4, sizeof(cmd->addr4)); } break;
-        case CMD_PATH_SET_IP4_DST: { path->info |= P_ADDR_DST; memcpy(PKT_IP4(&path->skel)->daddr, cmd->addr4, sizeof(cmd->addr4)); } break;
-        case CMD_PATH_SET_IP6_SRC: { path->info |= P_ADDR_SRC; memcpy(PKT_IP6(&path->skel)->saddr, cmd->addr6, sizeof(cmd->addr6)); } break;
-        case CMD_PATH_SET_IP6_DST: { path->info |= P_ADDR_DST; memcpy(PKT_IP6(&path->skel)->daddr, cmd->addr6, sizeof(cmd->addr6)); } break;
+        case CMD_PATH_SET_IP4_SRC: { path->info |= P_ADDR_SRC; memcpy(PKT_IP4(&path->skel)->saddr, CMD_VALUE(addr4), CMD_ARG_SIZE(addr4)); } break;
+        case CMD_PATH_SET_IP4_DST: { path->info |= P_ADDR_DST; memcpy(PKT_IP4(&path->skel)->daddr, CMD_VALUE(addr4), CMD_ARG_SIZE(addr4)); } break;
+        case CMD_PATH_SET_IP6_SRC: { path->info |= P_ADDR_SRC; memcpy(PKT_IP6(&path->skel)->saddr, CMD_VALUE(addr6), CMD_ARG_SIZE(addr6)); } break;
+        case CMD_PATH_SET_IP6_DST: { path->info |= P_ADDR_DST; memcpy(PKT_IP6(&path->skel)->daddr, CMD_VALUE(addr6), CMD_ARG_SIZE(addr6)); } break;
 
         case CMD_PATH_SET_UDP_SRC:
-        case CMD_PATH_SET_TCP_SRC: { path->info |= P_PORT_SRC; path->sPortsN = portsN; memcpy(path->sPorts, cmd->ports, portsN * sizeof(cmd->ports[0])); } break;
+        case CMD_PATH_SET_TCP_SRC: { path->info |= P_PORT_SRC; path->sPortsN = portsN; memcpy(path->sPorts, cmd, portsN * sizeof(u16)); } break;
         case CMD_PATH_SET_UDP_DST:
-        case CMD_PATH_SET_TCP_DST: { path->info |= P_PORT_DST; path->dPortsN = portsN; memcpy(path->dPorts, cmd->ports, portsN * sizeof(cmd->ports[0])); } break;
+        case CMD_PATH_SET_TCP_DST: { path->info |= P_PORT_DST; path->dPortsN = portsN; memcpy(path->dPorts, cmd, portsN * sizeof(u16)); } break;
 
         case CMD_PATH_SET_WEIGHT_NODE: {
 
-            const uint weight = cmd->weight_node;
+            const uint weight = CMD_VALUE(weight_node);
 
             if (weight > PATH_WEIGHT_MAX)
                 CMD_ERR(INVALID_WEIGHT);
@@ -1105,7 +1103,7 @@ static ssize_t __cold_as_ice __optimize_size cmd (struct file *file, const char 
 
         case CMD_PATH_SET_WEIGHT_ACKS: {
 
-            const uint wacks = cmd->weight_acks;
+            const uint wacks = CMD_VALUE(weight_acks);
 
             if (wacks == 0
              || wacks > ACKS_N)
@@ -1120,7 +1118,7 @@ static ssize_t __cold_as_ice __optimize_size cmd (struct file *file, const char 
 
         case CMD_PATH_SET_TIMEOUT: {
 
-            const uint timeout = cmd->timeout;
+            const uint timeout = CMD_VALUE(timeout);
 
             if (timeout < PATH_TIMEOUT_MIN
              || timeout > PATH_TIMEOUT_MAX)
@@ -1133,7 +1131,7 @@ static ssize_t __cold_as_ice __optimize_size cmd (struct file *file, const char 
 
         case CMD_PATH_SET_LATENCY_MIN: { // TODO: ARREDONDAR PARA CIMA?
 
-            const uint latency_min = cmd->latency;
+            const uint latency_min = CMD_VALUE(latency);
 
             if (latency_min < LATENCY_MIN
              || latency_min > LATENCY_MAX)
@@ -1146,7 +1144,7 @@ static ssize_t __cold_as_ice __optimize_size cmd (struct file *file, const char 
 
         case CMD_PATH_SET_LATENCY_MAX: { // TODO: ARREDONDAR PARA CIMA?
 
-            const uint latency_max = cmd->latency;
+            const uint latency_max = CMD_VALUE(latency);
 
             if (latency_max < LATENCY_MIN
              || latency_max > LATENCY_MAX)
@@ -1159,7 +1157,7 @@ static ssize_t __cold_as_ice __optimize_size cmd (struct file *file, const char 
 
         case CMD_PATH_SET_LATENCY_VAR: { // TODO: ARREDONDAR PARA CIMA?
 
-            const uintll latency_var = cmd->latency_var;
+            const uintll latency_var = CMD_VALUE(latency_var);
 
             if (latency_var < LATENCY_VAR_MIN
              || latency_var > LATENCY_VAR_MAX)
@@ -1172,7 +1170,7 @@ static ssize_t __cold_as_ice __optimize_size cmd (struct file *file, const char 
 
         case CMD_NODE_SET_MTU: {
 
-            const uint mtu = cmd->mtu;
+            const uint mtu = CMD_VALUE(mtu);
 
             if (mtu < MTU_MIN ||
                 mtu > MTU_MAX)
@@ -1185,12 +1183,14 @@ static ssize_t __cold_as_ice __optimize_size cmd (struct file *file, const char 
 
         case CMD_NODE_SET_NAME: {
 
-            if (!cmd->nname[0] ||
-                 cmd->nname[NODE_NAME_SIZE - 1])
+            const char* const name = CMD_VALUE(nname);
+
+            if (!name[0] ||
+                 name[NODE_NAME_SIZE - 1])
                 CMD_ERR(INVALID_NODE_NAME);
 
             memset(node->name, 0, sizeof(node->name));
-            strcpy(node->name, cmd->nname);
+            strcpy(node->name, name);
 
             node->info |= N_NAME;
 
@@ -1198,12 +1198,14 @@ static ssize_t __cold_as_ice __optimize_size cmd (struct file *file, const char 
 
         case CMD_PATH_SET_NAME: {
 
-            if (!cmd->pname[0] ||
-                 cmd->pname[PATH_NAME_SIZE - 1])
+            const char* const name = CMD_VALUE(pname);
+
+            if (!name[0] ||
+                 name[PATH_NAME_SIZE - 1])
                 CMD_ERR(INVALID_PATH_NAME);
 
             memset(path->name, 0, sizeof(path->name));
-            strcpy(path->name, cmd->pname);
+            strcpy(path->name, name);
 
             path->info |= P_NAME;
 
@@ -1213,7 +1215,7 @@ static ssize_t __cold_as_ice __optimize_size cmd (struct file *file, const char 
         case CMD_PATH_SET_IP4_TTL:
         case CMD_PATH_SET_IP6_TTL: {
 
-            const uint ttl = cmd->ttl;
+            const uint ttl = CMD_VALUE(ttl);
 
             if (ttl < TTL_MIN ||
                 ttl > TTL_MAX)
@@ -1228,7 +1230,7 @@ static ssize_t __cold_as_ice __optimize_size cmd (struct file *file, const char 
         case CMD_PATH_SET_IP4_TOS:
         case CMD_PATH_SET_IP6_TOS: {
 
-            const uint tos = cmd->tos;
+            const uint tos = CMD_VALUE(tos);
 
             if (tos > TOS_MAX)
                 CMD_ERR(INVALID_TOS);
@@ -1240,7 +1242,7 @@ static ssize_t __cold_as_ice __optimize_size cmd (struct file *file, const char 
 
         case CMD_PATH_SET_PPP_SESSION: {
 
-            const uint session = cmd->session;
+            const uint session = CMD_VALUE(ppp_session);
 
             if (session > 0xFFFF)
                 CMD_ERR(INVALID_SESSION);
@@ -1320,7 +1322,7 @@ static ssize_t __cold_as_ice __optimize_size cmd (struct file *file, const char 
 #ifdef CONFIG_XGW_NMAP
         case CMD_NMAP: {
 
-            const uint gw = cmd->nid;
+            const uint gw = CMD_VALUE(nid);
 
             if (gw >= NODES_N)
                 CMD_ERR(INVALID_NID);

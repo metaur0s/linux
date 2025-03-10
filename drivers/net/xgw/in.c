@@ -157,10 +157,10 @@ static noinline uint in_ping (node_s* const node, const skb_s* const skb, pkt_s*
         secret_derivate_random_as_key(node->secret[sec], ping->rnd, K);
 
         // FAZ ISSO PRIMEIRO ANTES DE LIBERAR O PATH PARA ENVIAR
-        const uint o = __atomic_add_fetch(&node->oSave, 1, __ATOMIC_ACQUIRE) % O_KEYS_DYNAMIC;
+        const uint o = __atomic_add_fetch(&node->oCycle, 1, __ATOMIC_ACQUIRE) % O_KEYS_DYNAMIC;
                                            node->oVersions[o] = ver;
                                     memcpy(node->oKeys[o], K, sizeof(K));
-                         __atomic_store_n(&node->oUse, o,  __ATOMIC_RELEASE);
+                         __atomic_store_n(&node->oIndex, o,  __ATOMIC_RELEASE);
 
         return PSTATS_I_PONG_GOOD;
     }

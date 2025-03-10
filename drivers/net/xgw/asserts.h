@@ -77,8 +77,8 @@ BUILD_ASSERT(offsetof(path_s, latency) % CACHE_LINE_SIZE == 0);
 BUILD_ASSERT(offsetof(path_s,  sPorts) % CACHE_LINE_SIZE == 0);
 
 BUILD_ASSERT(offsetof(node_s, opaths)      % CACHE_LINE_SIZE == 0);
-BUILD_ASSERT(offsetof(node_s, ptr)         % CACHE_LINE_SIZE == 0);
-BUILD_ASSERT(offsetof(node_s, synCounters) % CACHE_LINE_SIZE == 0);
+BUILD_ASSERT(offsetof(node_s, nid)         % CACHE_LINE_SIZE == 0);
+BUILD_ASSERT(offsetof(node_s, syns)        % CACHE_LINE_SIZE == 0);
 BUILD_ASSERT(offsetof(node_s, paths)       % CACHE_LINE_SIZE == 0);
 BUILD_ASSERT(offsetof(node_s, pstats)      % CACHE_LINE_SIZE == 0);
 BUILD_ASSERT(offsetof(node_s, oKeys)       % CACHE_LINE_SIZE == 0);
@@ -101,15 +101,15 @@ BUILD_ASSERT(sizeof(((node_s*)NULL)->pstats)
 BUILD_ASSERT(sizeof(((node_s*)NULL)->oKeys)  == (O_KEYS_ALL * K_SIZE));
 BUILD_ASSERT(sizeof(((node_s*)NULL)->iKeys)  == (I_KEYS_ALL * K_SIZE));
 BUILD_ASSERT(sizeof(((node_s*)NULL)->secret) == (SECRET_KEYS_N * K_SIZE));
-BUILD_ASSERT(sizeof(((node_s*)NULL)->synCounters) == 128);
+BUILD_ASSERT(sizeof(((node_s*)NULL)->syns)   == 128);
 BUILD_ASSERT(sizeof(((node_s*)NULL)->paths)  == 4096);
 BUILD_ASSERT(sizeof(((node_s*)NULL)->pstats) == 16384);
 
 // -- NAO PRECISAREMOS CHECAR LIMITES, POIS NAO CABEM MESMO
 // -- E TEM QUE CABER TODOS
-BUILD_ASSERT(~(typeof(((hdr_x_s*)NULL)->src))0     == NID_MAX);
-BUILD_ASSERT(~(typeof(((hdr_x_s*)NULL)->dst))0     == NID_MAX);
-BUILD_ASSERT(~(typeof(((hdr_x_s*)NULL)->version))0 == I_KEY_MAX);
+BUILD_ASSERT((typeof(((hdr_x_s*)NULL)->src))     ~(typeof(((hdr_x_s*)NULL)->src))     0 == NID_MAX);
+BUILD_ASSERT((typeof(((hdr_x_s*)NULL)->dst))     ~(typeof(((hdr_x_s*)NULL)->dst))     0 == NID_MAX);
+BUILD_ASSERT((typeof(((hdr_x_s*)NULL)->version)) ~(typeof(((hdr_x_s*)NULL)->version)) 0 == I_KEY_MAX);
 
 // THE TYPES MUST BE ABLE TO HOLD THEIR VALUES
 BUILD_ASSERT((typeof(((path_s*)NULL)->nid))          NID_MAX          == NID_MAX);
@@ -125,7 +125,7 @@ BUILD_ASSERT((typeof(((path_s*)NULL)->pongReceived)) LTIME_MAX        == LTIME_M
 BUILD_ASSERT((typeof(((path_s*)NULL)->tdiff))        TDIFF_MIN        == TDIFF_MIN);
 BUILD_ASSERT((typeof(((path_s*)NULL)->tdiff))        TDIFF_MAX        == TDIFF_MAX);
 BUILD_ASSERT((typeof(((path_s*)NULL)->info))         P_INFO           == P_INFO);
-BUILD_ASSERT((typeof(((path_s*)NULL)->info))         K_ESTABLISHED    == K_ESTABLISHED);
+BUILD_ASSERT((typeof(((path_s*)NULL)->info))         P_ALL            == P_ALL);
 BUILD_ASSERT((typeof(((path_s*)NULL)->weight))       PATH_WEIGHT_MAX  == PATH_WEIGHT_MAX);
 BUILD_ASSERT((typeof(((path_s*)NULL)->weight_acks))  ACKS_N           == ACKS_N);
 BUILD_ASSERT((typeof(((path_s*)NULL)->sPortsN))      PATH_PORTS_N     == PATH_PORTS_N);
@@ -141,6 +141,7 @@ BUILD_ASSERT((typeof(((node_s*)NULL)->ipaths))       IPATH(PID_MAX)   == IPATH(P
 BUILD_ASSERT((typeof(((node_s*)NULL)->kpaths))       KPATHS           == KPATHS);
 BUILD_ASSERT((typeof(((node_s*)NULL)->opaths))       OPATHS           == OPATHS);
 BUILD_ASSERT((typeof(((node_s*)NULL)->ipaths))       IPATHS           == IPATHS);
+BUILD_ASSERT((typeof(((node_s*)NULL)->info))         N_INFO           == N_INFO);
 
 BUILD_ASSERT(sizeof(((node_s*)NULL)->secret[0]) == K_SIZE);
 BUILD_ASSERT(sizeof(((node_s*)NULL)->secret) == SECRET_SIZE);

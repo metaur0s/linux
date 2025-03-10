@@ -195,19 +195,23 @@ struct node_s { // DEIXA TUDO NO MESMO CACHE LINE PARA A ITERACAO DO KEEPER
     u16 mtu;
     u16 weights;
     u64* conns; // JIFFIES (60) | PID (4) -- GROUPS OF CONNECTIONS WITH SAME HASH
-    u32 connsN:24, // O OUT PRECISA DISSO  ((((1 << node->order) * PAGE_SIZE) - offsetof(node_s, conns)) / sizeof(conn_s))
-        info:8;
+    u32 connsN; // O OUT PRECISA DISSO  ((((1 << node->order) * PAGE_SIZE) - offsetof(node_s, conns)) / sizeof(conn_s))
     u32 iCycle; // NOTE: O OVERFLOW VAI SER AOS BILHOES
-    u8  oSave; // O OVERFLOW TEM QUE SER MULTIPLO DE O_KEYS_DYNAMIC
-    u8  oUse; // QUAL SERA USADO PARA ENCRIPTAR
+    u8  oCycle; // O OVERFLOW TEM QUE SER MULTIPLO DE O_KEYS_DYNAMIC
+    u8  oIndex; // QUAL SERA USADO PARA ENCRIPTAR
     u8  oVersions [O_KEYS_ALL];
-    u8 reserved [11];
+    u8 info;
+    u8 reserved [10];
 // 32 -- RO - KEEPER/CMD
+    u16 nid;
+#ifdef CONFIG_XGW_NMAP
+    u16 gw;
+#else
+    u16 _gw;
+#endif
+    u32 reserved32;
     node_s** ptr;
     node_s* next;
-    u16 nid;
-    u16 gw;
-    u32 reserved32;
     net_device_s* dev; // TODO: USA MUITO NO IN, E TALVEZ NO OUT E NO CMD
 // 32 -- RO - NAME
     char name [NODE_NAME_SIZE];

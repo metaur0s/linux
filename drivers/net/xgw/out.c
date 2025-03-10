@@ -179,8 +179,7 @@ static netdev_tx_t out (skb_s* const skb, net_device_s* const dev) {
     if ((PTR(p) - (path->skel.hsize + PKT_ALIGN_SIZE)) < SKB_HEAD(skb))
         ret_path(PSTATS_O_DATA_NO_HEADROOM);
 
-    // TODO: USAR O GET JIFFIES ACIMA
-    pkt_encapsulate(node, atomic_get(&node->oUse), RTIME(now, atomic_get(&path->tdiff)), &path->skel, skb, p, size);
+    pkt_encapsulate(node, atomic_get(&node->oIndex), RTIME(now, atomic_get(&path->tdiff)), &path->skel, skb, p, size);
 
     // -- THE FUNCTION CAN BE CALLED FROM AN INTERRUPT
     // -- WHEN CALLING THIS METHOD, INTERRUPTS MUST BE ENABLED
