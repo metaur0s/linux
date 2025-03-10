@@ -149,7 +149,7 @@ static inline u64 get_current_ms (void) {
 #include "dev.c"
 #include "cmd_names.c"
 #include "cmd.c"
-#include "asserts.h"
+#include "asserts.c"
 
 /*
 
