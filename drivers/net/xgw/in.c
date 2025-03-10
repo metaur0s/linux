@@ -349,8 +349,6 @@ _is_xgw:
 
     path_s* const path = &node->paths[pid];
 
-    const u64 now = get_current_ms();
-
     // NOTE: WHEN SETTING A COUNTER-SYN, IT MUST BE > COUNTER_SYN_MIN
     // NOTE: WHEN SETTING A COUNTER-SYN, IT MUST BE > COUNTER_SYN_MAX
 
@@ -404,7 +402,7 @@ _is_xgw:
         } else { // PING / DATA
 
             // OBS: CONSIDERA LATENCY
-            const s64 diff = (s64)(p_ltime + atomic_get(&path->latency)) - (s64)now;
+            const s64 diff = (s64)(p_ltime + atomic_get(&path->latency)) - (s64)get_current_ms();
 
             if (!(-10000 <= diff && diff <= 10000))
                 // ELE NAO CONHECE NOSSO TIME
