@@ -344,17 +344,14 @@ _is_xgw:
     if (size < XGW_PAYLOAD_MIN)
         ret_path(PSTATS_I_SIZE_SMALL);
 
-    if ((PTR(pkt) + PKT_SIZE + PKT_ALIGN_SIZE + size) > end)
+    if (size != PING_SIZE && i >= I_KEYS_DYNAMIC)
+        // BAD SIZE FOR A PING PACKET
+        ret_path(PSTATS_I_PING_BAD_SIZE);
+    
+    if ((PKT_DATA(pkt) + size) > end)
         ret_path(PSTATS_I_SIZE_TRUNCATED);
 
     path_s* const path = &node->paths[pid];
-
-    // NOTE: WHEN SETTING A COUNTER-SYN, IT MUST BE > COUNTER_SYN_MIN
-    // NOTE: WHEN SETTING A COUNTER-SYN, IT MUST BE > COUNTER_SYN_MAX
-
-    if (i >= I_KEYS_DYNAMIC && size != PING_SIZE)
-        // BAD SIZE FOR A PING PACKET
-        ret_path(PSTATS_I_PING_BAD_SIZE);
 
     // SITUATION VS PACKET TYPE
     switch (atomic_get(&path->rtime)) {
