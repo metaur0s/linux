@@ -342,10 +342,11 @@ _is_xgw:
     if (!(__atomic_load_n(&node->ipaths, __ATOMIC_SEQ_CST) & IPATH(pid)))
         ret_path(PSTATS_I_DISABLED);
 
-    if (size < XGW_PAYLOAD_MIN)
-        ret_path(PSTATS_I_SIZE_SMALL);
-
-    if (size != PING_SIZE && i >= I_KEYS_DYNAMIC)
+    if (i < I_KEYS_DYNAMIC) {
+        if (size < XGW_PAYLOAD_MIN)
+            // BAD SIZE FOR A NORMAL PACKET
+            ret_path(PSTATS_I_SIZE_SMALL);
+    } elif (size != PING_SIZE)
         // BAD SIZE FOR A PING PACKET
         ret_path(PSTATS_I_PING_BAD_SIZE);
     
