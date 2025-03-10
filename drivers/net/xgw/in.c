@@ -358,9 +358,6 @@ _is_xgw:
         // BAD SIZE FOR A PING PACKET
         ret_path(PSTATS_I_PING_BAD_SIZE);
 
-    uint latency = atomic_get(&path->latency);
-    s64 tdiff    = atomic_get(&path->tdiff);
-
     // SITUATION VS PACKET TYPE
     switch (atomic_get(&path->rtime)) {
         
@@ -408,7 +405,7 @@ _is_xgw:
         } else { // PING / DATA
 
             // OBS: CONSIDERA LATENCY
-            const s64 diff = (s64)(p_ltime + latency) - (s64)now;
+            const s64 diff = (s64)(p_ltime + atomic_get(&path->latency)) - (s64)now;
 
             if (!(-10000 <= diff && diff <= 10000))
                 // ELE NAO CONHECE NOSSO TIME
