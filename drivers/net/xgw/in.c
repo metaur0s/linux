@@ -401,15 +401,17 @@ _is_xgw:
                 ret_path(PSTATS_I_LTIME_MISMATCH_PING_SENT);
         } else { // PING / DATA
 
-            // OBS: CONSIDERA LATENCY
+            // OBS: CONSIDERA LATENCY, MAS PODE ESTAR ERRADA (SER A INICIAL, SETADA PELO USUÁRIO)
             const s64 diff = (s64)(p_ltime + atomic_get(&path->latency)) - (s64)get_current_ms();
 
             if (!(-10000 <= diff && diff <= 10000))
                 // ELE NAO CONHECE NOSSO TIME
                 ret_path(PSTATS_I_LTIME_MISMATCH);
-            if (diff > 1280) // PEER AFOBADO
+            if (diff > 1280)
+                // PEER AFOBADO
                 ret_path(PSTATS_I_LTIME_SKEW_UP);
-            if (diff < -1280) // PEER LESADO
+            if (diff < -1280)
+                // PEER LESADO
                 ret_path(PSTATS_I_LTIME_SKEW_DOWN);
         }
     }
