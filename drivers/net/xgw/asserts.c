@@ -1,3 +1,5 @@
+BUILD_ASSERT(XGW_MTU_OVERHEAD == (PKT_X_SIZE + PKT_ALIGN_SIZE));
+
 //
 BUILD_ASSERT(sizeof(cmd_arg_nname_t) == sizeof(((node_s*)NULL)->name));
 BUILD_ASSERT(sizeof(cmd_arg_pname_t) == sizeof(((path_s*)NULL)->name));
