@@ -300,11 +300,12 @@ int in (skb_s* const skb) {
 
 _is_xgw:
 
-    if ((ptr += sizeof(hdr_x_s)) > end)
-        ret_dev(DSTATS_I_INCOMPLETE);
-
     // AGORA SABE ONDE COMECA O PKT
-    pkt_s* const pkt = ptr - sizeof(pkt_s);
+    pkt_s* const pkt = (ptr + sizeof(hdr_x_s)) - sizeof(pkt_s);
+
+    if (PKT_DATA(pkt) > end)
+        // MISSING HEADER + ALIGN
+        ret_dev(DSTATS_I_INCOMPLETE);
 
     const uint nid      = BE16 (pkt->x.src);
     const uint dst      = BE16 (pkt->x.dst);
@@ -424,11 +425,6 @@ _is_xgw:
 
     if (i >= I_KEY_SYN)
         ret_path(in_ping(node, skb, pkt));
-
-    // REPLAY/CORRUPTION/FORGING/EXPIRATION PROTECTION
-    // NOTE: LEMBRANDO QUE O TEMPO TODO AMBOS FICAM AJUSTANDO O NODE->DIFF,
-    //       ENTAO NAO DA PARA LEVAR AO PE DA LETRA ESSES TIMES
-    // NOTE: O PACOTE PODE TER LEVADO UM TEMPO A CHEGAR, SER PROCESSADO ETC
 
     // NORMAL PACKET
 
