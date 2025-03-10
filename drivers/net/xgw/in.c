@@ -394,8 +394,7 @@ _is_xgw:
     // PACKET TYPE VS LTIME
     if (i != I_KEY_SYN) { // THE SYN LTIME CHECK WAS MOVED ABOVE
 
-        if (p_ltime < RTIME_MIN
-         || p_ltime > RTIME_MAX)
+        if (!(RTIME_MIN <= p_ltime && p_ltime <= RTIME_MAX))
             // INVALID LTIME
             ret_path(PSTATS_I_LTIME_INVALID);
 
