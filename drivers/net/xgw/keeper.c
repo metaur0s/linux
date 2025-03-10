@@ -226,7 +226,7 @@ static void keeper (struct timer_list* const timer) {
                 // TODO: ELE TEM QUE TER RECEBIDO TAMBEM UM PING, HA PELO MENOS 2 KEEPER INTERVALS
                 // TODO: E A INTERFACE ESTA UP
                 // TODO: E A INTERFACE ESTA COM CARRIER
-                const u64 acks = (path->acks << 1) | (pongReceived <= (path->pingSent + 2*latency + path->latency_var));
+                const u64 acks = ((pongReceived <= (path->pingSent + 2*latency + path->latency_var)) << 63) | (path->acks >> 1);
 
                 if (path->acks != acks) {
                     path->acks = acks;
@@ -247,12 +247,11 @@ static void keeper (struct timer_list* const timer) {
                 }
 
                 // DOS PIORES AOS MELHORES
-            #define IS_STABLE(acks, interval, loss) (popcount((acks) << (ACKS_N - (interval))) >= ((interval) - (loss)))
                 opaths |= (
-                    (((u64)IS_STABLE(acks, 12, 8)) << (3*PATHS_N)) | // BASTA QUE ESTEJA FUNCIONANDO ENTAO
-                    (((u64)IS_STABLE(acks, 20, 1)) << (2*PATHS_N)) |
-                    (((u64)IS_STABLE(acks, 12, 0)) << (1*PATHS_N)) | // NOTE: THIS ONE SHOULD BE REPEATED
-                        ((u64)IS_STABLE(acks, 12, 0)) // TODO: REMOVE THIS REPETITION LIMITATION
+                    ((acks >= 0xFF00000000000000ULL) << (3*PATHS_N)) | // BASTA QUE ESTEJA FUNCIONANDO ENTAO
+                    ((acks >= 0xFF00000000000000ULL) << (2*PATHS_N)) |
+                    ((acks >= 0xFF00000000000000ULL) << (1*PATHS_N)) | // NOTE: THIS ONE SHOULD BE REPEATED
+                    ((acks >= 0xFF00000000000000ULL) << (0*PATHS_N)) // TODO: REMOVE THIS REPETITION LIMITATION
                 ) << pid;
 
                 // MAKE PING
