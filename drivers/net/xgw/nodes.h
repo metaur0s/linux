@@ -163,9 +163,9 @@ struct path_s {
 // A ARRAY DE OUTPUT É PARA NAO PRECISAR DE LOCK
 #define O_KEYS_ALL     19
 #define O_KEYS_DYNAMIC 16 // TEM QUE SER DAR OVERFLOW CONFORME NODE->OCYCLE
-#define O_KEY_SYN      16
-#define O_KEY_PING     17
-#define O_KEY_PONG     18
+#define O_KEY_PING     16
+#define O_KEY_PONG     17
+#define O_KEY_SYN      18
 
 //
 #define OPATH_0 0x0001000100010001ULL
