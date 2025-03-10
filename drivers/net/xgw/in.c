@@ -366,9 +366,6 @@ _is_xgw:
         
         case RTIME_LISTENING:
             if (i == I_KEY_SYN) {
-                if (p_ltime != path->syn)
-                    // ELE NAO CONHECE NOSSO CODIGO
-                    ret_path(PSTATS_I_LTIME_MISMATCH_SYN);
                 if (0)
                     // LIMITAR A QUANTIDADE DE SYNS RECEBIVEIS A CADA KEEPER INTERVAL
                     ret_path(PSTATS_I_LISTENING_SYN_TOO_MANY);
@@ -389,31 +386,16 @@ _is_xgw:
     }
 
     // PACKET TYPE VS LTIME
-    if (i != I_KEY_SYN) { // THE SYN LTIME CHECK WAS MOVED ABOVE
-
-        if (!(RTIME_MIN <= p_ltime && p_ltime <= RTIME_MAX))
-            // INVALID LTIME
-            ret_path(PSTATS_I_LTIME_INVALID);
-
-        if (i == I_KEY_PONG) {
-            if (p_ltime != atomic_get(&path->pingSent))
-                ret_path(PSTATS_I_LTIME_MISMATCH_PING_SENT);
-        } else { // PING / DATA
-
-            // OBS: CONSIDERA LATENCY, MAS PODE ESTAR ERRADA (SER A INICIAL, SETADA PELO USUÁRIO)
-            const s64 diff = (s64)(p_ltime + atomic_get(&path->latency)) - (s64)get_current_ms();
-
-            if (!(-10000 <= diff && diff <= 10000))
-                // ELE NAO CONHECE NOSSO TIME
-                ret_path(PSTATS_I_LTIME_MISMATCH);
-            if (diff > 1280)
-                // PEER AFOBADO
-                ret_path(PSTATS_I_LTIME_SKEW_UP);
-            if (diff < -1280)
-                // PEER LESADO
-                ret_path(PSTATS_I_LTIME_SKEW_DOWN);
-        }
-    }
+    if (i <= I_KEY_PING) { // TODO: <--- REORDENAR PARA PING, PONG, SYN
+        // DATA / PING
+        // OBS: CONSIDERA LATENCY, MAS PODE ESTAR ERRADA (SER A INICIAL, SETADA PELO USUÁRIO)
+        if (ABS_DIFF(p_ltime + atomic_get(&path->latency), get_current_ms()) > 1280)
+            // ELE NAO CONHECE NOSSO TIME (OU TEM UM SKEW GRANDE)
+            ret_path(PSTATS_I_LTIME_MISMATCH);
+    } elif (p_ltime != atomic_get(&path->pingSent))
+        // TODO: AO INICIAR O SERVER, COLOCAR path->pingSent = path->syn
+        // ELE NAO CONHECE NOSSO CODIGO / TIME
+        ret_path(PSTATS_I_LTIME_MISMATCH_SYN_OR_PONG);
 
     // DECRYPT
     if (pkt_decrypt(node, i, pkt, size) != hash)
