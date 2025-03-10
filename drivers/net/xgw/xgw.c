@@ -181,7 +181,7 @@ static int __init xgw_init (void) {
     //
     BUILD_ASSERT( ( ((uintptr_t)0xffffffffffffffffULL) & (~(uintptr_t)1) ) == (0xffffffffffffffffULL ^ 1) );
 
-    printk("XGW: INIT KEEPER INTERVAL %d\n", KEEPER_INTERVAL);
+    printk("XGW: INIT KEEPER INTERVAL %u JIFFIES / %u MS\n", KEEPER_INTERVAL_JIFFIES, KEEPER_INTERVAL_MS);
     printk("XGW: V4 PREFIX %08llX WIDTH %u/%u\n", (uintll)V4_PREFIX, V4_WIDTH_PREFIX, V4_WIDTH_NODE);
     printk("XGW: V6 PREFIX %016llX WIDTH %u/%u\n", (uintll)V6_PREFIX, V6_WIDTH_PREFIX, V6_WIDTH_NODE);
 
