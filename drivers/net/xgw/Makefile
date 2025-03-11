@@ -28,9 +28,9 @@ CFLAGS_xgw.o += -mpopcnt
 #CFLAGS_xgw.o += -mabm
 #endif
 
-ifneq ($(CONFIG_XGW_TBM),)
-CFLAGS_xgw.o += -mtbm
-endif
+#ifneq ($(CONFIG_XGW_TBM),)
+#CFLAGS_xgw.o += -mtbm
+#endif
 
 ifneq ($(CONFIG_XGW_FMA),)
 CFLAGS_xgw.o += -mfma
