@@ -126,8 +126,8 @@ BUILD_ASSERT((typeof(((path_s*)NULL)->timeout))      PATH_TIMEOUT_MAX == PATH_TI
 BUILD_ASSERT((typeof(((path_s*)NULL)->since))        LTIME_MAX        == LTIME_MAX);
 BUILD_ASSERT((typeof(((path_s*)NULL)->pingSent))     LTIME_MAX        == LTIME_MAX);
 BUILD_ASSERT((typeof(((path_s*)NULL)->pongReceived)) LTIME_MAX        == LTIME_MAX);
-BUILD_ASSERT((typeof(((path_s*)NULL)->pingSeen))     LTIME_MAX        == LTIME_MAX);
-BUILD_ASSERT((typeof(((path_s*)NULL)->pongSeen))     LTIME_MAX        == LTIME_MAX);
+BUILD_ASSERT((typeof(((path_s*)NULL)->pingSeen))     RTIME_MAX        == RTIME_MAX);
+BUILD_ASSERT((typeof(((path_s*)NULL)->pongSeen))     RTIME_MAX        == RTIME_MAX);
 BUILD_ASSERT((typeof(((path_s*)NULL)->info))         P_INFO           == P_INFO);
 BUILD_ASSERT((typeof(((path_s*)NULL)->info))         P_ALL            == P_ALL);
 BUILD_ASSERT((typeof(((path_s*)NULL)->weight))       PATH_WEIGHT_MAX  == PATH_WEIGHT_MAX);

@@ -89,9 +89,12 @@ static noinline uint in_ping (node_s* const node, const skb_s* const skb, pkt_s*
 
     const u64 now = get_current_ms();
 
-    const int tdiff_is_valid = (__atomic_load_n(&node->tlast, __ATOMIC_SEQ_CST) - now) <= 45000;
-
+    u64 tlast = __atomic_load_n(&node->tlast, __ATOMIC_SEQ_CST);
     s64 tdiff = __atomic_load_n(&node->tdiff, __ATOMIC_SEQ_CST);
+
+    // NOTE: ENTÃO SE A O TDIFF REAL FOR DE FATO 0, ENTAO ISSO ESTA ERRADO
+    if ((now - tlast) > 45000)
+        tdiff = 0;
 
     const uint pid      = BE8  (pkt->x.path);
     const uint i        = BE8  (pkt->x.version);
