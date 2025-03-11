@@ -9,9 +9,7 @@
 
 struct ping_s {
     u64 rnd [K_LEN];
-    u16 _;
-    u16 ver;
-    u16 __;
-    u16 sec;
+    u8 _[7];
+    u8 ver;
     u64 time;
 };

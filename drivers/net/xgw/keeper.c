@@ -150,17 +150,14 @@ static void keeper (struct timer_list* const timer) {
 
                     // TODO: FAZER ISSO A TODOS OS NODES-PATHS AO SETAR O SELF
                     // TODO: TEM QUE REPENSAR O CRYPTO DERIVATE, POIS SENAO SE MUDAR O SELF, TERA DE SETAR NOVAMENTE O SECRET
-                    path->skel.x.src  = BE16(nodeSelf);
-
-                    path->rtime      = RTIME_CONNECTING;
+                    path->skel.x.src   = BE16(nodeSelf);
+                    path->pongReceived = PR_CONNECTING;
                 } else {
                     printk("XGW: %s [%s]: LISTENING\n", node->name, path->name);
                     path->skel.type    = 0; //
-                    path->rtime        = RTIME_LISTENING;
-                }   path->pingSent     = 0; // AINDA NAO CONSTRUI PING
-                    path->pongReceived = 0;
-                    path->tdiff        = 0;
-                    path->latency      = path->latency_max + path->latency_var;
+                    path->pongReceived = PR_LISTENING;
+                }   path->pingSent     = path->syn; // AINDA NAO CONSTRUI PING
+                    path->latency      = path->latency_max; // TODO: + path->latency_var
                     path->info        ^= K_START | K_LISTEN;
 
                 // ENABLE IN
@@ -170,7 +167,7 @@ static void keeper (struct timer_list* const timer) {
 
             if (path->info & K_LISTEN) {
 
-                if (__atomic_load_n(&path->rtime, __ATOMIC_SEQ_CST) >= RTIME_CONNECTING) {
+                if (__atomic_load_n(&path->pongReceived, __ATOMIC_SEQ_CST) >= PR_CONNECTING) {
 
                     if (path->info & P_SERVER)
                         printk("XGW: %s [%s]: ACCEPTED ON PHYS %s\n", node->name, path->name, path->skel.phys->name);
@@ -226,7 +223,7 @@ static void keeper (struct timer_list* const timer) {
                 // TODO: ELE TEM QUE TER RECEBIDO TAMBEM UM PING, HA PELO MENOS 2 KEEPER INTERVALS
                 // TODO: E A INTERFACE ESTA UP
                 // TODO: E A INTERFACE ESTA COM CARRIER
-                const u64 acks = ((pongReceived <= (path->pingSent + 2*latency + path->latency_var)) << 63) | (path->acks >> 1);
+                const u64 acks = ((u64)(pongReceived <= (path->pingSent + 2*latency + path->latency_var)) << 63) | (path->acks >> 1);
 
                 if (path->acks != acks) {
                     path->acks = acks;
@@ -267,7 +264,7 @@ static void keeper (struct timer_list* const timer) {
                     //
                     random64_n(PTR(ping), PING_RANDOMS_N, SUFFIX_ULL(CONFIG_XGW_RANDOM_PING));
 
-                    const uint o = atomic_get(&path->rtime) == RTIME_CONNECTING ?
+                    const uint o = atomic_get(&path->rtime) == PR_CONNECTING ?
                         O_KEY_SYN : O_KEY_PING;
 
                     const u64 rtime = (o == O_KEY_SYN) ?

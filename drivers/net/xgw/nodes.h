@@ -122,10 +122,10 @@ struct path_s {
     // --
     u64 acks;     // KEEPER - HISTORY
     u64 syn; // O PKT->TSTAMP QUE O CLIENTE VAI USAR, ENQUANTO NAO DESCOBRE ELE
-    u64 pingSent;    // QUANDO ENVIEI O PING
-    u64 pongReceived; // QUANDO RECEBI O PONG
-    u64 rtime;  // LAST PING->TSTAMP RECEIVED (HIS RAW TIME)
-    s64 tdiff;  // ltime - rtime
+    u64 pingSent;    // QUANDO ENVIEI O PING - PARA SABER SE ACEITA O PONG
+    u64 pongReceived; // QUANDO RECEBI O PONG - PARA SABER QUE A CONEXÃO ESTÁ VIVA
+    u64 pongSeen; // LAST PING->TSTAMP RECEIVED (HIS RAW TIME) - SO WE DON'T ACCEPT REPEATED/GOINGBACKS
+    u64 pingSeen; // LAST PING->TSTAMP RECEIVED (HIS RAW TIME) - SO WE DON'T ACCEPT REPEATED/GOINGBACKS
 // 32 -- KEEPER / PING
     u16 latency;      // KEEPER WRITE / OUT READ  <<---- VAI TER QUE ENFIAR ESSA PORRA ENTÃO DENTRO DO CACHE LINE DO SKEL, OU NO NODE
     u8  tos;
@@ -161,11 +161,11 @@ struct path_s {
 #define I_KEY_MAX I_KEY_PONG
 
 // A ARRAY DE OUTPUT É PARA NAO PRECISAR DE LOCK
-#define O_KEYS_ALL     19
-#define O_KEYS_DYNAMIC 16 // TEM QUE SER DAR OVERFLOW CONFORME NODE->OCYCLE
-#define O_KEY_PING     16
-#define O_KEY_PONG     17
-#define O_KEY_SYN      18
+#define O_KEYS_ALL     11
+#define O_KEYS_DYNAMIC  8 // TEM QUE SER DAR OVERFLOW CONFORME NODE->OCYCLE
+#define O_KEY_PING      8
+#define O_KEY_PONG      9
+#define O_KEY_SYN      10
 
 //
 #define OPATH_0 0x0001000100010001ULL
@@ -201,7 +201,9 @@ struct node_s { // DEIXA TUDO NO MESMO CACHE LINE PARA A ITERACAO DO KEEPER
     u8  oIndex; // QUAL SERA USADO PARA ENCRIPTAR
     u8  oVersions [O_KEYS_ALL];
     u8 info;
-    u8 reserved [10];
+    u16 reserved16;
+    s64 tdiff;
+    u64 tlast; //
 // 32 -- RO - KEEPER/CMD
     u16 nid;
 #ifdef CONFIG_XGW_NMAP

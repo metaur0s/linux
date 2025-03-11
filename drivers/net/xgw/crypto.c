@@ -125,22 +125,30 @@ u64 decrypt (const u64 K[K_LEN], u64* restrict pos, u64* restrict const end, u64
 }
 
 // USING SECRET S, APPLY RANDOM R, AND DERIVE KEY K
-static void secret_derivate_random_as_key (const u64 S[K_LEN], const u64 R[K_LEN], u64 K[K_LEN]) {
+static void secret_derivate_random_as_key (const u64 S[SECRET_KEYS_N][K_LEN], const u64 R[K_LEN], u64 K[K_LEN]) {
 
-    // WHILE IS FETCHING S...
-    __prefetch_r_temporal_high(S);
-
-    // ...LOAD DYNAMIC RANDOM AND ITS SUM
     u64 sum = 0;
 
-    for_count (k, K_LEN)
+    // LOAD DYNAMIC RANDOM AND ITS SUM
+    for_count (k, K_LEN){
         sum += K[k] = BE64(R[k]);
-    sum += sum >> 32;
-    sum += sum >> 16;
+    }   sum += sum >> 32;
+        sum += sum >> 16;
 
-    do {
-        K[sum % K_LEN] += S[K[sum % K_LEN] % K_LEN] + sum;
-    } while (sum >>= 7);
+    const u64* const restrict s = S[sum % SECRET_KEYS_N];
+
+    // WHILE IS FETCHING S...
+    __prefetch_r_temporal_high(s);
+
+    // ...ONE WORD AFFECT THE OTHERS
+    for_count (k, K_LEN) {
+        sum += K[k] += sum * popcount(sum);
+    }   sum += sum >> 32;
+        sum += sum >> 16;
+
+    do { // NOW APPLY SECRET
+        K[sum % K_LEN] += s[(K[(s[sum % K_LEN] + sum) % K_LEN] + sum) % K_LEN];
+    } while (sum >>= 4);
 }
 
 // GENERATE CONSTANT PING/PONG KEYS

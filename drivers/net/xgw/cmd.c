@@ -841,6 +841,8 @@ static ssize_t __cold_as_ice __optimize_size cmd (struct file *file, const char 
             node->iCycle  = 0;
             node->oCycle  = 0;
             node->oIndex  = 0;
+            node->tdiff   = 0;
+            node->tlast   = 0;
 
             // WAKE NODE
             __link(node, knodes);

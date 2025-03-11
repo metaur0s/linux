@@ -1,8 +1,8 @@
 
-#define RTIME_LISTENING   0
-#define RTIME_ACCEPTING   1
-#define RTIME_CONNECTING  2
-#define RTIME_ESTABLISHED RTIME_MIN
+#define PR_LISTENING   0
+#define PR_ACCEPTING   1
+#define PR_CONNECTING  2
+#define PR_ESTABLISHED LTIME_MIN
 
 #define RTIME_MIN ((u64)8192)
 #define RTIME_MAX ((u64)(8ULL*12*31*24*3600*1000))
@@ -15,6 +15,35 @@
 
 #define COUNTER_SYN_MIN ((u64)8)
 #define COUNTER_SYN_MAX ((~(u64)0) - 32)
+
+static inline void pega_key_in (node_s* const node, const ping_s* const pong) {
+
+    u64 K[K_LEN];
+
+    // LEARN HIS INPUT KEYS (MY OUTPUT KEYS)
+    const uint ver = BE16(pong->ver);
+
+    secret_derivate_random_as_key(node->secret, pong->rnd, K);
+
+    // FAZ ISSO PRIMEIRO ANTES DE LIBERAR O PATH PARA ENVIAR
+    const uint o = __atomic_add_fetch(&node->oCycle, 1, __ATOMIC_ACQUIRE) % O_KEYS_DYNAMIC;
+                                       node->oVersions[o] = ver;
+                                memcpy(node->oKeys[o], K, sizeof(K));
+                     __atomic_store_n(&node->oIndex, o,  __ATOMIC_RELEASE);
+}
+
+static inline void pega_key_out (node_s* const node, ping_s* const pong) {
+
+    // A CADA PONG O SLOT MAIS ANTIGO É RECICLADO.
+    // ENTÃO AS KEYS MAIS ANTIGAS SÃO AUTOMATICAMENTE DESCARTADAS.
+    // OVERFLOWS SERAO PROBLEMAS, ENTAO TEM QUE USAR PALAVRA GRANDE.
+    const uint i = __atomic_add_fetch(&node->iCycle, 1, __ATOMIC_RELAXED) % I_KEYS_DYNAMIC;
+
+    pong->ver  = BE16(i); // OVERWRITE WITH THE VERSION
+
+    // SEM ATOMICITY/BARRIER POR QUE O PEER SO VAI REFERENCIAR ESSE NOSSO INPUT INDEX QUANDO ELE RECEBER
+    secret_derivate_random_as_key(node->secret, pong->rnd, node->iKeys[i]);
+}
 
 static inline void pong_send (node_s* const node, path_s* const path, const pkt_s* const skel, const u64 p_rtime, const u64 now) {
 
@@ -30,20 +59,9 @@ static inline void pong_send (node_s* const node, path_s* const path, const pkt_
         // GERA AS KEYS
         random64_n(PTR(pong), PING_RANDOMS_N, SUFFIX_ULL(CONFIG_XGW_RANDOM_PING));
 
-        // A CADA PONG O SLOT MAIS ANTIGO É RECICLADO.
-        // ENTÃO AS KEYS MAIS ANTIGAS SÃO AUTOMATICAMENTE DESCARTADAS.
-        // OVERFLOWS SERAO PROBLEMAS, ENTAO TEM QUE USAR PALAVRA GRANDE.
-        const uint i = __atomic_add_fetch(&node->iCycle, 1, __ATOMIC_RELAXED) % I_KEYS_DYNAMIC;
-
-     // pong->sec -> JA GERADO PELO RANDOM
-        pong->ver  = BE16(i); // OVERWRITE WITH THE VERSION
         pong->time = BE64(now);
 
-        // O RANDOM GEROU QUAL SEC USAREMOS
-        const uint sec = BE16(pong->sec);
-
-        // SEM ATOMICITY/BARRIER POR QUE O PEER SO VAI REFERENCIAR ESSE NOSSO INPUT INDEX QUANDO ELE RECEBER
-        secret_derivate_random_as_key(node->secret[sec], pong->rnd, node->iKeys[i]);
+        pega_key_out(node, pong);
 
         // USA O RAW RTIME QUE RECEBEU
         // TODO: O ALIGN COM RANDOM TEM QUE SER COLOCADO FORA DO ENCAPSULATE, POIS NO CASO DO PING/PONG NAO VAMOS USAR
@@ -71,15 +89,20 @@ static noinline uint in_ping (node_s* const node, const skb_s* const skb, pkt_s*
 
     const u64 now = get_current_ms();
 
+    const int tdiff_is_valid = (__atomic_load_n(&node->tlast, __ATOMIC_SEQ_CST) - now) <= 45000;
+
+    s64 tdiff = __atomic_load_n(&node->tdiff, __ATOMIC_SEQ_CST);
+
     const uint pid      = BE8  (pkt->x.path);
     const uint i        = BE8  (pkt->x.version);
           u64  p_ltime  = BE64 (pkt->x.time);
 
     path_s* const path = &node->paths[pid];
 
-    uint latency = atomic_get(&path->latency);
-    s64 tdiff    = atomic_get(&path->tdiff);
-    u64 rtime    = atomic_get(&path->rtime);
+    uint latency     = atomic_get(&path->latency);
+    u64 pingSeen     = atomic_get(&path->pingSeen);
+    u64 pongSeen     = atomic_get(&path->pongSeen);
+    u64 pongReceived = atomic_get(&path->pongReceived);
 
     // HIS RAW TIME
     const ping_s* const ping = PKT_DATA(pkt);
@@ -91,27 +114,24 @@ static noinline uint in_ping (node_s* const node, const skb_s* const skb, pkt_s*
         // INVALID RTIME
         return PSTATS_I_RTIME_INVALID;
 
-    if (rtime >= RTIME_ESTABLISHED){
-        // JA CONHEÇO O TIME DELE, O DIFF E O LATENCY
-        if (p_rtime <= rtime)
-            // HIS RAW TIME CANNOT GO DOWN OR REPEAT
-            return PSTATS_I_RTIME_BACKWARDS;
+    if (tdiff_is_valid)
+        // JA CONHEÇO O TIME DELE
         // O QUANTO
         //      (O RELOGIO DELE COMO ELE DIZ QUE ESTA (APROXIMADO))
         //          (LEVANDO EM CONTA QUE ISTO FOI UM SNAPSHOT DELE HA *LATENCY* ATÉ RECEBERMOS)
         // ESTÁ EM RELAÇÃO A
         //      (O RELOGIO DELE COMO ELE DEVE ESTAR (APROXIMADO))
-        const s64 diff = (s64)(p_rtime + latency) - (s64)RTIME(now, tdiff);
-        // A IMPRECISÃO NÃO PODE SER TÃO GRANDE ASSIM:
-        // NOTE: CONSIDERAR PATH->LATENCY_VAR
-        if (diff > 2000) // PEER AFOBADO
-            return PSTATS_I_RTIME_SKEW_UP;
-        if (diff < -2000) // PEER LESADO
-            return PSTATS_I_RTIME_SKEW_DOWN;
-    }
+        // OBS: O LATENCY AIND PODE SER O INICIAL E NÃO O REAL
+        if (ABS_DIFF((p_rtime + latency), RTIME(now, tdiff)) > (2000 + path->latency_var))
+            // A IMPRECISÃO NÃO PODE SER TÃO GRANDE ASSIM
+            return PSTATS_I_RTIME_SKEW;
 
     if (i == I_KEY_PONG) {
         // CONNECTING / ESTABLISHED
+
+        if (p_rtime <= pongSeen || !__atomic_compare_exchange_n(&path->pongSeen, &pongSeen, p_rtime, 0, __ATOMIC_RELAXED, __ATOMIC_RELAXED))
+            // HIS RAW TIME CANNOT GO DOWN OR REPEAT
+            return PSTATS_I_RTIME_BACKWARDS;
 
         // p_ltime IS THE TIME WE SENT
         // WE USE THE HALF, BECAUSE THIS TIME ELAPSED WAS TO GO AND GET BACK
@@ -128,7 +148,7 @@ static noinline uint in_ping (node_s* const node, const skb_s* const skb, pkt_s*
         // E ENTAO PEGA A COMPARAÇÃO ENTRE *LOCAL TIME WHEN I SENT* COM *REMOTE TIME WHEN I SENT*
         // LTIME_DIFF_RTIME(p_ltime + latency, p_rtime)
         // LTIME_DIFF_RTIME(now, p_rtime + latency)
-        tdiff = (tdiff + LTIME_DIFF_RTIME(now, p_rtime + latency)) / 2;
+        tdiff = (tdiff + LTIME_DIFF_RTIME(now, p_rtime + latency)) / (1 + !!tdiff);
 
         if (!__atomic_compare_exchange_n(&path->pingSent, &p_ltime, 0, 0, __ATOMIC_SEQ_CST, __ATOMIC_RELAXED))
             // THIS PONG WAS ALREADY PROCESSED, OR
@@ -138,43 +158,38 @@ static noinline uint in_ping (node_s* const node, const skb_s* const skb, pkt_s*
         // CONFIRMOU QUE ESTE PONG RESPONDEU O ULTIMO PING ENVIADO
         // LIMPOU ELE: NAO VAI ACEITAR OUTRO
 
+        __atomic_store_n(&node->tdiff, tdiff, __ATOMIC_SEQ_CST); // TEM QUE SER ESCRITO ANTES DO RTIME
+        __atomic_store_n(&node->tlast,  now,  __ATOMIC_SEQ_CST);
+
         // ESTE AQUI DEVERIA SER COMPARE, EXCHANGE, MAS:
         // SÓ PODE ACONTECER UM RACE SE ENTRARMOS NESTE BLOCO E AO MESMO TEMPO O KEEPER GERAR UM NOVO path->pingSent,
         // E A RESPOSTA VIR TELEPATICAMENTE E SER PROCESSADA AO MESMO TEMPO.
         // O RESULTADO É QUE PODERIAMOS ESTAR ESCREVENDO ESTE P_RTIME ANTIGO POR CIMA DO NOVO.
         // MAS DE QUALQUER JEITO, O NOVO É MAIOR DO QUE O ANTERIOR A ESTE, COMO CHECAMOS ACIMA.
         __atomic_store_n(&path->latency, (u16)latency, __ATOMIC_RELAXED);
-        __atomic_store_n(&path->pongReceived, now,     __ATOMIC_RELAXED);
-        __atomic_store_n(&path->tdiff,        tdiff,   __ATOMIC_RELAXED); // TEM QUE SER ESCRITO ANTES DO RTIME
-        __atomic_store_n(&path->rtime,       p_rtime,  __ATOMIC_SEQ_CST); // RTIME_CONNECTING / RTIME_ESTABLISHED -> RTIME_ESTABLISHED
+        __atomic_store_n(&path->pongReceived, now,     __ATOMIC_SEQ_CST); // PR_CONNECTING / PR_ESTABLISHED -> PR_ESTABLISHED
 
-        // LEARN HIS INPUT KEYS (MY OUTPUT KEYS)
-        const uint ver = BE16(ping->ver);
-        const uint sec = BE16(ping->sec);
-
-        u64 K[K_LEN];
-
-        secret_derivate_random_as_key(node->secret[sec], ping->rnd, K);
-
-        // FAZ ISSO PRIMEIRO ANTES DE LIBERAR O PATH PARA ENVIAR
-        const uint o = __atomic_add_fetch(&node->oCycle, 1, __ATOMIC_ACQUIRE) % O_KEYS_DYNAMIC;
-                                           node->oVersions[o] = ver;
-                                    memcpy(node->oKeys[o], K, sizeof(K));
-                         __atomic_store_n(&node->oIndex, o,  __ATOMIC_RELEASE);
+        // NOTE: MAS SE ACABOU DE LIBERAR O PATH,
+        // O KEEPER PODE ACABAR ATIVANDO O OUT ANTES DE TERMINARMOS DE LEARN ESTA KEY
+        pega_key_in(node, ping);
 
         return PSTATS_I_PONG_GOOD;
     }
 
+    if (p_rtime <= pingSeen || !__atomic_compare_exchange_n(&path->pingSeen, &pingSeen, p_rtime, 0, __ATOMIC_RELAXED, __ATOMIC_RELAXED))
+        // HIS RAW TIME CANNOT GO DOWN OR REPEAT
+        return PSTATS_I_RTIME_BACKWARDS;
+
     // THIS IS A PING
     pkt_s* skel; pkt_s temp_skel;
 
-    if (rtime == RTIME_LISTENING) {
+    if (pongReceived == PR_LISTENING) {
         // LISTENING - PATH HAS NO SKEL
 
         if (i == I_KEY_SYN) {
             // LEARN O PATH EM UM HEADER TEMPORARIO
             skel = &temp_skel;
-        } elif (__atomic_compare_exchange_n(&path->rtime, &rtime, RTIME_ACCEPTING, 0, __ATOMIC_SEQ_CST, __ATOMIC_RELAXED)) {
+        } elif (__atomic_compare_exchange_n(&path->pongReceived, &pongReceived, PR_ACCEPTING, 0, __ATOMIC_SEQ_CST, __ATOMIC_RELAXED)) {
             // SYN-ACK
             // LEARN ON PATH
             skel = &path->skel;
@@ -183,14 +198,16 @@ static noinline uint in_ping (node_s* const node, const skb_s* const skb, pkt_s*
 
         in_discover(path, skb, skel);
 
-        if (skel == &path->skel) {
+        if (skel == &path->skel) { // -> SYN-ACK
             // AGORA JA PODE USAR O PATH->SKEL
             // LIBERA O KEEPER PARA ENVIAR PINGS
             // LIBERA O OUT PARA ENVIAR DADOS
             // OBS.: CUIDADO COM ESTE LATENCY AQUI, POIS AINDA NAO FOI DESCOBERTO O REAL
-            tdiff = LTIME_DIFF_RTIME(now, p_rtime + latency);
-            __atomic_store_n(&path->tdiff,  tdiff,  __ATOMIC_RELAXED);
-            __atomic_store_n(&path->rtime, p_rtime, __ATOMIC_SEQ_CST); // RTIME_ACCEPTING -> RTIME_ESTABLISHED
+            tdiff = (tdiff + LTIME_DIFF_RTIME(now, p_rtime + latency)) / (1 + !!tdiff);
+
+            __atomic_store_n(&node->tdiff,      tdiff, __ATOMIC_SEQ_CST);
+            __atomic_store_n(&node->tlast,        now, __ATOMIC_SEQ_CST);
+            __atomic_store_n(&path->pongReceived, now, __ATOMIC_SEQ_CST); // PR_ACCEPTING -> PR_ESTABLISHED
         }
     } else
         // ESTABLISHED
@@ -349,22 +366,22 @@ _is_xgw:
     } elif (size != PING_SIZE)
         // BAD SIZE FOR A PING PACKET
         ret_path(PSTATS_I_PING_BAD_SIZE);
-    
+
     if ((PKT_DATA(pkt) + size) > end)
         ret_path(PSTATS_I_SIZE_TRUNCATED);
 
     path_s* const path = &node->paths[pid];
 
     // SITUATION VS PACKET TYPE
-    switch (atomic_get(&path->rtime)) {
-        
-        case RTIME_CONNECTING:
+    switch (atomic_get(&path->pongReceived)) {
+
+        case PR_CONNECTING:
             if (i != I_KEY_PONG)
                 // CONNECTING SO RECEBE PONGS
                 ret_path(PSTATS_I_CONNECTING_NOT_PONG);
             break;
-        
-        case RTIME_LISTENING:
+
+        case PR_LISTENING:
             if (i == I_KEY_SYN) {
                 if (0)
                     // LIMITAR A QUANTIDADE DE SYNS RECEBIVEIS A CADA KEEPER INTERVAL
@@ -373,13 +390,13 @@ _is_xgw:
                 // LISTENING SO RECEBE SYN E PING
                 ret_path(PSTATS_I_LISTENING_NOT_SYN_OR_PING);
             break;
-        
-        case RTIME_ACCEPTING:
+
+        case PR_ACCEPTING:
             // LISTENING, MAS EM ESTADO DE ACCEPTING
             ret_path(PSTATS_I_ACCEPTING);
             break;
-        
-        default: // >= RTIME_ESTABLISHED
+
+        default: // >= PR_ESTABLISHED
             if (i == I_KEY_SYN)
                 // ESTABLISHED RECEBE TUDO MENOS SYN
                 ret_path(PSTATS_I_ESTABLISHED_SYN);
@@ -393,7 +410,6 @@ _is_xgw:
             // ELE NAO CONHECE NOSSO TIME (OU TEM UM SKEW GRANDE)
             ret_path(PSTATS_I_LTIME_MISMATCH);
     } elif (p_ltime != atomic_get(&path->pingSent))
-        // TODO: AO INICIAR O SERVER, COLOCAR path->pingSent = path->syn
         // ELE NAO CONHECE NOSSO CODIGO / TIME
         ret_path(PSTATS_I_LTIME_MISMATCH_SYN_OR_PONG);
 
@@ -406,7 +422,7 @@ _is_xgw:
     // IS AUTHENTIC (hash)
     // IS SYNCED (p_ltime)
 
-    if (i >= I_KEY_SYN)
+    if (i >= I_KEY_PING)
         ret_path(in_ping(node, skb, pkt));
 
     // NORMAL PACKET
