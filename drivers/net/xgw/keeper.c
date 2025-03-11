@@ -264,11 +264,11 @@ static void keeper (struct timer_list* const timer) {
                     //
                     random64_n(PTR(ping), PING_RANDOMS_N, SUFFIX_ULL(CONFIG_XGW_RANDOM_PING));
 
-                    const uint o = atomic_get(&path->rtime) == PR_CONNECTING ?
+                    const uint o = atomic_get(&path->pongReceived) == PR_CONNECTING ?
                         O_KEY_SYN : O_KEY_PING;
 
                     const u64 rtime = (o == O_KEY_SYN) ?
-                        path->syn : RTIME(now, atomic_get(&path->tdiff));
+                        path->syn : RTIME(now, atomic_get(&node->tdiff));
 
                     // ENCAPSULATE THE PING
                     pkt_encapsulate(node, o, rtime, &path->skel, skb, ping, PING_SIZE);

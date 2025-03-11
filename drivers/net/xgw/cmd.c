@@ -602,7 +602,8 @@ static ssize_t __cold_as_ice __optimize_size cmd (struct file *file, const char 
             printk("XGW: %s: KPATHS %04X\n",      node->name, (uint  )node->kpaths);
             printk("XGW: %s: IPATHS %04X\n",      node->name, (uint  )node->ipaths);
             printk("XGW: %s: OPATHS %016llX\n",   node->name, (uintll)node->opaths);
-
+            printk("XGW: %s: TLAST %llu\n",       node->name, (uintll)node->tlast);
+            printk("XGW: %s: TDIFF %lld\n",       node->name, ( intll)node->tdiff);
             printk("XGW: %s: MTU %u\n",           node->name, (uint  )node->mtu);
             printk("XGW: %s: CONNS N %u\n",       node->name, (uint  )node->connsN);
             printk("XGW: %s: WEIGHTS %u\n",       node->name, (uint  )node->weights);
@@ -639,10 +640,10 @@ static ssize_t __cold_as_ice __optimize_size cmd (struct file *file, const char 
             printk("XGW: %s [%s]: LATENCY MAX %ujf\n",   node->name, path->name, (uint)path->latency_max);
             printk("XGW: %s [%s]: LATENCY VAR %ujf\n",   node->name, path->name, (uint)path->latency_var);
             printk("XGW: %s [%s]: TIMEOUT %us\n",        node->name, path->name, (uint)path->timeout);
-            printk("XGW: %s [%s]: PING SENT %llu\n",     node->name, path->name, (uintll)(path->pingSent ?: now - path->pingSent));
-            printk("XGW: %s [%s]: PONG RECEIVED %llu\n", node->name, path->name, (uintll)(path->pongReceived ?: now - path->pongReceived));
-            printk("XGW: %s [%s]: RTIME %016llX\n",      node->name, path->name, (uintll)path->rtime);
-            printk("XGW: %s [%s]: TDIFF %lld\n",         node->name, path->name, (intll)path->tdiff);
+            printk("XGW: %s [%s]: PING SENT %llu\n",     node->name, path->name, (uintll)path->pingSent);
+            printk("XGW: %s [%s]: PONG RECEIVED %llu\n", node->name, path->name, (uintll)path->pongReceived);
+            printk("XGW: %s [%s]: PONG SEEN %llu\n",     node->name, path->name, (uintll)path->pongSeen);
+            printk("XGW: %s [%s]: PING SEEN %llu\n",     node->name, path->name, (uintll)path->pingSeen);
             printk("XGW: %s [%s]: SYN %016llX\n",        node->name, path->name, (uintll)path->syn);
             printk("XGW: %s [%s]: SPORT #%u OF %u\n",    node->name, path->name, (uint)path->sPortIndex, (uint)path->sPortsN);
             printk("XGW: %s [%s]: DPORT #%u OF %u\n",    node->name, path->name, (uint)path->dPortIndex, (uint)path->dPortsN);

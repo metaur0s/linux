@@ -156,9 +156,7 @@ struct path_s {
 #define I_KEY_PING     253
 #define I_KEY_PONG     254 // TEM QUE CABER E PREENCHER O PKT->VERSION
 #define I_KEY_SYN      255
-
-//
-#define I_KEY_MAX I_KEY_PONG
+#define I_KEY_MAX      255
 
 // A ARRAY DE OUTPUT É PARA NAO PRECISAR DE LOCK
 #define O_KEYS_ALL     11
@@ -166,6 +164,7 @@ struct path_s {
 #define O_KEY_PING      8
 #define O_KEY_PONG      9
 #define O_KEY_SYN      10
+#define O_KEY_MAX      10
 
 //
 #define OPATH_0 0x0001000100010001ULL
