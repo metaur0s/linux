@@ -1,6 +1,6 @@
 BUILD_ASSERT(XGW_MTU_OVERHEAD == (PKT_X_SIZE + PKT_ALIGN_SIZE));
 
-BUILD_ASSERT(PKT_DATA((pkt_s*)NULL) == (NULL + ENCAP_SIZE + XGW_MTU_OVERHEAD));
+BUILD_ASSERT((PKT_DATA((pkt_s*)NULL) - NULL) == (ENCAP_SIZE + XGW_MTU_OVERHEAD));
 
 //
 BUILD_ASSERT(sizeof(cmd_arg_nname_t) == sizeof(((node_s*)NULL)->name));
@@ -114,6 +114,7 @@ BUILD_ASSERT(sizeof(((node_s*)NULL)->pstats) == 16384);
 BUILD_ASSERT((typeof(((hdr_x_s*)NULL)->src))     ~(typeof(((hdr_x_s*)NULL)->src))     0 == NID_MAX);
 BUILD_ASSERT((typeof(((hdr_x_s*)NULL)->dst))     ~(typeof(((hdr_x_s*)NULL)->dst))     0 == NID_MAX);
 BUILD_ASSERT((typeof(((hdr_x_s*)NULL)->version)) ~(typeof(((hdr_x_s*)NULL)->version)) 0 == I_KEY_MAX);
+BUILD_ASSERT((typeof(((ping_s*)NULL)->ver))      ~(typeof(((ping_s*)NULL)->ver))      0 == I_KEY_MAX);
 
 // THE TYPES MUST BE ABLE TO HOLD THEIR VALUES
 BUILD_ASSERT((typeof(((path_s*)NULL)->nid))          NID_MAX          == NID_MAX);
@@ -123,11 +124,11 @@ BUILD_ASSERT((typeof(((path_s*)NULL)->latency_min))  LATENCY_MAX      == LATENCY
 BUILD_ASSERT((typeof(((path_s*)NULL)->latency_max))  LATENCY_MAX      == LATENCY_MAX);
 BUILD_ASSERT((typeof(((path_s*)NULL)->latency_var))  LATENCY_VAR_MAX  == LATENCY_VAR_MAX);
 BUILD_ASSERT((typeof(((path_s*)NULL)->timeout))      PATH_TIMEOUT_MAX == PATH_TIMEOUT_MAX);
-BUILD_ASSERT((typeof(((path_s*)NULL)->since))        LTIME_MAX        == LTIME_MAX);
-BUILD_ASSERT((typeof(((path_s*)NULL)->pingSent))     LTIME_MAX        == LTIME_MAX);
-BUILD_ASSERT((typeof(((path_s*)NULL)->pongReceived)) LTIME_MAX        == LTIME_MAX);
-BUILD_ASSERT((typeof(((path_s*)NULL)->pingSeen))     RTIME_MAX        == RTIME_MAX);
-BUILD_ASSERT((typeof(((path_s*)NULL)->pongSeen))     RTIME_MAX        == RTIME_MAX);
+BUILD_ASSERT((typeof(((path_s*)NULL)->since))        XTIME_MAX        == XTIME_MAX);
+BUILD_ASSERT((typeof(((path_s*)NULL)->pingSent))     XTIME_MAX        == XTIME_MAX);
+BUILD_ASSERT((typeof(((path_s*)NULL)->pongReceived)) XTIME_MAX        == XTIME_MAX);
+BUILD_ASSERT((typeof(((path_s*)NULL)->pingSeen))     XTIME_MAX        == XTIME_MAX);
+BUILD_ASSERT((typeof(((path_s*)NULL)->pongSeen))     XTIME_MAX        == XTIME_MAX);
 BUILD_ASSERT((typeof(((path_s*)NULL)->info))         P_INFO           == P_INFO);
 BUILD_ASSERT((typeof(((path_s*)NULL)->info))         P_ALL            == P_ALL);
 BUILD_ASSERT((typeof(((path_s*)NULL)->weight))       PATH_WEIGHT_MAX  == PATH_WEIGHT_MAX);
@@ -148,8 +149,14 @@ BUILD_ASSERT((typeof(((node_s*)NULL)->ipaths))       IPATHS           == IPATHS)
 BUILD_ASSERT((typeof(((node_s*)NULL)->info))         N_INFO           == N_INFO);
 BUILD_ASSERT((typeof(((node_s*)NULL)->tdiff))        TDIFF_MIN        == TDIFF_MIN);
 BUILD_ASSERT((typeof(((node_s*)NULL)->tdiff))        TDIFF_MAX        == TDIFF_MAX);
-BUILD_ASSERT((typeof(((node_s*)NULL)->tlast))        LTIME_MAX        == LTIME_MAX);
+BUILD_ASSERT((typeof(((node_s*)NULL)->tlast))        XTIME_MAX        == XTIME_MAX);
 
+BUILD_ASSERT((typeof(((ping_s*)NULL)->ver))          I_KEY_MAX        == I_KEY_MAX);
+BUILD_ASSERT((typeof(((ping_s*)NULL)->time))         XTIME_MAX        == XTIME_MAX);
+
+BUILD_ASSERT((typeof(((hdr_x_s*)NULL)->time))        XTIME_MAX        == XTIME_MAX);
+
+BUILD_ASSERT(sizeof(((ping_s*)NULL)->rnd)       == K_SIZE);
 BUILD_ASSERT(sizeof(((node_s*)NULL)->secret[0]) == K_SIZE);
 BUILD_ASSERT(sizeof(((node_s*)NULL)->secret) == SECRET_SIZE);
 

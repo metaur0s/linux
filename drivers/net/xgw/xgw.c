@@ -110,16 +110,9 @@ static volatile stat_s nstats [NODES_N] [NSTATS_N];
 //    - SO IT CAN BE DONE PER INTERFACE HASH
 static path_s* pings [PING_QUEUES_N];
 
-static netdev_tx_t out (skb_s* const skb, net_device_s* const dev);
-static void __cold_as_ice __optimize_size stats_print (void);
-static void __cold_as_ice __optimize_size dev_setup (net_device_s* const dev);
-static void keeper (struct timer_list* const timer);
-
 // EXPOSED TO KERNEL
 // net/core/dev.c WILL USE US
 #define in xgw_dev_in
-
-int in (skb_s* const skb);
 
 // jiffies64_to_msecs()
 static inline u64 get_current_ms (void) {

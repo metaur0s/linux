@@ -2,26 +2,20 @@
 #define PR_LISTENING   0
 #define PR_ACCEPTING   1
 #define PR_CONNECTING  2
-#define PR_ESTABLISHED LTIME_MIN
+#define PR_ESTABLISHED XTIME_MIN
 
-#define RTIME_MIN ((u64)8192)
-#define RTIME_MAX ((u64)(8ULL*12*31*24*3600*1000))
-
-#define LTIME_MIN ((u64)8192)
-#define LTIME_MAX ((u64)(8ULL*12*31*24*3600*1000))
+#define XTIME_MIN ((u64)8192)
+#define XTIME_MAX ((u64)(8ULL*12*31*24*3600*1000))
 
 #define TDIFF_MIN ((s64)(-8LL*12*31*24*3600*1000))
 #define TDIFF_MAX ((s64)( 8LL*12*31*24*3600*1000))
 
-#define COUNTER_SYN_MIN ((u64)8)
-#define COUNTER_SYN_MAX ((~(u64)0) - 32)
-
-static inline void pega_key_in (node_s* const node, const ping_s* const pong) {
+static noinline void pega_key_in (node_s* const node, const ping_s* const pong) {
 
     u64 K[K_LEN];
 
     // LEARN HIS INPUT KEYS (MY OUTPUT KEYS)
-    const uint ver = BE16(pong->ver);
+    const uint ver = BE8(pong->ver);
 
     secret_derivate_random_as_key(node->secret, pong->rnd, K);
 
@@ -32,20 +26,20 @@ static inline void pega_key_in (node_s* const node, const ping_s* const pong) {
                      __atomic_store_n(&node->oIndex, o,  __ATOMIC_RELEASE);
 }
 
-static inline void pega_key_out (node_s* const node, ping_s* const pong) {
+static noinline void pega_key_out (node_s* const node, ping_s* const pong) {
 
     // A CADA PONG O SLOT MAIS ANTIGO É RECICLADO.
     // ENTÃO AS KEYS MAIS ANTIGAS SÃO AUTOMATICAMENTE DESCARTADAS.
     // OVERFLOWS SERAO PROBLEMAS, ENTAO TEM QUE USAR PALAVRA GRANDE.
     const uint i = __atomic_add_fetch(&node->iCycle, 1, __ATOMIC_RELAXED) % I_KEYS_DYNAMIC;
 
-    pong->ver  = BE16(i); // OVERWRITE WITH THE VERSION
+    pong->ver = BE8(i); // OVERWRITE WITH THE VERSION
 
-    // SEM ATOMICITY/BARRIER POR QUE O PEER SO VAI REFERENCIAR ESSE NOSSO INPUT INDEX QUANDO ELE RECEBER
+    // SEM ATOMICITY/BARRIER POIS ESTA USANDO UMA KEY JA EXPIRADA
     secret_derivate_random_as_key(node->secret, pong->rnd, node->iKeys[i]);
 }
 
-static inline void pong_send (node_s* const node, path_s* const path, const pkt_s* const skel, const u64 p_rtime, const u64 now) {
+static noinline void pong_send (node_s* const node, path_s* const path, const pkt_s* const skel, const u64 p_rtime, const u64 now) {
 
     uint stat;
 
@@ -112,12 +106,12 @@ static noinline uint in_ping (node_s* const node, const skb_s* const skb, pkt_s*
 
     const u64 p_rtime = BE64(ping->time);
 
-    if (p_rtime < RTIME_MIN
-     || p_rtime > RTIME_MAX)
+    if (p_rtime < XTIME_MIN
+     || p_rtime > XTIME_MAX)
         // INVALID RTIME
         return PSTATS_I_RTIME_INVALID;
 
-    if (tdiff_is_valid)
+    if (tdiff)
         // JA CONHEÇO O TIME DELE
         // O QUANTO
         //      (O RELOGIO DELE COMO ELE DIZ QUE ESTA (APROXIMADO))
@@ -132,7 +126,9 @@ static noinline uint in_ping (node_s* const node, const skb_s* const skb, pkt_s*
     if (i == I_KEY_PONG) {
         // CONNECTING / ESTABLISHED
 
-        if (p_rtime <= pongSeen || !__atomic_compare_exchange_n(&path->pongSeen, &pongSeen, p_rtime, 0, __ATOMIC_RELAXED, __ATOMIC_RELAXED))
+        if (p_rtime <= pongSeen
+        //    || !__atomic_compare_exchange_n(&path->pongSeen, &pongSeen, p_rtime, 0, __ATOMIC_RELAXED, __ATOMIC_RELAXED)
+        )
             // HIS RAW TIME CANNOT GO DOWN OR REPEAT
             return PSTATS_I_RTIME_BACKWARDS;
 
@@ -179,7 +175,9 @@ static noinline uint in_ping (node_s* const node, const skb_s* const skb, pkt_s*
         return PSTATS_I_PONG_GOOD;
     }
 
-    if (p_rtime <= pingSeen || !__atomic_compare_exchange_n(&path->pingSeen, &pingSeen, p_rtime, 0, __ATOMIC_RELAXED, __ATOMIC_RELAXED))
+    if (p_rtime <= pingSeen
+        //|| !__atomic_compare_exchange_n(&path->pingSeen, &pingSeen, p_rtime, 0, __ATOMIC_RELAXED, __ATOMIC_RELAXED)
+    )
         // HIS RAW TIME CANNOT GO DOWN OR REPEAT
         return PSTATS_I_RTIME_BACKWARDS;
 

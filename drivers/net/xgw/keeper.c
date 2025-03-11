@@ -157,6 +157,8 @@ static void keeper (struct timer_list* const timer) {
                     path->skel.type    = 0; //
                     path->pongReceived = PR_LISTENING;
                 }   path->pingSent     = path->syn; // AINDA NAO CONSTRUI PING
+                    path->pingSeen     = XTIME_MIN;
+                    path->pongSeen     = XTIME_MIN;
                     path->latency      = path->latency_max; // TODO: + path->latency_var
                     path->info        ^= K_START | K_LISTEN;
 

@@ -11,20 +11,6 @@ static inline u64 rdrand64 (void) {
 }
 #endif
 
-static u64 random64 (u64 seed) {
-
-#ifdef CONFIG_XGW_RDRAND
-    seed += rdrand64();
-#endif
-#ifdef CONFIG_XGW_RDTSC
-    seed += __builtin_ia32_rdtsc();
-#endif
-    seed += _xrnd[seed % RANDOM_LEN] * popcount(seed);
-            _xrnd[seed % RANDOM_LEN] = seed;
-
-    return seed;
-}
-
 // NAO É RANDOM NO SENTIDO DE NAO ADIVINHAVEL, MAS FICA NAO TAO SEQUENCIAL E ALTERANDO DIFERENTES BITS
 static void random64_n (u64 words[], uint n, u64 seed) {
 
@@ -36,6 +22,7 @@ static void random64_n (u64 words[], uint n, u64 seed) {
 #endif
 
     for_count (i, n) {
+        seed += _xrnd[seed % RANDOM_LEN];
         seed += _xrnd[seed % RANDOM_LEN] * popcount(seed);
                 _xrnd[seed % RANDOM_LEN] = seed;
         words[i] = seed;
