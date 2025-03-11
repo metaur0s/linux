@@ -10,7 +10,7 @@
 #define TDIFF_MIN ((s64)(-8LL*12*31*24*3600*1000))
 #define TDIFF_MAX ((s64)( 8LL*12*31*24*3600*1000))
 
-static noinline void pega_key_in (node_s* const node, const ping_s* const pong) {
+static inline void pega_key_in (node_s* const node, const ping_s* const pong) {
 
     u64 K[K_LEN];
 
@@ -26,7 +26,7 @@ static noinline void pega_key_in (node_s* const node, const ping_s* const pong) 
                      __atomic_store_n(&node->oIndex, o,  __ATOMIC_RELEASE);
 }
 
-static noinline void pega_key_out (node_s* const node, ping_s* const pong) {
+static inline void pega_key_out (node_s* const node, ping_s* const pong) {
 
     // A CADA PONG O SLOT MAIS ANTIGO É RECICLADO.
     // ENTÃO AS KEYS MAIS ANTIGAS SÃO AUTOMATICAMENTE DESCARTADAS.
