@@ -126,9 +126,7 @@ static noinline uint in_ping (node_s* const node, const skb_s* const skb, pkt_s*
     if (i == I_KEY_PONG) {
         // CONNECTING / ESTABLISHED
 
-        if (p_rtime <= pongSeen
-        //    || !__atomic_compare_exchange_n(&path->pongSeen, &pongSeen, p_rtime, 0, __ATOMIC_RELAXED, __ATOMIC_RELAXED)
-        )
+        if (p_rtime <= pongSeen || !__atomic_compare_exchange_n(&path->pongSeen, &pongSeen, p_rtime, 0, __ATOMIC_RELAXED, __ATOMIC_RELAXED))
             // HIS RAW TIME CANNOT GO DOWN OR REPEAT
             return PSTATS_I_RTIME_BACKWARDS;
 
@@ -175,9 +173,7 @@ static noinline uint in_ping (node_s* const node, const skb_s* const skb, pkt_s*
         return PSTATS_I_PONG_GOOD;
     }
 
-    if (p_rtime <= pingSeen
-        //|| !__atomic_compare_exchange_n(&path->pingSeen, &pingSeen, p_rtime, 0, __ATOMIC_RELAXED, __ATOMIC_RELAXED)
-    )
+    if (p_rtime <= pingSeen || !__atomic_compare_exchange_n(&path->pingSeen, &pingSeen, p_rtime, 0, __ATOMIC_RELAXED, __ATOMIC_RELAXED))
         // HIS RAW TIME CANNOT GO DOWN OR REPEAT
         return PSTATS_I_RTIME_BACKWARDS;
 
@@ -325,13 +321,13 @@ _is_xgw:
         // MISSING HEADER + ALIGN
         ret_dev(DSTATS_I_INCOMPLETE);
 
-    const uint nid      = BE16 (pkt->x.src);
-    const uint dst      = BE16 (pkt->x.dst);
-    const uint pid      = BE8  (pkt->x.path);
-    const uint i        = BE8  (pkt->x.version);
-    const uint size     = BE16 (pkt->x.dsize);
-          u64  p_ltime  = BE64 (pkt->x.time);
-    const u64  hash     = BE64 (pkt->x.hash);
+    const uint nid    = BE16 (pkt->x.src);
+    const uint dst    = BE16 (pkt->x.dst);
+    const uint pid    = BE8  (pkt->x.path);
+    const uint i      = BE8  (pkt->x.version);
+    const uint size   = BE16 (pkt->x.dsize);
+    const u64  ltime  = BE64 (pkt->x.time);
+    const u64  hash   = BE64 (pkt->x.hash);
 
     if (nid == nodeSelf)
         ret_dev(DSTATS_I_FROM_SELF);
@@ -365,11 +361,12 @@ _is_xgw:
             // BAD SIZE FOR A NORMAL PACKET
             ret_path(PSTATS_I_SIZE_SMALL);
     } elif (size != PING_SIZE)
-        // BAD SIZE FOR A PING PACKET
-        ret_path(PSTATS_I_PING_BAD_SIZE);
+            // BAD SIZE FOR A PING PACKET
+            ret_path(PSTATS_I_SIZE_NOT_PING);
 
     if ((PKT_DATA(pkt) + size) > end)
-        ret_path(PSTATS_I_SIZE_TRUNCATED);
+            // WE DON'T HAVE THE ENTIRE PACKET
+            ret_path(PSTATS_I_SIZE_TRUNCATED);
 
     path_s* const path = &node->paths[pid];
 
@@ -388,8 +385,8 @@ _is_xgw:
                     // LIMITAR A QUANTIDADE DE SYNS RECEBIVEIS A CADA KEEPER INTERVAL
                     ret_path(PSTATS_I_LISTENING_SYN_TOO_MANY);
             } elif (i != I_KEY_PING)
-                // LISTENING SO RECEBE SYN E PING
-                ret_path(PSTATS_I_LISTENING_NOT_SYN_OR_PING);
+                    // LISTENING SO RECEBE SYN E PING
+                    ret_path(PSTATS_I_LISTENING_NOT_SYN_OR_PING);
             break;
 
         case PR_ACCEPTING:
@@ -407,12 +404,12 @@ _is_xgw:
     if (i <= I_KEY_PING) { // TODO: <--- REORDENAR PARA PING, PONG, SYN
         // DATA / PING
         // OBS: CONSIDERA LATENCY, MAS PODE ESTAR ERRADA (SER A INICIAL, SETADA PELO USUÁRIO)
-        if (ABS_DIFF(p_ltime + atomic_get(&path->latency), get_current_ms()) > 1280)
+        if (ABS_DIFF(ltime + atomic_get(&path->latency), get_current_ms()) > 1280)
             // ELE NAO CONHECE NOSSO TIME (OU TEM UM SKEW GRANDE)
             ret_path(PSTATS_I_LTIME_MISMATCH);
-    } elif (p_ltime != atomic_get(&path->pingSent))
-        // ELE NAO CONHECE NOSSO CODIGO / TIME
-        ret_path(PSTATS_I_LTIME_MISMATCH_SYN_OR_PONG);
+    } elif (ltime != atomic_get(&path->pingSent))
+            // ELE NAO CONHECE NOSSO CODIGO / TIME
+            ret_path(PSTATS_I_LTIME_MISMATCH_SYN_OR_PONG);
 
     // DECRYPT
     if (pkt_decrypt(node, i, pkt, size) != hash)
@@ -421,7 +418,7 @@ _is_xgw:
 
     // IS A EXPECTED TYPE FOR OUR STATUS
     // IS AUTHENTIC (hash)
-    // IS SYNCED (p_ltime)
+    // IS SYNCED (time)
 
     if (i >= I_KEY_PING)
         ret_path(in_ping(node, skb, pkt));
@@ -512,10 +509,3 @@ _ret:
     // NOTE QUE TODOS OS STATS PASS SAO 0
     return stat;
 }
-
-// TODO: IKEYS_PING, IKEYS_PONG,
-// TODO: OKEYS_PING, OKEYS_PONG,
-
-// TODO: O CLIENTE SO ACEITA PONGS VALIDADOS
-// TODO: O CLIENTE SO ACEITA PINGS VALIDADOS
-// TODO: AO RECEBER UM PING, O CLIENTE JAMAIS COPIA O CABEÇALHO DE CHEGADA
