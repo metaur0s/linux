@@ -408,7 +408,8 @@ _is_xgw:
             // ELE NAO CONHECE NOSSO TIME (OU TEM UM SKEW GRANDE)
             ret_path(PSTATS_I_LTIME_MISMATCH);
     } elif (ltime != atomic_get(&path->pingSent))
-            // ELE NAO CONHECE NOSSO CODIGO / TIME
+            // SYN: ELE NAO CONHECE NOSSO CODIGO
+            // PONG: NAO É PARA O NOSSO ULTIMO PING ENVIADO
             ret_path(PSTATS_I_LTIME_MISMATCH_SYN_OR_PONG);
 
     // DECRYPT
