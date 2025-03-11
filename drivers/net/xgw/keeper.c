@@ -232,11 +232,11 @@ static void keeper (struct timer_list* const timer) {
                     const char* str;
 
                     switch (acks) {
-                        case 0x0000000000000000ULL: str = "LOST";       break;
-                        case 0x0000000000000001ULL: str = "RECOVERING"; break;
-                        case 0xFFFFFFFFFFFFFFFEULL: str = "UNSTABLE";   break;
-                        case 0xFFFFFFFFFFFFFFFFULL: str = "STABLE";     break;
-                        default:                    str = NULL;
+                        case 0b0000000000000000000000000000000000000000000000000000000000000000ULL: str = "LOST";       break;
+                        case 0b0111111111111111111111111111111111111111111111111111111111111111ULL: str = "RECOVERING"; break;
+                        case 0b1000000000000000000000000000000000000000000000000000000000000000ULL: str = "UNSTABLE";   break;
+                        case 0b1111111111111111111111111111111111111111111111111111111111111111ULL: str = "STABLE";     break;
+                        default:                                                                    str = NULL;
                     }
 
                     if (str)
@@ -244,11 +244,11 @@ static void keeper (struct timer_list* const timer) {
                 }
 
                 // DOS PIORES AOS MELHORES
-                opaths |= (
-                    ((acks >= 0xFF00000000000000ULL) << (3*PATHS_N)) | // BASTA QUE ESTEJA FUNCIONANDO ENTAO
-                    ((acks >= 0xFF00000000000000ULL) << (2*PATHS_N)) |
-                    ((acks >= 0xFF00000000000000ULL) << (1*PATHS_N)) | // NOTE: THIS ONE SHOULD BE REPEATED
-                    ((acks >= 0xFF00000000000000ULL) << (0*PATHS_N)) // TODO: REMOVE THIS REPETITION LIMITATION
+                opaths |= ( // bin(((1 << 12) - 1) << (64 - 12))
+                    ((typeof(opaths))(acks >= 0b1111000000000000000000000000000000000000000000000000000000000000ULL) << (3*PATHS_N)) | // BASTA QUE ESTEJA FUNCIONANDO ENTAO
+                    ((typeof(opaths))(acks >= 0b1111111000000000000000000000000000000000000000000000000000000000ULL) << (2*PATHS_N)) |
+                    ((typeof(opaths))(acks >= 0b1111111111110000000000000000000000000000000000000000000000000000ULL) << (1*PATHS_N)) | // NOTE: THIS ONE SHOULD BE REPEATED
+                    ((typeof(opaths))(acks >= 0b1111111111110000000000000000000000000000000000000000000000000000ULL) << (0*PATHS_N)) // TODO: REMOVE THIS REPETITION LIMITATION
                 ) << pid;
 
                 // MAKE PING
