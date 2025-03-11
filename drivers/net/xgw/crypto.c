@@ -135,6 +135,7 @@ static void secret_derivate_random_as_key (const u64 S[SECRET_KEYS_N][K_LEN], co
     }   sum += sum >> 32;
         sum += sum >> 16;
 
+    // DYNAMICALLY CHOOSE A CONSTANT SECRET
     const u64* const restrict s = S[sum % SECRET_KEYS_N];
 
     // WHILE IS FETCHING S...
