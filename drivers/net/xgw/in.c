@@ -122,12 +122,13 @@ static noinline uint in_ping (node_s* const node, const skb_s* const skb, pkt_s*
         if (i == I_KEY_SYN) {
             // LEARN O PATH EM UM HEADER TEMPORARIO
             skel = &temp_skel;
-        } elif (__atomic_compare_exchange_n(&path->pongReceived, &pongReceived, PR_ACCEPTING, 0, __ATOMIC_SEQ_CST, __ATOMIC_RELAXED)) {
-            // SYN-ACK
+        } else { // SYN-ACK
+            if (!__atomic_compare_exchange_n(&path->pongReceived, &pongReceived, PR_ACCEPTING, 0, __ATOMIC_SEQ_CST, __ATOMIC_RELAXED)) {
+                // LOCK FAILED
+                return PSTATS_I_PING_GOOD_ACCEPT_RACED;
             // LEARN ON PATH
             skel = &path->skel;
-        } else // LOCK FAILED
-            return PSTATS_I_PING_GOOD_ACCEPT_RACED;
+        }
 
         in_discover(path, skb, skel);
 
