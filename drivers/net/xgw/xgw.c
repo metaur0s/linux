@@ -135,6 +135,7 @@ static inline u64 get_current_ms (void) {
 #include "pkt_encap_finish.c"
 #include "pkt_encap.c"
 #include "out.c"
+#include "ping.c"
 #include "in_discover.c"
 #include "in.c"
 #include "keeper.c"
