@@ -31,49 +31,31 @@ static inline void keeper_send_pings (void) {
         while ((path = *ptr)) {
             if (path->info & K_ESTABLISHED) {
 
-                uint len; uint s;
+                const u64 now = get_current_ms();
 
-                // NOTE: RESERVA HEAD AND TAIL ROOM POIS PODE TER MAIS ENCAPSULAMENTOS NO PHYS
-                skb_s* const skb = alloc_skb(64 + PKT_SIZE + PKT_ALIGN_SIZE + PING_SIZE + 64, GFP_ATOMIC);
+                const uint o = atomic_get(&path->pongReceived) == PR_CONNECTING ?
+                    O_KEY_SYN : O_KEY_PING;
 
-                if (skb) {
-
-                    const u64 now = get_current_ms();
-
-                    // TODO: AQUI PELO MENOS PODEMOS ALINHAR - PTR(((uintptr_t)SKB_DATA(skb) + sizeof(u64) - 1) % sizeof(u64))
-                    ping_s* const ping = SKB_DATA(skb) + 64 + PKT_SIZE + PKT_ALIGN_SIZE;
-
-                    //
-                    random64_n(PTR(ping), PING_RANDOMS_N, SUFFIX_ULL(CONFIG_XGW_RANDOM_PING));
-
-                    const uint o = atomic_get(&path->pongReceived) == PR_CONNECTING ?
-                        O_KEY_SYN : O_KEY_PING;
-
-                    const u64 rtime = (o == O_KEY_SYN) ?
-                        path->syn : RTIME(now, atomic_get(&path->node->tdiff));
-
-                    // ENCAPSULATE THE PING
-                    pkt_encapsulate(path->node, o, rtime, &path->skel, skb, ping, PING_SIZE);
-
+                const u64 rtime = (o == O_KEY_SYN) ?
+                    path->syn : RTIME(now, atomic_get(&path->node->tdiff));
                     __atomic_store_n(&path->pingSent, now, __ATOMIC_RELAXED);
 
-                    // TEM QUE LER ANTES POIS O SKB SERA PERTIDO
-                    len = skb->len;
+                // NOTE: RESERVA HEAD AND TAIL ROOM POIS PODE TER MAIS ENCAPSULAMENTOS NO PHYS
+                skb_s* const skb = pega_key_out(node, O_KEY_PONG, skel, now, rtime); uint stat;
 
-                    skb->ip_summed = CHECKSUM_NONE;
-
-                    if (dev_queue_xmit(skb)) // TODO: SAME ON DEV_OUT(), BUT THE SKB IS CONSUMED!!!
-                        s = PSTATS_O_PING_FAILED;
+                if (skb) {
+                    if (dev_queue_xmit(oskb))
+                        // FAILED TO SEND THE SKB
+                        // NOTE: THE SKB WAS ALREADY CONSUMED
+                        stat = PSTATS_O_PING_SEND_FAILED;
                     else
-                        s = PSTATS_O_PING_OK;
-                } else // PING WAS NOT MADE (BECAUSE SKB WASNT RELEASED BY DEVICE)
-                    s = PSTATS_O_PING_SKB_FAILED;
-
-                // TODO: PSTATS_O_PING_PHYS_DOWN
+                        stat = PSTATS_O_PING_OK;
+                } else // FAILED TO ALLOCATE SKB
+                    stat = PSTATS_O_PING_SKB_FAILED;
 
                 // NOTE: WE WILL INFORM THE TOTAL SIZE SENT THROUGHT THE PHYSICAL INTERFACE
-                atomic_add(&path->pstats[s].bytes, len);
-                atomic_inc(&path->pstats[s].count);
+                atomic_add(&path->pstats[stat].bytes, path->skel.hsize + PKT_ALIGN_SIZE + PING_SIZE);
+                atomic_inc(&path->pstats[stat].count);
 
                 ptr = &path->next;
             } else // NOTE: NOW PATH->NEXT IS INVALID
