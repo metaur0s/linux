@@ -44,10 +44,10 @@ static inline void keeper_send_pings (void) {
                     path->syn : RTIME(now, atomic_get(&path->node->tdiff));
 
                 // NOTE: RESERVA HEAD AND TAIL ROOM POIS PODE TER MAIS ENCAPSULAMENTOS NO PHYS
-                skb_s* const skb = pega_key_out(node, o, &path->skel, now, rtime); uint stat;
+                skb_s* const skb = pega_key_out(path->node, o, &path->skel, now, rtime); uint stat;
 
                 if (skb) {
-                    if (dev_queue_xmit(oskb))
+                    if (dev_queue_xmit(skb))
                         // FAILED TO SEND THE SKB
                         // NOTE: THE SKB WAS ALREADY CONSUMED
                         stat = PSTATS_O_PING_SEND_FAILED;
