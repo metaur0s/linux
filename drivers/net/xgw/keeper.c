@@ -44,7 +44,7 @@ static inline void keeper_send_pings (void) {
                     path->syn : RTIME(now, atomic_get(&path->node->tdiff));
 
                 // NOTE: RESERVA HEAD AND TAIL ROOM POIS PODE TER MAIS ENCAPSULAMENTOS NO PHYS
-                ping_send(path->node, o, &path->skel, now, rtime);
+                ping_send(path->node, path, &path->skel, now, rtime, o);
 
                 ptr = &path->next;
             } else // NOTE: NOW PATH->NEXT IS INVALID

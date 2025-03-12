@@ -26,7 +26,7 @@ static inline void pega_key_in (node_s* const node, const ping_s* const ping) {
                      __atomic_store_n(&node->oIndex, o,  __ATOMIC_RELEASE);
 }
 
-static void ping_send (node_s* const node, const uint o, const pkt_s* const skel, const u64 now, const u64 rtime) {
+static void ping_send (node_s* const node, const path_s* const path, const pkt_s* const skel, const u64 now, const u64 rtime, const uint o) {
 
     uint stat;
 
@@ -57,7 +57,7 @@ static void ping_send (node_s* const node, const uint o, const pkt_s* const skel
 
         skb->ip_summed = CHECKSUM_NONE;
 
-        if (dev_queue_xmit(oskb))
+        if (dev_queue_xmit(skb))
             // FAILED TO SEND THE SKB
             // NOTE: THE SKB WAS ALREADY CONSUMED
             stat = PSTATS_O_PING_SEND_FAILED;
@@ -205,7 +205,7 @@ static noinline uint in_ping (node_s* const node, const skb_s* const skb, pkt_s*
         skel = &path->skel;
 
     // RESPONDE COM UM PONG
-    ping_send(node, O_KEY_PONG, skel, now, rtime);
+    ping_send(node, path, skel, now, rtime, O_KEY_PONG);
 
     return PSTATS_I_PING_GOOD;
 }
