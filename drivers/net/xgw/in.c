@@ -135,13 +135,13 @@ static noinline uint in_ping (node_s* const node, const skb_s* const skb, pkt_s*
         if (skel == &path->skel) { // -> SYN-ACK
             // AGORA JA PODE USAR O PATH->SKEL
             // LIBERA O KEEPER TERMINAR DE ATIVAR O PATH
-            // OBS.: CUIDADO COM ESTE LATENCY AQUI, POIS AINDA NAO FOI DESCOBERTO O REAL
 
             tdiff = (
+                // CONSIDERA O NOSSO TDIFF ATUAL, QUE SE NÃO FOR RECENTE, ESTÁ COMO 0, E O WEIGHT SERÁ CANCELADO NA DIVISÃO
                 tdiff +
-                // TODO: MAS SE O PEER ENVIA *PINGS* CALCULANDO
+                // CONSIDERA TAMBÉM O QUE O PEER USA COMO TDIFF
                 LTIME_DIFF_RTIME(ltime, rtime) +
-                //
+                // OBS.: CUIDADO COM ESTE LATENCY AQUI, POIS AINDA NAO FOI DESCOBERTO O REAL
                 LTIME_DIFF_RTIME(now, rtime + latency)
             ) / (2 + !!tdiff);
 
