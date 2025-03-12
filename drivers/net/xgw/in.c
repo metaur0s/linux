@@ -53,6 +53,9 @@ static void ping_send (node_s* const node, const path_s* const path, const pkt_s
 
         // USA O RAW RTIME QUE RECEBEU
         // TODO: O ALIGN COM RANDOM TEM QUE SER COLOCADO FORA DO ENCAPSULATE, POIS NO CASO DO PING/PONG NAO VAMOS USAR
+        // O_KEY_SYN:  path->syn
+        // O_KEY_PONG: ping->time
+        // O_KEY_PING: RTIME(now)
         pkt_encapsulate(node, o, rtime, skel, skb, ping, PING_SIZE);
 
         skb->ip_summed = CHECKSUM_NONE;
