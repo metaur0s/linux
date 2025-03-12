@@ -124,7 +124,7 @@ static noinline uint in_ping (node_s* const node, const skb_s* const skb, pkt_s*
             skel = &temp_skel;
         } else { // SYN-ACK
             if (!__atomic_compare_exchange_n(&path->pongReceived, &pongReceived, PR_ACCEPTING, 0, __ATOMIC_SEQ_CST, __ATOMIC_RELAXED))
-                // LOCK FAILED
+                // COULD NOT LOCK THE PATH
                 return PSTATS_I_PING_GOOD_ACCEPT_RACED;
             // LEARN ON PATH
             skel = &path->skel;
@@ -134,10 +134,16 @@ static noinline uint in_ping (node_s* const node, const skb_s* const skb, pkt_s*
 
         if (skel == &path->skel) { // -> SYN-ACK
             // AGORA JA PODE USAR O PATH->SKEL
-            // LIBERA O KEEPER PARA ENVIAR PINGS
-            // LIBERA O OUT PARA ENVIAR DADOS
+            // LIBERA O KEEPER TERMINAR DE ATIVAR O PATH
             // OBS.: CUIDADO COM ESTE LATENCY AQUI, POIS AINDA NAO FOI DESCOBERTO O REAL
-            tdiff = (tdiff + LTIME_DIFF_RTIME(now, rtime + latency)) / (1 + !!tdiff);
+
+            tdiff = (
+                tdiff +
+                // TODO: MAS SE O PEER ENVIA *PINGS* CALCULANDO
+                LTIME_DIFF_RTIME(ltime, rtime) +
+                //
+                LTIME_DIFF_RTIME(now, rtime + latency)
+            ) / (2 + !!tdiff);
 
             __atomic_store_n(&node->tdiff,      tdiff, __ATOMIC_SEQ_CST);
             __atomic_store_n(&node->tlast,        now, __ATOMIC_SEQ_CST);
