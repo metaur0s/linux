@@ -26,7 +26,9 @@ static inline void pega_key_in (node_s* const node, const ping_s* const ping) {
                      __atomic_store_n(&node->oIndex, o,  __ATOMIC_RELEASE);
 }
 
-static skb_s* pega_key_out (node_s* const node, const uint o, const pkt_s* const skel, const u64 now, const u64 rtime) {
+static void ping_send (node_s* const node, const uint o, const pkt_s* const skel, const u64 now, const u64 rtime) {
+
+    uint stat;
 
     skb_s* const skb = alloc_skb(64 + PKT_SIZE + PKT_ALIGN_SIZE + PING_SIZE + 64, GFP_ATOMIC);
 
@@ -54,14 +56,24 @@ static skb_s* pega_key_out (node_s* const node, const uint o, const pkt_s* const
         pkt_encapsulate(node, o, rtime, skel, skb, ping, PING_SIZE);
 
         skb->ip_summed = CHECKSUM_NONE;
-    }
 
-    return skb;
+        if (dev_queue_xmit(oskb))
+            // FAILED TO SEND THE SKB
+            // NOTE: THE SKB WAS ALREADY CONSUMED
+            stat = PSTATS_O_PING_SEND_FAILED;
+        else
+            stat = PSTATS_O_PING_OK;
+    } else // FAILED TO ALLOCATE SKB
+        stat = PSTATS_O_PING_SKB_FAILED;
+
+    // NOTE: WE WILL INFORM THE TOTAL SIZE SENT THROUGHT THE PHYSICAL INTERFACE
+    atomic_add(&path->pstats[stat].bytes, skel->hsize + PKT_ALIGN_SIZE + PING_SIZE);
+    atomic_inc(&path->pstats[stat].count);
 }
 
 // IT MUST BE NOT INLINED, AS THE WHOLE INTENTION OF SEPARATING IT AS A FUNCTION IS TO MINIMIZE THE IN FUNCTION
 // WE DARE TO REDO SOME THINGS HERE, SO IF WE INLINE, THOSE WILL BE SURPLEFUOUS.
-static noinline uint in_ping (node_s* const node, const skb_s* const iskb, pkt_s* const pkt) {
+static noinline uint in_ping (node_s* const node, const skb_s* const skb, pkt_s* const pkt) {
 
     const u64 now = get_current_ms();
 
@@ -175,7 +187,7 @@ static noinline uint in_ping (node_s* const node, const skb_s* const iskb, pkt_s
         } else // LOCK FAILED
             return PSTATS_I_PING_GOOD_ACCEPT_RACED;
 
-        in_discover(path, iskb, skel);
+        in_discover(path, skb, skel);
 
         if (skel == &path->skel) { // -> SYN-ACK
             // AGORA JA PODE USAR O PATH->SKEL
@@ -193,21 +205,7 @@ static noinline uint in_ping (node_s* const node, const skb_s* const iskb, pkt_s
         skel = &path->skel;
 
     // RESPONDE COM UM PONG
-    skb_s* const oskb = pega_key_out(node, O_KEY_PONG, skel, now, rtime); uint stat;
-
-    if (oskb) {
-        if (dev_queue_xmit(oskb))
-            // FAILED TO SEND THE SKB
-            // NOTE: THE SKB WAS ALREADY CONSUMED
-            stat = PSTATS_O_PONG_SEND_FAILED;
-        else
-            stat = PSTATS_O_PONG_OK;
-    } else // FAILED TO ALLOCATE SKB
-        stat = PSTATS_O_PONG_SKB_FAILED;
-
-    // NOTE: WE WILL INFORM THE TOTAL SIZE SENT THROUGHT THE PHYSICAL INTERFACE
-    atomic_add(&path->pstats[stat].bytes, skel->hsize + PKT_ALIGN_SIZE + PING_SIZE);
-    atomic_inc(&path->pstats[stat].count);
+    ping_send(node, O_KEY_PONG, skel, now, rtime);
 
     return PSTATS_I_PING_GOOD;
 }

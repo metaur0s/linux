@@ -44,21 +44,7 @@ static inline void keeper_send_pings (void) {
                     path->syn : RTIME(now, atomic_get(&path->node->tdiff));
 
                 // NOTE: RESERVA HEAD AND TAIL ROOM POIS PODE TER MAIS ENCAPSULAMENTOS NO PHYS
-                skb_s* const skb = pega_key_out(path->node, o, &path->skel, now, rtime); uint stat;
-
-                if (skb) {
-                    if (dev_queue_xmit(skb))
-                        // FAILED TO SEND THE SKB
-                        // NOTE: THE SKB WAS ALREADY CONSUMED
-                        stat = PSTATS_O_PING_SEND_FAILED;
-                    else
-                        stat = PSTATS_O_PING_OK;
-                } else // FAILED TO ALLOCATE SKB
-                    stat = PSTATS_O_PING_SKB_FAILED;
-
-                // NOTE: WE WILL INFORM THE TOTAL SIZE SENT THROUGHT THE PHYSICAL INTERFACE
-                atomic_add(&path->pstats[stat].bytes, path->skel.hsize + PKT_ALIGN_SIZE + PING_SIZE);
-                atomic_inc(&path->pstats[stat].count);
+                ping_send(path->node, o, &path->skel, now, rtime);
 
                 ptr = &path->next;
             } else // NOTE: NOW PATH->NEXT IS INVALID
