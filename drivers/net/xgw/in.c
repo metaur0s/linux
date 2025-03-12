@@ -10,14 +10,14 @@
 #define TDIFF_MIN ((s64)(-8LL*12*31*24*3600*1000))
 #define TDIFF_MAX ((s64)( 8LL*12*31*24*3600*1000))
 
-static inline void pega_key_in (node_s* const node, const ping_s* const pong) {
+static inline void pega_key_in (node_s* const node, const ping_s* const ping) {
 
     u64 K[K_LEN];
 
     // LEARN HIS INPUT KEYS (MY OUTPUT KEYS)
-    const uint ver = BE8(pong->ver);
+    const uint ver = BE8(ping->ver);
 
-    secret_derivate_random_as_key(node->secret, pong->rnd, K);
+    secret_derivate_random_as_key(node->secret, ping->rnd, K);
 
     // FAZ ISSO PRIMEIRO ANTES DE LIBERAR O PATH PARA ENVIAR
     const uint o = __atomic_add_fetch(&node->oCycle, 1, __ATOMIC_ACQUIRE) % O_KEYS_DYNAMIC;
@@ -26,60 +26,42 @@ static inline void pega_key_in (node_s* const node, const ping_s* const pong) {
                      __atomic_store_n(&node->oIndex, o,  __ATOMIC_RELEASE);
 }
 
-static inline void pega_key_out (node_s* const node, ping_s* const pong) {
-
-    // A CADA PONG O SLOT MAIS ANTIGO É RECICLADO.
-    // ENTÃO AS KEYS MAIS ANTIGAS SÃO AUTOMATICAMENTE DESCARTADAS.
-    // OVERFLOWS SERAO PROBLEMAS, ENTAO TEM QUE USAR PALAVRA GRANDE.
-    const uint i = __atomic_add_fetch(&node->iCycle, 1, __ATOMIC_RELAXED) % I_KEYS_DYNAMIC;
-
-    pong->ver = BE8(i); // OVERWRITE WITH THE VERSION
-
-    // SEM ATOMICITY/BARRIER POIS ESTA USANDO UMA KEY JA EXPIRADA
-    secret_derivate_random_as_key(node->secret, pong->rnd, node->iKeys[i]);
-}
-
-static noinline void pong_send (node_s* const node, path_s* const path, const pkt_s* const skel, const u64 p_rtime, const u64 now) {
-
-    uint stat;
+static skb_s* pega_key_out (node_s* const node, const uint o, const pkt_s* const skel, const u64 now, const u64 rtime) {
 
     skb_s* const skb = alloc_skb(64 + PKT_SIZE + PKT_ALIGN_SIZE + PING_SIZE + 64, GFP_ATOMIC);
 
     if (skb) {
 
         // TODO: USA O SKB_DATA ALIGNED
-        ping_s* const pong = SKB_DATA(skb) + 64 + PKT_SIZE + PKT_ALIGN_SIZE;
+        ping_s* const ping = SKB_DATA(skb) + 64 + PKT_SIZE + PKT_ALIGN_SIZE;
 
         // GERA AS KEYS
-        random64_n(PTR(pong), PING_RANDOMS_N, SUFFIX_ULL(CONFIG_XGW_RANDOM_PING));
+        random64_n(PTR(ping), PING_RANDOMS_N, SUFFIX_ULL(CONFIG_XGW_RANDOM_PING));
 
-        pong->time = BE64(now);
+        // A CADA PONG O SLOT MAIS ANTIGO É RECICLADO.
+        // ENTÃO AS KEYS MAIS ANTIGAS SÃO AUTOMATICAMENTE DESCARTADAS.
+        // OVERFLOWS SERAO PROBLEMAS, ENTAO TEM QUE USAR PALAVRA GRANDE.
+        const uint i = __atomic_add_fetch(&node->iCycle, 1, __ATOMIC_RELAXED) % I_KEYS_DYNAMIC;
 
-        pega_key_out(node, pong);
+        ping->ver = BE8(i); // OVERWRITE WITH THE VERSION
+        ping->time = BE64(now);
+
+        // SEM ATOMICITY/BARRIER POIS ESTA USANDO UMA KEY JA EXPIRADA
+        secret_derivate_random_as_key(node->secret, ping->rnd, node->iKeys[i]);
 
         // USA O RAW RTIME QUE RECEBEU
         // TODO: O ALIGN COM RANDOM TEM QUE SER COLOCADO FORA DO ENCAPSULATE, POIS NO CASO DO PING/PONG NAO VAMOS USAR
-        pkt_encapsulate(node, O_KEY_PONG, p_rtime, skel, skb, pong, PING_SIZE);
+        pkt_encapsulate(node, o, rtime, skel, skb, ping, PING_SIZE);
 
         skb->ip_summed = CHECKSUM_NONE;
+    }
 
-        if (dev_queue_xmit(skb))
-            // FAILED TO SEND THE SKB
-            // NOTE: THE SKB WAS ALREADY CONSUMED
-            stat = PSTATS_O_PONG_SEND_FAILED;
-        else
-            stat = PSTATS_O_PONG_OK;
-    } else // FAILED TO ALLOCATE SKB
-        stat = PSTATS_O_PONG_SKB_FAILED;
-
-    // NOTE: WE WILL INFORM THE TOTAL SIZE SENT THROUGHT THE PHYSICAL INTERFACE
-    atomic_add(&path->pstats[stat].bytes, skel->hsize + PKT_ALIGN_SIZE + PING_SIZE);
-    atomic_inc(&path->pstats[stat].count);
+    return skb;
 }
 
 // IT MUST BE NOT INLINED, AS THE WHOLE INTENTION OF SEPARATING IT AS A FUNCTION IS TO MINIMIZE THE IN FUNCTION
 // WE DARE TO REDO SOME THINGS HERE, SO IF WE INLINE, THOSE WILL BE SURPLEFUOUS.
-static noinline uint in_ping (node_s* const node, const skb_s* const skb, pkt_s* const pkt) {
+static noinline uint in_ping (node_s* const node, const skb_s* const iskb, pkt_s* const pkt) {
 
     const u64 now = get_current_ms();
 
@@ -104,10 +86,10 @@ static noinline uint in_ping (node_s* const node, const skb_s* const skb, pkt_s*
     // HIS RAW TIME
     const ping_s* const ping = PKT_DATA(pkt);
 
-    const u64 p_rtime = BE64(ping->time);
+    const u64 rtime = BE64(ping->time);
 
-    if (p_rtime < XTIME_MIN
-     || p_rtime > XTIME_MAX)
+    if (rtime < XTIME_MIN
+     || rtime > XTIME_MAX)
         // INVALID RTIME
         return PSTATS_I_RTIME_INVALID;
 
@@ -119,14 +101,14 @@ static noinline uint in_ping (node_s* const node, const skb_s* const skb, pkt_s*
         // ESTÁ EM RELAÇÃO A
         //      (O RELOGIO DELE COMO ELE DEVE ESTAR (APROXIMADO))
         // OBS: O LATENCY AIND PODE SER O INICIAL E NÃO O REAL
-        if (ABS_DIFF((p_rtime + latency), RTIME(now, tdiff)) > (2000 + path->latency_var))
+        if (ABS_DIFF((rtime + latency), RTIME(now, tdiff)) > (2000 + path->latency_var))
             // A IMPRECISÃO NÃO PODE SER TÃO GRANDE ASSIM
             return PSTATS_I_RTIME_SKEW;
 
     if (i == I_KEY_PONG) {
         // CONNECTING / ESTABLISHED
 
-        if (p_rtime <= pongSeen || !__atomic_compare_exchange_n(&path->pongSeen, &pongSeen, p_rtime, 0, __ATOMIC_RELAXED, __ATOMIC_RELAXED))
+        if (rtime <= pongSeen || !__atomic_compare_exchange_n(&path->pongSeen, &pongSeen, rtime, 0, __ATOMIC_RELAXED, __ATOMIC_RELAXED))
             // HIS RAW TIME CANNOT GO DOWN OR REPEAT
             return PSTATS_I_RTIME_BACKWARDS;
 
@@ -143,9 +125,9 @@ static noinline uint in_ping (node_s* const node, const skb_s* const skb, pkt_s*
         // ELE NOS MANDOU O TIME DELE DE QUANDO ELE RECEBEU.
         // MAS CONSIDERA O TIME QUE ELE TINHA QUANDO ENVIAMOS.
         // E ENTAO PEGA A COMPARAÇÃO ENTRE *LOCAL TIME WHEN I SENT* COM *REMOTE TIME WHEN I SENT*
-        // LTIME_DIFF_RTIME(p_ltime + latency, p_rtime)
-        // LTIME_DIFF_RTIME(now, p_rtime + latency)
-        tdiff = (tdiff + LTIME_DIFF_RTIME(now, p_rtime + latency)) / (1 + !!tdiff);
+        // LTIME_DIFF_RTIME(p_ltime + latency, rtime)
+        // LTIME_DIFF_RTIME(now, rtime + latency)
+        tdiff = (tdiff + LTIME_DIFF_RTIME(now, rtime + latency)) / (1 + !!tdiff);
 
         if (!__atomic_compare_exchange_n(&path->pingSent, &p_ltime, 0, 0, __ATOMIC_SEQ_CST, __ATOMIC_RELAXED))
             // THIS PONG WAS ALREADY PROCESSED, OR
@@ -173,7 +155,7 @@ static noinline uint in_ping (node_s* const node, const skb_s* const skb, pkt_s*
         return PSTATS_I_PONG_GOOD;
     }
 
-    if (p_rtime <= pingSeen || !__atomic_compare_exchange_n(&path->pingSeen, &pingSeen, p_rtime, 0, __ATOMIC_RELAXED, __ATOMIC_RELAXED))
+    if (rtime <= pingSeen || !__atomic_compare_exchange_n(&path->pingSeen, &pingSeen, rtime, 0, __ATOMIC_RELAXED, __ATOMIC_RELAXED))
         // HIS RAW TIME CANNOT GO DOWN OR REPEAT
         return PSTATS_I_RTIME_BACKWARDS;
 
@@ -193,14 +175,14 @@ static noinline uint in_ping (node_s* const node, const skb_s* const skb, pkt_s*
         } else // LOCK FAILED
             return PSTATS_I_PING_GOOD_ACCEPT_RACED;
 
-        in_discover(path, skb, skel);
+        in_discover(path, iskb, skel);
 
         if (skel == &path->skel) { // -> SYN-ACK
             // AGORA JA PODE USAR O PATH->SKEL
             // LIBERA O KEEPER PARA ENVIAR PINGS
             // LIBERA O OUT PARA ENVIAR DADOS
             // OBS.: CUIDADO COM ESTE LATENCY AQUI, POIS AINDA NAO FOI DESCOBERTO O REAL
-            tdiff = (tdiff + LTIME_DIFF_RTIME(now, p_rtime + latency)) / (1 + !!tdiff);
+            tdiff = (tdiff + LTIME_DIFF_RTIME(now, rtime + latency)) / (1 + !!tdiff);
 
             __atomic_store_n(&node->tdiff,      tdiff, __ATOMIC_SEQ_CST);
             __atomic_store_n(&node->tlast,        now, __ATOMIC_SEQ_CST);
@@ -211,7 +193,21 @@ static noinline uint in_ping (node_s* const node, const skb_s* const skb, pkt_s*
         skel = &path->skel;
 
     // RESPONDE COM UM PONG
-    pong_send(node, path, skel, p_rtime, now);
+    skb_s* const oskb = pega_key_out(node, O_KEY_PONG, skel, now, rtime); uint stat;
+
+    if (oskb) {
+        if (dev_queue_xmit(oskb))
+            // FAILED TO SEND THE SKB
+            // NOTE: THE SKB WAS ALREADY CONSUMED
+            stat = PSTATS_O_PONG_SEND_FAILED;
+        else
+            stat = PSTATS_O_PONG_OK;
+    } else // FAILED TO ALLOCATE SKB
+        stat = PSTATS_O_PONG_SKB_FAILED;
+
+    // NOTE: WE WILL INFORM THE TOTAL SIZE SENT THROUGHT THE PHYSICAL INTERFACE
+    atomic_add(&path->pstats[stat].bytes, skel->hsize + PKT_ALIGN_SIZE + PING_SIZE);
+    atomic_inc(&path->pstats[stat].count);
 
     return PSTATS_I_PING_GOOD;
 }
