@@ -23,9 +23,9 @@ static noinline uint in_ping (node_s* const node, const skb_s* const skb, pkt_s*
     if ((now - tlast) > 45000)
         tdiff = 0;
 
-    const uint pid      = BE8  (pkt->x.path);
-    const uint i        = BE8  (pkt->x.version);
-          u64  p_ltime  = BE64 (pkt->x.time);
+    const uint pid    = BE8  (pkt->x.path);
+    const uint i      = BE8  (pkt->x.version);
+          u64  ltime  = BE64 (pkt->x.time);
 
     path_s* const path = &node->paths[pid];
 
@@ -63,9 +63,9 @@ static noinline uint in_ping (node_s* const node, const skb_s* const skb, pkt_s*
             // HIS RAW TIME CANNOT GO DOWN OR REPEAT
             return PSTATS_I_RTIME_BACKWARDS;
 
-        // p_ltime IS THE TIME WE SENT
+        // ltime IS THE TIME WE SENT
         // WE USE THE HALF, BECAUSE THIS TIME ELAPSED WAS TO GO AND GET BACK
-        latency = (3*latency + (now - p_ltime)/2) / 4;
+        latency = (3*latency + (now - ltime)/2) / 4;
 
         // CAP TO CONFIGURED LIMITS
         if (latency > path->latency_max)
@@ -76,11 +76,11 @@ static noinline uint in_ping (node_s* const node, const skb_s* const skb, pkt_s*
         // ELE NOS MANDOU O TIME DELE DE QUANDO ELE RECEBEU.
         // MAS CONSIDERA O TIME QUE ELE TINHA QUANDO ENVIAMOS.
         // E ENTAO PEGA A COMPARAÇÃO ENTRE *LOCAL TIME WHEN I SENT* COM *REMOTE TIME WHEN I SENT*
-        // LTIME_DIFF_RTIME(p_ltime + latency, rtime)
+        // LTIME_DIFF_RTIME(ltime + latency, rtime)
         // LTIME_DIFF_RTIME(now, rtime + latency)
         tdiff = (tdiff + LTIME_DIFF_RTIME(now, rtime + latency)) / (1 + !!tdiff);
 
-        if (!__atomic_compare_exchange_n(&path->pingSent, &p_ltime, 0, 0, __ATOMIC_SEQ_CST, __ATOMIC_RELAXED))
+        if (!__atomic_compare_exchange_n(&path->pingSent, &ltime, 0, 0, __ATOMIC_SEQ_CST, __ATOMIC_RELAXED))
             // THIS PONG WAS ALREADY PROCESSED, OR
             // ANOTHER PING WAS SENT (AND A NEW PONG IS EXPECTED)
             return PSTATS_I_PONG_RACED;
@@ -101,7 +101,7 @@ static noinline uint in_ping (node_s* const node, const skb_s* const skb, pkt_s*
 
         // NOTE: MAS SE ACABOU DE LIBERAR O PATH,
         // O KEEPER PODE ACABAR ATIVANDO O OUT ANTES DE TERMINARMOS DE LEARN ESTA KEY
-        pega_key_in(node, ping);
+        ping_receive(node, ping);
 
         return PSTATS_I_PONG_GOOD;
     }
@@ -109,6 +109,9 @@ static noinline uint in_ping (node_s* const node, const skb_s* const skb, pkt_s*
     if (rtime <= pingSeen || !__atomic_compare_exchange_n(&path->pingSeen, &pingSeen, rtime, 0, __ATOMIC_RELAXED, __ATOMIC_RELAXED))
         // HIS RAW TIME CANNOT GO DOWN OR REPEAT
         return PSTATS_I_RTIME_BACKWARDS;
+
+    // TODO:
+    ping_receive(node, ping);
 
     // THIS IS A PING
     pkt_s* skel; pkt_s temp_skel;

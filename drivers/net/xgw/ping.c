@@ -1,5 +1,5 @@
 
-static inline void pega_key_in (node_s* const node, const ping_s* const ping) {
+static inline void ping_receive (node_s* const node, const ping_s* const ping) {
 
     u64 K[K_LEN];
 
