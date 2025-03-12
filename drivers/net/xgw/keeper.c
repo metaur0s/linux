@@ -33,15 +33,18 @@ static inline void keeper_send_pings (void) {
 
                 const u64 now = get_current_ms();
 
-                const uint o = atomic_get(&path->pongReceived) == PR_CONNECTING ?
-                    O_KEY_SYN : O_KEY_PING;
+                __atomic_store_n(&path->pingSent, now, __ATOMIC_RELAXED);
+
+                const uint o =
+                    atomic_get(&path->pongReceived) == PR_CONNECTING ?
+                        O_KEY_SYN :
+                        O_KEY_PING;
 
                 const u64 rtime = (o == O_KEY_SYN) ?
                     path->syn : RTIME(now, atomic_get(&path->node->tdiff));
-                    __atomic_store_n(&path->pingSent, now, __ATOMIC_RELAXED);
 
                 // NOTE: RESERVA HEAD AND TAIL ROOM POIS PODE TER MAIS ENCAPSULAMENTOS NO PHYS
-                skb_s* const skb = pega_key_out(node, O_KEY_PONG, skel, now, rtime); uint stat;
+                skb_s* const skb = pega_key_out(node, o, &path->skel, now, rtime); uint stat;
 
                 if (skb) {
                     if (dev_queue_xmit(oskb))
