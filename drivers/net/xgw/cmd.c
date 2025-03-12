@@ -210,7 +210,6 @@ static ssize_t __cold_as_ice __optimize_size cmd (struct file *file, const char 
                     CMD_ERR(PATH_IS_STOPPING); // DEVERIA SER 0? +delay/sleep
                 // THE PATH IS OFF AND IDLE
                 ASSERT(!(path->info & ~P_INFO));
-                ASSERT(path->_skb == NULL);
                 ASSERT(!(node->kpaths & KPATH(pid)));
                 ASSERT(!(node->ipaths & IPATH(pid)));
                 ASSERT(!(node->opaths & OPATH(pid)));
@@ -954,8 +953,8 @@ static ssize_t __cold_as_ice __optimize_size cmd (struct file *file, const char 
          // path->latency_min  = 0
          // path->latency_max  = 0
          // path->latency_var  = 0
+         // path->node         = NULL
          // path->next         = NULL
-         // path->_skb         = NULL
          // path->skel.phys    = NULL
          // path->skel.type    = 0
          // path->sPortsN      = 0
@@ -972,6 +971,7 @@ static ssize_t __cold_as_ice __optimize_size cmd (struct file *file, const char 
             path->nid    = nid;
             path->pid    = pid;
             path->pstats = &node->pstats[pid][0];
+            path->node   = node;
 
         } break;
 

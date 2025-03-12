@@ -120,12 +120,12 @@ struct path_s {
     u16 latency_max; // CONFIG
     u16 latency_var; // CONFIG
     // --
-    u64 acks;     // KEEPER - HISTORY
+    u64 acks; // KEEPER - HISTORY
     u64 syn; // O PKT->TSTAMP QUE O CLIENTE VAI USAR, ENQUANTO NAO DESCOBRE ELE
-    u64 pingSent;    // QUANDO ENVIEI O PING - PARA SABER SE ACEITA O PONG
-    u64 pongReceived; // QUANDO RECEBI O PONG - PARA SABER QUE A CONEXÃO ESTÁ VIVA
-    u64 pongSeen; // LAST PING->TIME RECEIVED (HIS RAW TIME) - SO WE DON'T ACCEPT REPEATED/GOINGBACKS
-    u64 pingSeen; // LAST PING->TIME RECEIVED (HIS RAW TIME) - SO WE DON'T ACCEPT REPEATED/GOINGBACKS
+    u64 pingSent;     // LTIME | WHEN I ASKED - PARA SABER SE ACEITA O PONG
+    u64 pongReceived; // LTIME | WHEN I WAS ANSWERED - PARA SABER QUE A CONEXÃO ESTÁ VIVA
+    u64 pingSeen;     // RTIME | LAST PING->TIME RECEIVED (HIS RAW TIME) - SO WE DON'T ACCEPT REPEATED/GOINGBACKS
+    u64 pongSeen;     // RTIME | LAST PONG->TIME RECEIVED (HIS RAW TIME) - SO WE DON'T ACCEPT REPEATED/GOINGBACKS
 // 32 -- KEEPER / PING
     u16 latency;      // KEEPER WRITE / OUT READ  <<---- VAI TER QUE ENFIAR ESSA PORRA ENTÃO DENTRO DO CACHE LINE DO SKEL, OU NO NODE
     u8  tos;
@@ -134,7 +134,7 @@ struct path_s {
     u8  sPortsN;
     u8  dPortIndex;
     u8  dPortsN;
-    skb_s* _skb;
+    node_s* node;
     path_s* next; // NA LISTA DE PINGS - ONLY VALID WHEN PATH STATUS >= K_UNSTABLE
     // SÓ PODE USAR PSTATS SE TEVE PATH-> !!!
     volatile stat_s* pstats; // TODO: UMA ARRAY AQUI MESMO?

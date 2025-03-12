@@ -30,31 +30,54 @@ static inline void keeper_send_pings (void) {
 
         while ((path = *ptr)) {
             if (path->info & K_ESTABLISHED) {
-                //
 
-                skb_s* const skb = path->_skb; uint len; uint s;
+                uint len; uint s;
+
+                // NOTE: RESERVA HEAD AND TAIL ROOM POIS PODE TER MAIS ENCAPSULAMENTOS NO PHYS
+                skb_s* const skb = alloc_skb(64 + PKT_SIZE + PKT_ALIGN_SIZE + PING_SIZE + 64, GFP_ATOMIC);
 
                 if (skb) {
-                    path->_skb = NULL;
-                    path->pingSent = get_current_ms();
+
+                    const u64 now = get_current_ms();
+
+                    // TODO: AQUI PELO MENOS PODEMOS ALINHAR - PTR(((uintptr_t)SKB_DATA(skb) + sizeof(u64) - 1) % sizeof(u64))
+                    ping_s* const ping = SKB_DATA(skb) + 64 + PKT_SIZE + PKT_ALIGN_SIZE;
+
+                    //
+                    random64_n(PTR(ping), PING_RANDOMS_N, SUFFIX_ULL(CONFIG_XGW_RANDOM_PING));
+
+                    const uint o = atomic_get(&path->pongReceived) == PR_CONNECTING ?
+                        O_KEY_SYN : O_KEY_PING;
+
+                    const u64 rtime = (o == O_KEY_SYN) ?
+                        path->syn : RTIME(now, atomic_get(&path->node->tdiff));
+
+                    // ENCAPSULATE THE PING
+                    pkt_encapsulate(path->node, o, rtime, &path->skel, skb, ping, PING_SIZE);
+
+                    __atomic_store_n(&path->pingSent, now, __ATOMIC_RELAXED);
 
                     // TEM QUE LER ANTES POIS O SKB SERA PERTIDO
                     len = skb->len;
 
                     skb->ip_summed = CHECKSUM_NONE;
+
                     if (dev_queue_xmit(skb)) // TODO: SAME ON DEV_OUT(), BUT THE SKB IS CONSUMED!!!
-                         s = PSTATS_O_PING_FAILED;
-                    else s = PSTATS_O_PING_OK;
-                }   else { s = PSTATS_O_PING_SKB_FAILED; len = 0; } // PING WAS NOT MADE (BECAUSE SKB WASNT RELEASED BY DEVICE)
-// PSTATS_O_PING_PHYS_DOWN
+                        s = PSTATS_O_PING_FAILED;
+                    else
+                        s = PSTATS_O_PING_OK;
+                } else // PING WAS NOT MADE (BECAUSE SKB WASNT RELEASED BY DEVICE)
+                    s = PSTATS_O_PING_SKB_FAILED;
+
+                // TODO: PSTATS_O_PING_PHYS_DOWN
+
                 // NOTE: WE WILL INFORM THE TOTAL SIZE SENT THROUGHT THE PHYSICAL INTERFACE
                 atomic_add(&path->pstats[s].bytes, len);
                 atomic_inc(&path->pstats[s].count);
 
-                //
                 ptr = &path->next;
-            } else
-               *ptr =  path->next; // NOTE: NOW PATH->NEXT IS INVALID
+            } else // NOTE: NOW PATH->NEXT IS INVALID
+               *ptr =  path->next;
         }
     }
 }
@@ -159,6 +182,7 @@ static void keeper (struct timer_list* const timer) {
                 }   path->pingSent     = path->syn; // AINDA NAO CONSTRUI PING
                     path->pingSeen     = XTIME_MIN;
                     path->pongSeen     = XTIME_MIN;
+                    path->acks         = 0;
                     path->latency      = path->latency_max; // TODO: + path->latency_var
                     path->info        ^= K_START | K_LISTEN;
 
@@ -174,30 +198,29 @@ static void keeper (struct timer_list* const timer) {
                     if (path->info & P_SERVER)
                         printk("XGW: %s [%s]: ACCEPTED ON PHYS %s\n", node->name, path->name, path->skel.phys->name);
 
-                    // AT THIS POINT, THE PATH->SKEL WAS BUILT
-                    //      a) FROM USER (CMD)
-                    //      b) FROM IN (DISCOVER)
-
-                    // O DISCOVER TEM QUE TER FEITO ISSO
-                    // O USERSPACE TEM QUE TER FEITO ISSO
-                    ASSERT(path->skel.x.src  == BE16(nodeSelf));
-                    ASSERT(path->skel.x.dst  == BE16(path->nid));
-                    ASSERT(path->skel.x.path == BE8 (path->pid));
-                        // path->skel.x.version --> ON encrypt()
-                        // path->skel.x.dsize   --> ON encrypt()
-                        // path->skel.x.seed    --> ON encrypt()
-                        // path->skel.x.hash    --> ON encrypt()
-
                     path->info      ^= K_LISTEN | K_ESTABLISHED;
-                    path->acks       = 0;
+             ASSERT(path->since == 0);
                     path->since      = now;
                     path->starts    += 1;
-                 // path->sent      -> 0  --- SERA SETADO ABAIXO
-                 // path->lcounter  -> 0  --- SERA SETADO ABAIXO
-                 // path->rcounter  -> a) COUNTER_CONNECTING (KEEPER - START)
-                 //                    b) COUNTER DO PEER (IN - PING)
+             ASSERT(path->pingSent == path->syn);
+             ASSERT(path->pongReceived >= PR_CONNECTING); // PR_CONNECTING (CLIENT) | ??? (SERVER)
+             ASSERT(path->pongSeen == XTIME_MIN);
+             ASSERT(path->pingSeen >= XTIME_MIN); // XTIME_MIN (CLIENT) | ??? (SERVER)
+             ASSERT(path->acks  == 0);
+                 // AT THIS POINT, THE PATH->SKEL WAS BUILT
+                 //      a) FROM USER (CMD)
+                 //      b) FROM IN (DISCOVER)
+             ASSERT(path->skel.x.src  == BE16(nodeSelf));
+             ASSERT(path->skel.x.dst  == BE16(path->nid));
+             ASSERT(path->skel.x.path == BE8 (path->pid));
+                 // path->skel.x.version --> ON encrypt()
+                 // path->skel.x.dsize   --> ON encrypt()
+                 // path->skel.x.time    --> ON encrypt()
+                 // path->skel.x.hash    --> ON encrypt()
+             ASSERT(path->skel.phys);
+             ASSERT(path->node == node);
 
-                    // QUANDO FIZER PINGS, VAI MANDAR
+                    // PASSA A ENVIAR PINGS
                     const uint q = path->skel.phys->ifindex % PING_QUEUES_N;
 
                     path->next = pings[q];
@@ -223,8 +246,6 @@ static void keeper (struct timer_list* const timer) {
 
                 // A SECOND ELAPSED
                 // TODO: ELE TEM QUE TER RECEBIDO TAMBEM UM PING, HA PELO MENOS 2 KEEPER INTERVALS
-                // TODO: E A INTERFACE ESTA UP
-                // TODO: E A INTERFACE ESTA COM CARRIER
                 const u64 acks = ((u64)(pongReceived <= (path->pingSent + 2*latency + path->latency_var)) << 63) | (path->acks >> 1);
 
                 if (path->acks != acks) {
@@ -235,8 +256,8 @@ static void keeper (struct timer_list* const timer) {
 
                     switch (acks) {
                         case 0b0000000000000000000000000000000000000000000000000000000000000000ULL: str = "LOST";       break;
-                        case 0b0111111111111111111111111111111111111111111111111111111111111111ULL: str = "RECOVERING"; break;
-                        case 0b1000000000000000000000000000000000000000000000000000000000000000ULL: str = "UNSTABLE";   break;
+                        case 0b1000000000000000000000000000000000000000000000000000000000000000ULL: str = "RECOVERING"; break;
+                        case 0b0111111111111111111111111111111111111111111111111111111111111111ULL: str = "UNSTABLE";   break;
                         case 0b1111111111111111111111111111111111111111111111111111111111111111ULL: str = "STABLE";     break;
                         default:                                                                    str = NULL;
                     }
@@ -252,29 +273,6 @@ static void keeper (struct timer_list* const timer) {
                     ((typeof(opaths))(acks >= 0b1111111111110000000000000000000000000000000000000000000000000000ULL) << (1*PATHS_N)) | // NOTE: THIS ONE SHOULD BE REPEATED
                     ((typeof(opaths))(acks >= 0b1111111111110000000000000000000000000000000000000000000000000000ULL) << (0*PATHS_N)) // TODO: REMOVE THIS REPETITION LIMITATION
                 ) << pid;
-
-                // MAKE PING
-                // TODO: SO FAZER ISSO SE A INTERFACE ESTIVER UP E COM CARRIER, PARA NAO PERDER IKEYS ATOA
-                // NOTE: RESERVA HEAD AND TAIL ROOM POIS PODE TER MAIS ENCAPSULAMENTOS NO PHYS
-                skb_s* const skb = alloc_skb(64 + PKT_SIZE + PKT_ALIGN_SIZE + PING_SIZE + 64, GFP_ATOMIC);
-
-                if ((path->_skb = skb)) {
-
-                    // TODO: AQUI PELO MENOS PODEMOS ALINHAR - PTR(((uintptr_t)SKB_DATA(skb) + sizeof(u64) - 1) % sizeof(u64))
-                    ping_s* const ping = SKB_DATA(skb) + 64 + PKT_SIZE + PKT_ALIGN_SIZE;
-
-                    //
-                    random64_n(PTR(ping), PING_RANDOMS_N, SUFFIX_ULL(CONFIG_XGW_RANDOM_PING));
-
-                    const uint o = atomic_get(&path->pongReceived) == PR_CONNECTING ?
-                        O_KEY_SYN : O_KEY_PING;
-
-                    const u64 rtime = (o == O_KEY_SYN) ?
-                        path->syn : RTIME(now, atomic_get(&node->tdiff));
-
-                    // ENCAPSULATE THE PING
-                    pkt_encapsulate(node, o, rtime, &path->skel, skb, ping, PING_SIZE);
-                }
             }
 
             if (path->info & K_SUSPEND) { // NOTE: WILL EXECUTE TWICE BECAUSE THE ATOMIC EXCHANTE BELOW
@@ -282,8 +280,8 @@ static void keeper (struct timer_list* const timer) {
                 // STOP OUT (BY NOT INCLUDING IN OPATHS)
                 // STOP IN
 _suspend:
-                path->info = (path->info & P_INFO) | K_SUSPENDING;
-                path->acks = 0; // PARA JA ATUALIZAR O BEEP
+                path->info  = (path->info & P_INFO) | K_SUSPENDING;
+                path->acks  = 0; // PARA JA ATUALIZAR O BEEP
 
                 __atomic_store_n(&node->ipaths, node->ipaths & ~IPATH(pid), __ATOMIC_RELAXED);
                 // NOW ANOTHER INTERVAL SO ANY IN/OUT IS DONE
@@ -294,6 +292,7 @@ _suspend:
                     printk("XGW: %s [%s]: STOPPED\n", node->name, path->name);
                     // NOW THE PATH IS STOPPED
                     // NOTE: THE PATH MAY BE ON, FOR EXAMPLE IF THE PATH STOPPED BECAUSE THE NODE STOPED
+                    path->since = 0;
                     node->kpaths ^= KPATH(pid);
                 }
             }
