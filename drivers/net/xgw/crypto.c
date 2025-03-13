@@ -179,12 +179,12 @@ static void reset_node_ping_keys (node_s* const node, const uint self, const uin
     //      AS SOMA SIMPLESMENTE É A MESMA (MAIOR | MENOR)
     if (self > peer) {
         sum = 0x0000000100000001ULL * ((self << 16) | peer);
-        X = node->iKeys[I_KEY_SYN];
-        Y = node->oKeys[O_KEY_SYN];
+        X = node->iKeys[I_KEY_PING];
+        Y = node->oKeys[O_KEY_PING];
     } else {
         sum = 0x0000000100000001ULL * ((peer << 16) | self);
-        X = node->oKeys[O_KEY_SYN];
-        Y = node->iKeys[I_KEY_SYN];
+        X = node->oKeys[O_KEY_PING];
+        Y = node->iKeys[I_KEY_PING];
     }
 
     // INITIALIZE THE KEYS
