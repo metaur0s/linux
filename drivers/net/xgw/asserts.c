@@ -12,6 +12,19 @@ BUILD_ASSERT(sizeof(cmd_arg_addr6_t) == sizeof(((path_s*)NULL)->skel.encap_ip6.i
 BUILD_ASSERT(sizeof(cmd_arg_mac_t)   == sizeof(((path_s*)NULL)->skel.encap_eth.eth.dmac));
 BUILD_ASSERT(sizeof(cmd_arg_mac_t)   == sizeof(((path_s*)NULL)->skel.encap_eth.eth.smac));
 
+BUILD_ASSERT(sizeof(cmd_arg_nname_t)      == NODE_NAME_SIZE);
+BUILD_ASSERT(sizeof(cmd_arg_pname_t)      == PATH_NAME_SIZE);
+BUILD_ASSERT(sizeof(cmd_arg_dname_t)      == DHCP_NAME_SIZE);
+BUILD_ASSERT(sizeof(cmd_arg_phys_t)       == IFNAMSIZ);
+BUILD_ASSERT(sizeof(cmd_arg_password_t)   == PASSWORD_SIZE_MAX);
+BUILD_ASSERT(sizeof(cmd_arg_mac_t)        == ETH_ALEN);
+BUILD_ASSERT(sizeof(cmd_arg_addr4_t)      == 4);
+BUILD_ASSERT(sizeof(cmd_arg_addr6_t)      == 16);
+BUILD_ASSERT(sizeof(cmd_arg_path_ports_t) == PATH_PORTS_N*sizeof(u16));
+BUILD_ASSERT(sizeof(cmd_arg_ports_t)      == PORTS_N*sizeof(u16));
+BUILD_ASSERT(sizeof(cmd_arg_ports_min_t)  == sizeof(u16));
+BUILD_ASSERT(sizeof(cmd_arg_secret_min_t) == 16);
+
 //
 BUILD_ASSERT(sizeof(hdr_eth_s)  == 14);
 BUILD_ASSERT(sizeof(hdr_vlan_s) ==  4);

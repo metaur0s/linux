@@ -75,8 +75,6 @@ static ssize_t __cold_as_ice __optimize_size cmd (struct file *file, const char 
 
     const uint C = CMD_VALUE(code);
 
-    CMD_CONSUME(code);
-
     if (C >= CMDS_N)
         FREE_CMD_ERR(INVALID_CMD_CODE);
 
@@ -86,6 +84,8 @@ static ssize_t __cold_as_ice __optimize_size cmd (struct file *file, const char 
 
     if (cmdSizes[C] > size)
         FREE_CMD_ERR(INVALID_CMD_SIZE);
+
+    CMD_CONSUME(code);
 
     if (C_USE_NID(C)) {
         if ((nid = CMD_VALUE(nid)) >= NODES_N)
@@ -184,12 +184,12 @@ static ssize_t __cold_as_ice __optimize_size cmd (struct file *file, const char 
             ASSERT(!(((path->info & P_INFO) == path->info) && (node->opaths & OPATH(pid))));
 
             // I/O ACCORDING TO STATUS
-            ASSERT(!((path->info & K_START)      && (node->ipaths  & IPATH(pid))));
-            ASSERT(!((path->info & K_START)      && (node->opaths  & OPATH(pid))));
-            ASSERT(!((path->info & K_SUSPENDING) && (node->opaths  & OPATH(pid))));
-            ASSERT(!((path->info & K_SUSPENDING) && (node->ipaths  & IPATH(pid))));
-            ASSERT(!((path->info & K_LISTEN)     && !(node->ipaths & IPATH(pid))));
-            ASSERT(!((path->info & K_LISTEN)     && (node->opaths  & OPATH(pid))));
+            ASSERT(!((path->info & K_START)       &&  (node->ipaths & IPATH(pid))));
+            ASSERT(!((path->info & K_START)       &&  (node->opaths & OPATH(pid))));
+            ASSERT(!((path->info & K_SUSPENDING)  &&  (node->opaths & OPATH(pid))));
+            ASSERT(!((path->info & K_SUSPENDING)  &&  (node->ipaths & IPATH(pid))));
+            ASSERT(!((path->info & K_LISTEN)      && !(node->ipaths & IPATH(pid))));
+            ASSERT(!((path->info & K_LISTEN)      &&  (node->opaths & OPATH(pid))));
             ASSERT(!((path->info & K_ESTABLISHED) && !(node->ipaths & IPATH(pid))));
 
             // IF ON, MUST BE RUNNING (EXCEPT IF NODE IS OFF)
