@@ -93,8 +93,9 @@ static void keeper (struct timer_list* const timer) {
 
                 if (path->info & P_CLIENT) {
 
-                    if (path->info & P_DHCP) {
 #if 0
+                    if (path->info & P_DHCP) {
+
                         if (1) {
                           // DHCP IS DONE
                           if (path_is_ip4(path)) {
@@ -110,10 +111,10 @@ static void keeper (struct timer_list* const timer) {
                           // copy eth protocol
                           // copy vlan id
                         } else
-#endif
                             // CANNOT START YET
                             goto _skip;
                     }
+#endif
 
                     printk("XGW: %s [%s]: CONNECTING\n", node->name, path->name);
 
@@ -150,12 +151,14 @@ static void keeper (struct timer_list* const timer) {
                     printk("XGW: %s [%s]: LISTENING\n", node->name, path->name);
                     path->skel.type    = 0; //
                     path->pongReceived = PR_LISTENING;
-                }   path->pingSent     = path->syn; // AINDA NAO CONSTRUI PING
-                    path->pingSeen     = XTIME_MIN;
-                    path->pongSeen     = XTIME_MIN;
+                }   path->pingSent     = 0; // AINDA NAO CONSTRUI PING
+                    path->pingSeen     = 0;
+                    path->pongSeen     = 0;
                     path->acks         = 0;
-                    path->latency      = path->latency_max; // TODO: + path->latency_var
+                    path->latency      = path->latency_max;
                     path->info        ^= K_START | K_LISTEN;
+             ASSERT(path->since == 0);
+             ASSERT(path->node == node);
 
                 // ENABLE IN
                 // NOTE: AQUI ENTAO TEM UM RACE CONDITION, ELE PODE RECEBER UM PING/PONG E COMO SERÁ INTERPRETADO?
@@ -170,14 +173,11 @@ static void keeper (struct timer_list* const timer) {
                         printk("XGW: %s [%s]: ACCEPTED ON PHYS %s\n", node->name, path->name, path->skel.phys->name);
 
                     path->info      ^= K_LISTEN | K_ESTABLISHED;
-             ASSERT(path->since == 0);
                     path->since      = now;
                     path->starts    += 1;
-             ASSERT(path->pingSent == path->syn);
+             ASSERT(path->pingSent == 0);
              ASSERT(path->pongReceived >= PR_CONNECTING); // PR_CONNECTING (CLIENT) | ??? (SERVER)
-             ASSERT(path->pongSeen == XTIME_MIN);
-             ASSERT(path->pingSeen >= XTIME_MIN); // XTIME_MIN (CLIENT) | ??? (SERVER)
-             ASSERT(path->acks  == 0);
+             ASSERT(path->pongSeen == 0);
                  // AT THIS POINT, THE PATH->SKEL WAS BUILT
                  //      a) FROM USER (CMD)
                  //      b) FROM IN (DISCOVER)
@@ -189,7 +189,6 @@ static void keeper (struct timer_list* const timer) {
                  // path->skel.x.time    --> ON encrypt()
                  // path->skel.x.hash    --> ON encrypt()
              ASSERT(path->skel.phys);
-             ASSERT(path->node == node);
 
                     // PASSA A ENVIAR PINGS
                     const uint q = path->skel.phys->ifindex % PING_QUEUES_N;

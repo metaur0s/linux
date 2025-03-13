@@ -19,14 +19,18 @@ CFLAGS_xgw.o += -Wno-error=date-time
 CFLAGS_xgw.o += -Wno-type-limits
 CFLAGS_xgw.o += -Wno-unused-parameter
 CFLAGS_xgw.o += -Wno-sign-compare
+ifeq ($(CONFIG_CC_IS_CLANG),y)
 CFLAGS_xgw.o += -Wno-c23-extensions
+endif
 
 CFLAGS_xgw.o += -mpopcnt
 
 # TODO: CLANG NAO TEM ABM
-#ifneq ($(CONFIG_XGW_ABM),)
-#CFLAGS_xgw.o += -mabm
-#endif
+ifneq ($(CONFIG_CC_IS_CLANG),y)
+ifneq ($(CONFIG_XGW_ABM),)
+CFLAGS_xgw.o += -mabm
+endif
+endif
 
 #ifneq ($(CONFIG_XGW_TBM),)
 #CFLAGS_xgw.o += -mtbm

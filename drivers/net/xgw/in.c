@@ -1,10 +1,9 @@
 
-#define PR_LISTENING   0
-#define PR_ACCEPTING   1
-#define PR_CONNECTING  2
-#define PR_ESTABLISHED XTIME_MIN
+#define PR_LISTENING   ((u64)0)
+#define PR_ACCEPTING   ((u64)1)
+#define PR_CONNECTING  ((u64)2)
+#define PR_ESTABLISHED ((u64)8192)
 
-#define XTIME_MIN ((u64)8192)
 #define XTIME_MAX ((u64)(8ULL*12*31*24*3600*1000))
 
 #define TDIFF_MIN ((s64)(-8LL*12*31*24*3600*1000))
