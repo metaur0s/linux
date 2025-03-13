@@ -1,13 +1,9 @@
 
+#define CMD_ARG(a, b, c) a ## b ## c
+
 // CHECK IF THE COMMAND MESSAGE IS COMPLETE
-#define _CMD_ARG_SIZE(a, b, c) sizeof(a ## b ## c)
-#define CMD_ARG_SIZE(arg) _CMD_ARG_SIZE(cmd_arg_, arg, _t)
-
-#define _CMD_VALUE(a, b, c) (*(a ## b ## c*)cmd)
-#define CMD_VALUE(arg) _CMD_VALUE(cmd_arg_, arg, _t)
-
-#define _CMD_VALUE_P(a, b, c) ((a ## b ## c)cmd)
-#define CMD_VALUE_P(arg) _CMD_VALUE_P(cmd_arg_, arg, _t)
+#define CMD_ARG_SIZE(arg) sizeof(CMD_ARG(cmd_arg_, arg, _t))
+#define CMD_VALUE(arg) (*(CMD_ARG(cmd_arg_, arg, _t)*)cmd)
 
 #define CMD_CONSUME(_type) { \
     ASSERT(size >= CMD_ARG_SIZE(_type)); \
