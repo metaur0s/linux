@@ -40,9 +40,6 @@ static void ping_send (node_s* const node, const path_s* const path, const pkt_s
         // SEM ATOMICITY/BARRIER POIS ESTA USANDO UMA KEY JA EXPIRADA
         secret_derivate_random_as_key(node->secret, ping->rnd, node->iKeys[i]);
 
-        // O_KEY_PING: RTIME(now)
-        // O_KEY_PONG: ping->time (USA O RAW RTIME QUE RECEBEU)
-        // O_KEY_SYN:  path->syn
         pkt_encapsulate(node, o, rtime, skel, skb, ping, PING_SIZE);
 
         skb->ip_summed = CHECKSUM_NONE;
