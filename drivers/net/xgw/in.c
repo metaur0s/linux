@@ -121,7 +121,7 @@ static noinline uint in_ping (node_s* const node, const skb_s* const skb, pkt_s*
         skel = &path->skel;
 
     // RESPONDE COM UM PONG
-    ping_send(node, path, skel, now, rtime, O_KEY_PONG);
+    ping_send(node, path, skel, now, RTIME(now, tdiff), O_KEY_PONG);
 
     return PSTATS_I_PING_GOOD;
 }
