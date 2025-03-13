@@ -206,18 +206,18 @@ static void keeper (struct timer_list* const timer) {
                     goto _suspend;
                 }
 
-                const uint latency = atomic_get(&path->latency);
+                const uint rtt      = 2*(atomic_get(&path->latency) + path->latency_var);
+                const u64 pingSent     = atomic_get(&path->pingSent);
                 const u64 pongReceived = atomic_get(&path->pongReceived);
 
-                if (((pongReceived ?: path->since) + path->timeout) < now) {
+                if (((pongReceived > PR_CONNECTING ? pongReceived : path->since) + path->timeout) < now) {
                     // TIMED OUT WAITING FOR PONGS
                     printk("XGW: %s [%s]: TIMED OUT\n", node->name, path->name);
                     goto _suspend;
                 }
 
                 // A SECOND ELAPSED
-                // TODO: ELE TEM QUE TER RECEBIDO TAMBEM UM PING, HA PELO MENOS 2 KEEPER INTERVALS
-                const u64 acks = ((u64)(pongReceived <= (path->pingSent + 2*latency + path->latency_var)) << 63) | (path->acks >> 1);
+                const u64 acks = ((u64)((pongReceived - pingSent) <= rtt) << 63) | (path->acks >> 1);
 
                 if (path->acks != acks) {
                     path->acks = acks;
@@ -234,15 +234,15 @@ static void keeper (struct timer_list* const timer) {
                     }
 
                     if (str)
-                        printk("XGW: %s [%s]: %s WITH LATENCY %u\n", node->name, path->name, str, latency);
+                        printk("XGW: %s [%s]: %s WITH RTT %u\n", node->name, path->name, str, rtt);
                 }
 
                 // DOS PIORES AOS MELHORES
                 opaths |= ( // bin(((1 << 12) - 1) << (64 - 12))
-                    ((typeof(opaths))(acks >= 0b1111000000000000000000000000000000000000000000000000000000000000ULL) << (3*PATHS_N)) | // BASTA QUE ESTEJA FUNCIONANDO ENTAO
-                    ((typeof(opaths))(acks >= 0b1111111000000000000000000000000000000000000000000000000000000000ULL) << (2*PATHS_N)) |
-                    ((typeof(opaths))(acks >= 0b1111111111110000000000000000000000000000000000000000000000000000ULL) << (1*PATHS_N)) | // NOTE: THIS ONE SHOULD BE REPEATED
-                    ((typeof(opaths))(acks >= 0b1111111111110000000000000000000000000000000000000000000000000000ULL) << (0*PATHS_N)) // TODO: REMOVE THIS REPETITION LIMITATION
+                    ((u64)(acks >= 0b1111000000000000000000000000000000000000000000000000000000000000ULL) << (3*PATHS_N)) | // BASTA QUE ESTEJA FUNCIONANDO ENTAO
+                    ((u64)(acks >= 0b1111111000000000000000000000000000000000000000000000000000000000ULL) << (2*PATHS_N)) |
+                    ((u64)(acks >= 0b1111111111110000000000000000000000000000000000000000000000000000ULL) << (1*PATHS_N)) | // NOTE: THIS ONE SHOULD BE REPEATED
+                    ((u64)(acks >= 0b1111111111110000000000000000000000000000000000000000000000000000ULL) << (0*PATHS_N)) // TODO: REMOVE THIS REPETITION LIMITATION
                 ) << pid;
             }
 

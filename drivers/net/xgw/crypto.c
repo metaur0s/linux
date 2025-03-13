@@ -54,7 +54,7 @@ u64 encrypt (const u64 K[K_LEN], u64* restrict pos, u64* restrict const end, u64
         // AVALANCHE OF ORIGINAL THROUGH KEYS
         // DONT LET THE ORIGINAL CONTROL THE ACCUMULATION AND LOOP
         // E FAZ O A AFETAR O H, ETC
-        x += ((B + D) ^ F) + H;
+        x += ((A + C) ^ E) + G;
 
         do {
 
@@ -77,7 +77,7 @@ u64 encrypt (const u64 K[K_LEN], u64* restrict pos, u64* restrict const end, u64
 
         if (pos == end)
             // RETURN THE HASH
-            return ((B + D) ^ F) + H;
+            return ((((((A + B) ^ C) + D) ^ E) + F) ^ G) + H;
 
         // READ THE ORIGINAL VALUE
         x = BE64(*pos);
@@ -99,22 +99,22 @@ u64 decrypt (const u64 K[K_LEN], u64* restrict pos, u64* restrict const end, u64
 
     loop {
 
-        x += A + C + E + G;
+        x += ((A + C) ^ E) + G;
 
         do {
 
             B += D += F += H += x;
 
-            A += K[B % K_LEN];
-            C += K[D % K_LEN];
-            E += K[F % K_LEN];
-            G += K[H % K_LEN];
+            B += A += K[B % K_LEN];
+            D += C += K[D % K_LEN];
+            F += E += K[F % K_LEN];
+            H += G += K[H % K_LEN];
 
         } while (x >>= (24 + (x % 32)));
 
         if (pos == end)
             // RETURN THE HASH
-            return ((B + D) ^ F) + H;
+            return ((((((A + B) ^ C) + D) ^ E) + F) ^ G) + H;
 
         // READ THE ENCRYPTED VALUE AND DECRYPT IT
         x = DEC(BE64(*pos));

@@ -30,19 +30,12 @@ static noinline uint in_ping (node_s* const node, const skb_s* const skb, pkt_s*
     path_s* const path = &node->paths[pid];
 
     uint latency     = atomic_get(&path->latency);
-    u64 pingSeen     = atomic_get(&path->pingSeen);
-    u64 pongSeen     = atomic_get(&path->pongSeen);
     u64 pongReceived = atomic_get(&path->pongReceived);
 
     // HIS RAW TIME
     const ping_s* const ping = PKT_DATA(pkt);
 
     const u64 rtime = BE64(ping->time);
-
-    if (rtime < XTIME_MIN
-     || rtime > XTIME_MAX)
-        // INVALID RTIME
-        return PSTATS_I_RTIME_INVALID;
 
     if (tdiff)
         // JA CONHEÇO O TIME DELE
@@ -56,62 +49,49 @@ static noinline uint in_ping (node_s* const node, const skb_s* const skb, pkt_s*
             // A IMPRECISÃO NÃO PODE SER TÃO GRANDE ASSIM
             return PSTATS_I_RTIME_SKEW;
 
-    if (i == I_KEY_PONG) {
-        // CONNECTING / ESTABLISHED
+    { // HIS RAW TIME MUST ADVANCE (FOR EACH PING/SYN AND PONG)
+        u64* const ptr =
+            (i == I_KEY_PONG) ?
+                &path->pongSeen :
+                &path->pingSeen;
 
-        if (rtime <= pongSeen || !__atomic_compare_exchange_n(&path->pongSeen, &pongSeen, rtime, 0, __ATOMIC_RELAXED, __ATOMIC_RELAXED))
-            // HIS RAW TIME CANNOT GO DOWN OR REPEAT
+        u64 seen = atomic_get(ptr);
+
+        if (!(seen < rtime && __atomic_compare_exchange_n(ptr, &seen, rtime, 0, __ATOMIC_RELAXED, __ATOMIC_RELAXED)))
+            // BACKWARD / REPEATED
             return PSTATS_I_RTIME_BACKWARDS;
+    }
 
-        // ltime IS THE TIME WE SENT
-        // WE USE THE HALF, BECAUSE THIS TIME ELAPSED WAS TO GO AND GET BACK
-        latency = (3*latency + (now - ltime)/2) / 4;
+    ping_receive(node, ping);
 
+    tdiff = (
+        // CONSIDERA O NOSSO TDIFF ATUAL, QUE SE NÃO FOR RECENTE, ESTÁ COMO 0, E O WEIGHT SERÁ CANCELADO NA DIVISÃO
+        tdiff +
+        // CONSIDERA TAMBÉM O QUE O PEER USA COMO TDIFF
+        LTIME_DIFF_RTIME(ltime, rtime) +
+        // OBS.: CUIDADO COM ESTE LATENCY AQUI, POIS AINDA NAO FOI DESCOBERTO O REAL
+        LTIME_DIFF_RTIME(now, rtime + latency)
+    ) / (2 + !!tdiff);
+
+    __atomic_store_n(&node->tdiff, tdiff, __ATOMIC_SEQ_CST); // TEM QUE SER ESCRITO ANTES DO RTIME
+    __atomic_store_n(&node->tlast,  now,  __ATOMIC_SEQ_CST);
+
+    if (i == I_KEY_PONG) {
+
+        // USE THE HALF, BECAUSE THIS TIME ELAPSED WAS TO GO AND GET BACK
+              latency = (2*latency + (now - atomic_get(&path->pingSent))/2) / 3;
         // CAP TO CONFIGURED LIMITS
-        if (latency > path->latency_max)
-            latency = path->latency_max;
+        if   (latency > path->latency_max)
+              latency = path->latency_max;
         elif (latency < path->latency_min)
               latency = path->latency_min;
 
-        // ELE NOS MANDOU O TIME DELE DE QUANDO ELE RECEBEU.
-        // MAS CONSIDERA O TIME QUE ELE TINHA QUANDO ENVIAMOS.
-        // E ENTAO PEGA A COMPARAÇÃO ENTRE *LOCAL TIME WHEN I SENT* COM *REMOTE TIME WHEN I SENT*
-        // LTIME_DIFF_RTIME(ltime + latency, rtime)
-        // LTIME_DIFF_RTIME(now, rtime + latency)
-        tdiff = (tdiff + LTIME_DIFF_RTIME(now, rtime + latency)) / (1 + !!tdiff);
-
-        if (!__atomic_compare_exchange_n(&path->pingSent, &ltime, 0, 0, __ATOMIC_SEQ_CST, __ATOMIC_RELAXED))
-            // THIS PONG WAS ALREADY PROCESSED, OR
-            // ANOTHER PING WAS SENT (AND A NEW PONG IS EXPECTED)
-            return PSTATS_I_PONG_RACED;
-
-        // CONFIRMOU QUE ESTE PONG RESPONDEU O ULTIMO PING ENVIADO
-        // LIMPOU ELE: NAO VAI ACEITAR OUTRO
-
-        __atomic_store_n(&node->tdiff, tdiff, __ATOMIC_SEQ_CST); // TEM QUE SER ESCRITO ANTES DO RTIME
-        __atomic_store_n(&node->tlast,  now,  __ATOMIC_SEQ_CST);
-
-        // ESTE AQUI DEVERIA SER COMPARE, EXCHANGE, MAS:
-        // SÓ PODE ACONTECER UM RACE SE ENTRARMOS NESTE BLOCO E AO MESMO TEMPO O KEEPER GERAR UM NOVO path->pingSent,
-        // E A RESPOSTA VIR TELEPATICAMENTE E SER PROCESSADA AO MESMO TEMPO.
-        // O RESULTADO É QUE PODERIAMOS ESTAR ESCREVENDO ESTE P_RTIME ANTIGO POR CIMA DO NOVO.
-        // MAS DE QUALQUER JEITO, O NOVO É MAIOR DO QUE O ANTERIOR A ESTE, COMO CHECAMOS ACIMA.
         __atomic_store_n(&path->latency, (u16)latency, __ATOMIC_RELAXED);
-        __atomic_store_n(&path->pongReceived, now,     __ATOMIC_SEQ_CST); // PR_CONNECTING / PR_ESTABLISHED -> PR_ESTABLISHED
+        __atomic_store_n(&path->pongReceived, now,     __ATOMIC_SEQ_CST);
 
-        // NOTE: MAS SE ACABOU DE LIBERAR O PATH,
-        // O KEEPER PODE ACABAR ATIVANDO O OUT ANTES DE TERMINARMOS DE LEARN ESTA KEY
-        ping_receive(node, ping);
-
+        // IF I AM THE CLIENT, NOW I'M ESTABLISHED
         return PSTATS_I_PONG_GOOD;
     }
-
-    if (rtime <= pingSeen || !__atomic_compare_exchange_n(&path->pingSeen, &pingSeen, rtime, 0, __ATOMIC_RELAXED, __ATOMIC_RELAXED))
-        // HIS RAW TIME CANNOT GO DOWN OR REPEAT
-        return PSTATS_I_RTIME_BACKWARDS;
-
-    // TODO:
-    ping_receive(node, ping);
 
     // THIS IS A PING
     pkt_s* skel; pkt_s temp_skel;
@@ -132,23 +112,10 @@ static noinline uint in_ping (node_s* const node, const skb_s* const skb, pkt_s*
 
         in_discover(path, skb, skel);
 
-        if (skel == &path->skel) { // -> SYN-ACK
+        if (skel == &path->skel)
             // AGORA JA PODE USAR O PATH->SKEL
-            // LIBERA O KEEPER TERMINAR DE ATIVAR O PATH
-
-            tdiff = (
-                // CONSIDERA O NOSSO TDIFF ATUAL, QUE SE NÃO FOR RECENTE, ESTÁ COMO 0, E O WEIGHT SERÁ CANCELADO NA DIVISÃO
-                tdiff +
-                // CONSIDERA TAMBÉM O QUE O PEER USA COMO TDIFF
-                LTIME_DIFF_RTIME(ltime, rtime) +
-                // OBS.: CUIDADO COM ESTE LATENCY AQUI, POIS AINDA NAO FOI DESCOBERTO O REAL
-                LTIME_DIFF_RTIME(now, rtime + latency)
-            ) / (2 + !!tdiff);
-
-            __atomic_store_n(&node->tdiff,      tdiff, __ATOMIC_SEQ_CST);
-            __atomic_store_n(&node->tlast,        now, __ATOMIC_SEQ_CST);
+            // LIBERA O KEEPER
             __atomic_store_n(&path->pongReceived, now, __ATOMIC_SEQ_CST); // PR_ACCEPTING -> PR_ESTABLISHED
-        }
     } else
         // ESTABLISHED
         skel = &path->skel;
@@ -344,15 +311,13 @@ _is_xgw:
     }
 
     // PACKET TYPE VS LTIME
-    if (i <= I_KEY_PING) { // TODO: <--- REORDENAR PARA PING, PONG, SYN
-        // DATA / PING
+    if (i != I_KEY_SYN) { // TODO: <--- REORDENAR PARA PING, PONG, SYN
         // OBS: CONSIDERA LATENCY, MAS PODE ESTAR ERRADA (SER A INICIAL, SETADA PELO USUÁRIO)
         if (ABS_DIFF(ltime + atomic_get(&path->latency), get_current_ms()) > 1280)
             // ELE NAO CONHECE NOSSO TIME (OU TEM UM SKEW GRANDE)
             ret_path(PSTATS_I_LTIME_MISMATCH);
-    } elif (ltime != atomic_get(&path->pingSent))
-            // SYN: ELE NAO CONHECE NOSSO CODIGO
-            // PONG: NAO É PARA O NOSSO ULTIMO PING ENVIADO
+    } elif (ltime != atomic_get(&path->syn))
+            // ELE NAO CONHECE NOSSO CODIGO
             ret_path(PSTATS_I_LTIME_MISMATCH_SYN_OR_PONG);
 
     // DECRYPT
