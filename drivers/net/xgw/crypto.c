@@ -210,7 +210,7 @@ static void reset_node_ping_keys (node_s* const node, const uint self, const uin
 }
 
 // REPETE ELE ATE PREENCHER TODA A ARRAY
-static void copy_and_fill (void* restrict dst, const uint dstSize, const void* const restrict src, uint srcSize) {
+static void copy_and_fill (void* const restrict dst, const uint dstSize, const void* const restrict src, uint srcSize) {
 
     ASSERT(dstSize >= srcSize);
 
