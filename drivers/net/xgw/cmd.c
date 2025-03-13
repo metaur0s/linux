@@ -630,10 +630,10 @@ static ssize_t __cold_as_ice __optimize_size cmd (struct file *file, const char 
         case CMD_PATH_STATUS: {
 
             printk("XGW: %s [%s]: WEIGHT %u\n",          node->name, path->name, (uint)path->weight);
-            printk("XGW: %s [%s]: SINCE %llu\n",         node->name, path->name, (uintll)(path->since ?: now - path->since));
+            printk("XGW: %s [%s]: SINCE %llu\n",         node->name, path->name, (uintll)path->since);
             printk("XGW: %s [%s]: STARTS %u\n",          node->name, path->name, (uint)path->starts);
-            printk("XGW: %s [%s]: TOS ???\n",            node->name, path->name);
             printk("XGW: %s [%s]: TTL %u\n",             node->name, path->name, (uint)path->ttl);
+            printk("XGW: %s [%s]: TOS %02X\n",           node->name, path->name, (uint)path->tos);
             printk("XGW: %s [%s]: LATENCY %ujf\n",       node->name, path->name, (uint)path->latency);
             printk("XGW: %s [%s]: LATENCY MIN %ujf\n",   node->name, path->name, (uint)path->latency_min);
             printk("XGW: %s [%s]: LATENCY MAX %ujf\n",   node->name, path->name, (uint)path->latency_max);
