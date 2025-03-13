@@ -40,8 +40,8 @@ static inline void __crypt_fetch_data (const u64* const pos, const u64* const en
 
 u64 encrypt (const u64 K[K_LEN], u64* restrict pos, u64* restrict const end, u64 x) {
 
-    ASSERT(end >= &pos[PKT_ALIGN_SIZE]);
-    ASSERT(end <= &pos[PKT_ALIGN_SIZE + XGW_PAYLOAD_MAX]);
+    ASSERT((end - pos) >= PKT_ALIGN_WORDS);
+    ASSERT((end - pos) <= XGW_PAYLOAD_MAX/sizeof(u64));
 
     __crypt_fetch_data(pos, end);
 
@@ -89,8 +89,8 @@ u64 encrypt (const u64 K[K_LEN], u64* restrict pos, u64* restrict const end, u64
 
 u64 decrypt (const u64 K[K_LEN], u64* restrict pos, u64* restrict const end, u64 x) {
 
-    ASSERT(end >= &pos[PKT_ALIGN_SIZE]);
-    ASSERT(end <= &pos[PKT_ALIGN_SIZE + XGW_PAYLOAD_MAX]);
+    ASSERT((end - pos) >= PKT_ALIGN_WORDS);
+    ASSERT((end - pos) <= XGW_PAYLOAD_MAX/sizeof(u64));
 
     __crypt_fetch_data(pos, end);
 
@@ -289,8 +289,8 @@ static void secret_derivate_from_password (u64 S[SECRET_KEYS_N][K_LEN], const u8
 
 // A IDÉIA É ASSUMIR QUE O SIZE É SEMPRE MULTIPLO DE 64-BITS.
 // DAÍ O RESTO QUE PASSAR DISSO, É "EXPULSO" DO ALIGN, FAZENDO ELE COMECAR MAIS PARA FRENTE.
-#define _PKT_START(pkt, size) (PTR(pkt) + PKT_SIZE + (size % sizeof(u64)))
-#define _PKT_END(pkt, size)   (PTR(pkt) + PKT_SIZE + PKT_ALIGN_SIZE + size)
+#define _PKT_START(pkt, size) (PTR(pkt->p) + (size % sizeof(pkt->p[0])))
+#define _PKT_END(pkt, size)   (PTR(pkt->p) + PKT_ALIGN_SIZE + size)
 
 // NOTE: TEM QUE FAZER APOS TER SETADO O PKT INFO E RCOUNTER
 #define pkt_encrypt(node, o, pkt, size) encrypt(node->oKeys[o], _PKT_START(pkt, size), _PKT_END(pkt, size), _PKT_SEED(pkt))
