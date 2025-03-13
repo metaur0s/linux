@@ -17,13 +17,27 @@ BUILD_ASSERT(sizeof(cmd_arg_pname_t)      == PATH_NAME_SIZE);
 BUILD_ASSERT(sizeof(cmd_arg_dname_t)      == DHCP_NAME_SIZE);
 BUILD_ASSERT(sizeof(cmd_arg_phys_t)       == IFNAMSIZ);
 BUILD_ASSERT(sizeof(cmd_arg_password_t)   == PASSWORD_SIZE_MAX);
+BUILD_ASSERT(sizeof(cmd_arg_secret_min_t) == 16);
 BUILD_ASSERT(sizeof(cmd_arg_mac_t)        == ETH_ALEN);
 BUILD_ASSERT(sizeof(cmd_arg_addr4_t)      == 4);
 BUILD_ASSERT(sizeof(cmd_arg_addr6_t)      == 16);
 BUILD_ASSERT(sizeof(cmd_arg_path_ports_t) == PATH_PORTS_N*sizeof(u16));
 BUILD_ASSERT(sizeof(cmd_arg_ports_t)      == PORTS_N*sizeof(u16));
 BUILD_ASSERT(sizeof(cmd_arg_ports_min_t)  == sizeof(u16));
-BUILD_ASSERT(sizeof(cmd_arg_secret_min_t) == 16);
+
+BUILD_ASSERT(sizeof(cmd_arg_nname_t)      == CMD_ARG_SIZE(nname));
+BUILD_ASSERT(sizeof(cmd_arg_pname_t)      == CMD_ARG_SIZE(pname));
+BUILD_ASSERT(sizeof(cmd_arg_dname_t)      == CMD_ARG_SIZE(dname));
+BUILD_ASSERT(sizeof(cmd_arg_phys_t)       == CMD_ARG_SIZE(phys));
+BUILD_ASSERT(sizeof(cmd_arg_password_t)   == CMD_ARG_SIZE(password));
+BUILD_ASSERT(sizeof(cmd_arg_secret_min_t) == CMD_ARG_SIZE(secret_min));
+BUILD_ASSERT(sizeof(cmd_arg_mac_t)        == CMD_ARG_SIZE(mac));
+BUILD_ASSERT(sizeof(cmd_arg_addr4_t)      == CMD_ARG_SIZE(addr4));
+BUILD_ASSERT(sizeof(cmd_arg_addr6_t)      == CMD_ARG_SIZE(addr6));
+BUILD_ASSERT(sizeof(cmd_arg_path_ports_t) == CMD_ARG_SIZE(path_ports));
+BUILD_ASSERT(sizeof(cmd_arg_ports_t)      == CMD_ARG_SIZE(ports));
+BUILD_ASSERT(sizeof(cmd_arg_ports_min_t)  == CMD_ARG_SIZE(ports_min));
+
 
 //
 BUILD_ASSERT(sizeof(hdr_eth_s)  == 14);
