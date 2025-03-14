@@ -201,39 +201,29 @@ static void keeper (struct timer_list* const timer) {
                     goto _suspend;
                 }
 
-                u64 latency;
-
                 const u64 pongReceived = atomic_get(&path->pongReceived);
 
-                const u64 took = pongReceived - path->pingSent;
-                //  + 2*path->latency_var
-
-                if (took <= 800) {
-
-                    // USE THE HALF, BECAUSE THIS TIME ELAPSED WAS TO GO AND GET BACK
-                          latency = (path->latency*2 + took/2) / 3;
-                    // CAP TO CONFIGURED LIMITS
-                    if   (latency > path->latency_max)
-                          latency = path->latency_max;
-                    elif (latency < path->latency_min)
-                          latency = path->latency_min;
-
-                    __atomic_store_n(&path->latency, (u16)latency, __ATOMIC_RELAXED);
-
-                } else {
-                    // LAST PING FAILED
-
-                    if (((pongReceived > PR_CONNECTING ? pongReceived : path->since) + 1000ULL*path->timeout) < now) {
-                        // TIMED OUT WAITING FOR PONGS
-                        printk("XGW: %s [%s]: TIMED OUT\n", node->name, path->name);
-                        goto _suspend;
-                    }
-
-                    latency = path->latency;
+                if (((pongReceived > PR_CONNECTING ? pongReceived : path->since) + 1000ULL*path->timeout) < now) {
+                    // TIMED OUT WAITING FOR PONGS
+                    printk("XGW: %s [%s]: TIMED OUT\n", node->name, path->name);
+                    goto _suspend;
                 }
 
+                //
+                const u64 took = pongReceived - path->pingSent;
+
+                // USE THE HALF, BECAUSE THIS TIME ELAPSED WAS TO GO AND GET BACK
+                u64   latency = (path->latency*2 + took/2) / 3;
+                // CAP TO CONFIGURED LIMITS
+                if   (latency > path->latency_max)
+                      latency = path->latency_max;
+                elif (latency < path->latency_min)
+                      latency = path->latency_min;
+
+                __atomic_store_n(&path->latency, (u16)latency, __ATOMIC_RELAXED);
+
                 // A SECOND ELAPSED
-                const u64 acks = ((u64)(latency <= rtt) << 63) | (path->acks >> 1);
+                const u64 acks = ((u64)(took <= 2*(latency + path->latency_var)) << 63) | (path->acks >> 1);
 
                 if (path->acks != acks) {
                     path->acks = acks;
@@ -250,7 +240,7 @@ static void keeper (struct timer_list* const timer) {
                     }
 
                     if (str)
-                        printk("XGW: %s [%s]: %s WITH RTT %llu +%llu\n", node->name, path->name, str, (uintll)rtt, (uintll)path->latency_var);
+                        printk("XGW: %s [%s]: %s WITH LATENCY %u\n", node->name, path->name, str, (uint)path->latency);
                 }
 
                 // DOS PIORES AOS MELHORES
