@@ -64,11 +64,11 @@ static noinline uint in_ping (node_s* const node, const skb_s* const skb, pkt_s*
         // CONSIDERA O NOSSO TDIFF ATUAL, QUE SE NÃO FOR RECENTE, ESTÁ COMO 0, E O WEIGHT SERÁ CANCELADO NA DIVISÃO
         tdiff +
         // CONSIDERA TAMBÉM O QUE O PEER USA COMO TDIFF
-//EXCETO NO SYN!!!
-        LTIME_DIFF_RTIME(ltime, rtime) +
+        //EXCETO NO SYN!!!
+        //LTIME_DIFF_RTIME(ltime, rtime) +
         // OBS.: CUIDADO COM ESTE LATENCY AQUI, POIS AINDA NAO FOI DESCOBERTO O REAL
         LTIME_DIFF_RTIME(now, rtime + latency)
-    ) / (2 + !!tdiff);
+    ) / (1 + !!tdiff);
 
     __atomic_store_n(&node->tdiff, tdiff, __ATOMIC_SEQ_CST); // TEM QUE SER ESCRITO ANTES DO RTIME
     __atomic_store_n(&node->tlast,  now,  __ATOMIC_SEQ_CST);
