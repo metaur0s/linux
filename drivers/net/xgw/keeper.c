@@ -246,16 +246,16 @@ static void keeper (struct timer_list* const timer) {
             }
 
             if (path->info & K_SUSPEND) { // NOTE: WILL EXECUTE TWICE BECAUSE THE ATOMIC EXCHANTE BELOW
-                // STOP PING (BY REMOVING K_ESTABLISHED)
-                // STOP OUT (BY NOT INCLUDING IN OPATHS)
-                // STOP IN
 _suspend:
+                // STOP PING (BY REMOVING K_ESTABLISHED)
                 path->info  = (path->info & P_INFO) | K_SUSPENDING;
                 path->acks  = 0; // PARA JA ATUALIZAR O BEEP
                 path->since = 0;
 
+                // STOP OUT (BY NOT INCLUDING IN OPATHS)
+                // STOP IN
                 __atomic_store_n(&node->ipaths, node->ipaths & ~IPATH(pid), __ATOMIC_RELAXED);
-                // NOW ANOTHER INTERVAL SO ANY IN/OUT IS DONE
+
             } elif (path->info & K_SUSPENDING) { BUILD_ASSERT(N_ON == P_ON);
                 if ((path->info ^= K_SUSPENDING) & node->info & N_ON & P_ON) {
                      path->info |= K_START;
