@@ -150,7 +150,7 @@ BUILD_ASSERT(LATENCY_VAR_MIN >= 1);
 BUILD_ASSERT((sizeof(((path_s*)NULL)->acks)*8) == ACKS_N);
 
 BUILD_ASSERT(sizeof(((node_s*)NULL)->pstats)
-         >= (sizeof(((node_s*)NULL)->pstats[0][0]) * PSTATS_N));
+         >= (sizeof(((node_s*)NULL)->pstats[0][0]) * PATHS_N * PSTATS_N));
 
 //
 BUILD_ASSERT(sizeof(((node_s*)NULL)->oKeys)  == (O_KEYS_ALL * K_SIZE));
@@ -158,7 +158,7 @@ BUILD_ASSERT(sizeof(((node_s*)NULL)->iKeys)  == (I_KEYS_ALL * K_SIZE));
 BUILD_ASSERT(sizeof(((node_s*)NULL)->secret) == (SECRET_KEYS_N * K_SIZE));
 BUILD_ASSERT(sizeof(((node_s*)NULL)->syns)   == 128);
 BUILD_ASSERT(sizeof(((node_s*)NULL)->paths)  == 4096);
-BUILD_ASSERT(sizeof(((node_s*)NULL)->pstats) == 16384);
+BUILD_ASSERT(sizeof(((node_s*)NULL)->pstats) == 8192);
 
 // -- NAO PRECISAREMOS CHECAR LIMITES, POIS NAO CABEM MESMO
 // -- E TEM QUE CABER TODOS
