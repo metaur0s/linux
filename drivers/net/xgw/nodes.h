@@ -136,7 +136,7 @@ struct path_s {
     u8  dPortsN;
     node_s* node;
     path_s* next; // NA LISTA DE PINGS - ONLY VALID WHEN PATH STATUS >= K_UNSTABLE
-    volatile stat_s* pstats;
+    volatile stat_s* _pstats;
 // 48 -- RO (ALMOST) - KEEPER ON START
     u64 since;
     u32 starts;
