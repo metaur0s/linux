@@ -299,7 +299,7 @@ _is_xgw:
     // PACKET TYPE VS LTIME
     if (i != I_KEY_SYN) { // TODO: <--- REORDENAR PARA PING, PONG, SYN
         // OBS: CONSIDERA LATENCY, MAS PODE ESTAR ERRADA (SER A INICIAL, SETADA PELO USUÁRIO)
-        if (ABS_DIFF(ltime + atomic_get(&path->latency), get_current_ms()) > 1280)
+        if (ABS_DIFF(ltime + atomic_get(&path->latency), get_current_ms()) > 2048)
             // ELE NAO CONHECE NOSSO TIME (OU TEM UM SKEW GRANDE)
             ret_path(PSTATS_I_LTIME_MISMATCH);
     } elif (ltime != atomic_get(&path->syn))
