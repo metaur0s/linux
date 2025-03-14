@@ -111,7 +111,6 @@ struct path_s {
 // 64 -- KEEPER / IN
     // RO
     u32 info; // KEEPER
-    u16 reserved16;
     u8  pid;
     u8  timeout; // KEEPER | EM SEGUNDOS
     u8  weight;
@@ -119,6 +118,7 @@ struct path_s {
     u16 latency_min; // KEEPER / IN
     u16 latency_max; // KEEPER / IN
     u16 latency_var; // KEEPER / IN / OUT
+    u16 latency;     // KEEPER WRITE / OUT READ  <<---- VAI TER QUE ENFIAR ESSA PORRA ENTÃO DENTRO DO CACHE LINE DO SKEL, OU NO NODE
     // --
     u64 acks; // KEEPER - HISTORY
     u64 syn; // O PKT->TIME QUE O CLIENTE VAI USAR, ENQUANTO NAO DESCOBRE ELE
@@ -127,7 +127,7 @@ struct path_s {
     u64 pingSeen;     // RTIME | LAST PING->TIME RECEIVED (HIS RAW TIME) - SO WE DON'T ACCEPT REPEATED/GOINGBACKS
     u64 pongSeen;     // RTIME | LAST PONG->TIME RECEIVED (HIS RAW TIME) - SO WE DON'T ACCEPT REPEATED/GOINGBACKS
 // 32 -- KEEPER / PING
-    u16 latency;      // KEEPER WRITE / OUT READ  <<---- VAI TER QUE ENFIAR ESSA PORRA ENTÃO DENTRO DO CACHE LINE DO SKEL, OU NO NODE
+    u16 reserved16;
     u8  tos;
     u8  ttl;
     u8  sPortIndex;
