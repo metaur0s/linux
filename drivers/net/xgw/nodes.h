@@ -220,8 +220,8 @@ struct node_s { // DEIXA TUDO NO MESMO CACHE LINE PARA A ITERACAO DO KEEPER
     u64 syns [PATHS_N]; // THE DEFAULT ONES
 // 4096 -- PATHS
     path_s paths [PATHS_N];
-// 16384 --
-    volatile stat_s pstats [PATHS_N] [64]; // TODO: DIMINUIR ISSO, MAS MANTER ALINHADO
+// 8192 --
+    volatile stat_s pstats [PATHS_N] [32];
 // ---------------------- NODE_SIZE_INIT -----------------------------
 // -- KEEPER/OUT READ, IN WRITE
     u64 oKeys [O_KEYS_ALL] [K_LEN];
