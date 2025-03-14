@@ -706,16 +706,28 @@ while args:
                     v = int(v)
                     assert 0 <= v <= 255
                     COMM(CMD_PATH_SET_TIMEOUT, nid, pid, U8(v))
-                case 'rtt-min':
+                case 'latency-min':
                     v = int(v)
                     assert 0 <= v <= 1000
                     COMM(CMD_PATH_SET_RTT_MIN, nid, pid, U16(v))
-                case 'rtt-max':
+                case 'latency-max':
                     v = int(v)
                     assert 0 <= v <= 1000
                     COMM(CMD_PATH_SET_RTT_MAX, nid, pid, U16(v))
-                case 'rtt-var':
+                case 'latency-var':
                     v = int(v)
+                    assert 0 <= v <= 1000
+                    COMM(CMD_PATH_SET_RTT_VAR, nid, pid, U16(v))
+                case 'rtt-min':
+                    v = int(v) // 2
+                    assert 0 <= v <= 1000
+                    COMM(CMD_PATH_SET_RTT_MIN, nid, pid, U16(v))
+                case 'rtt-max':
+                    v = int(v) // 2
+                    assert 0 <= v <= 1000
+                    COMM(CMD_PATH_SET_RTT_MAX, nid, pid, U16(v))
+                case 'rtt-var':
+                    v = int(v) // 2
                     assert 0 <= v <= 1000
                     COMM(CMD_PATH_SET_RTT_VAR, nid, pid, U16(v))
                 case 'conns-n':
