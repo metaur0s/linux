@@ -209,7 +209,7 @@ static void keeper (struct timer_list* const timer) {
                 const u64 pingSent     = atomic_get(&path->pingSent);
                 const u64 pongReceived = atomic_get(&path->pongReceived);
 
-                if (((pongReceived > PR_CONNECTING ? pongReceived : path->since) + path->timeout) < now) {
+                if (((pongReceived > PR_CONNECTING ? pongReceived : path->since) + 1000ULL*path->timeout) < now) {
                     // TIMED OUT WAITING FOR PONGS
                     printk("XGW: %s [%s]: TIMED OUT\n", node->name, path->name);
                     goto _suspend;
