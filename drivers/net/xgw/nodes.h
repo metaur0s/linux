@@ -117,7 +117,7 @@ struct path_s {
     u16 latency_min; // KEEPER / IN
     u16 latency_max; // KEEPER / IN
     u16 latency_var; // KEEPER / IN / OUT
-    u16 latency;     // KEEPER WRITE / OUT READ  <<---- VAI TER QUE ENFIAR ESSA PORRA ENTÃO DENTRO DO CACHE LINE DO SKEL, OU NO NODE
+    u16 latency;     // KEEPER / IN / OUT <<---- VAI TER QUE ENFIAR ESSA PORRA (latency + latency_var) ENTÃO DENTRO DO CACHE LINE DO SKEL
     // --
     u64 syn; // O PKT->TIME QUE O CLIENTE VAI USAR, ENQUANTO NAO DESCOBRE ELE
     u64 pingSent;     // LTIME | WHEN I ASKED - PARA SABER SE ACEITA O PONG
@@ -125,7 +125,7 @@ struct path_s {
     u64 pingSeen;     // RTIME | LAST PING->TIME RECEIVED (HIS RAW TIME) - SO WE DON'T ACCEPT REPEATED/GOINGBACKS
     u64 pongSeen;     // RTIME | LAST PONG->TIME RECEIVED (HIS RAW TIME) - SO WE DON'T ACCEPT REPEATED/GOINGBACKS
     u64 reserved64;
-// 32 -- KEEPER / PING
+// 32
     node_s* node;    // KEEPER_SEND_PINGS
     path_s* next;    // KEEPER_SEND_PINGS -- NA LISTA DE PINGS - ONLY VALID WHEN PATH STATUS >= K_UNSTABLE
     u64 acks;        // KEEPER -- HISTORY
