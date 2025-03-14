@@ -252,6 +252,7 @@ static void keeper (struct timer_list* const timer) {
 _suspend:
                 path->info  = (path->info & P_INFO) | K_SUSPENDING;
                 path->acks  = 0; // PARA JA ATUALIZAR O BEEP
+                path->since = 0;
 
                 __atomic_store_n(&node->ipaths, node->ipaths & ~IPATH(pid), __ATOMIC_RELAXED);
                 // NOW ANOTHER INTERVAL SO ANY IN/OUT IS DONE
@@ -262,7 +263,6 @@ _suspend:
                     printk("XGW: %s [%s]: STOPPED\n", node->name, path->name);
                     // NOW THE PATH IS STOPPED
                     // NOTE: THE PATH MAY BE ON, FOR EXAMPLE IF THE PATH STOPPED BECAUSE THE NODE STOPED
-                    path->since = 0;
                     node->kpaths ^= KPATH(pid);
                 }
             }
