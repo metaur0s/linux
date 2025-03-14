@@ -168,7 +168,6 @@ BUILD_ASSERT((typeof(((hdr_x_s*)NULL)->version)) ~(typeof(((hdr_x_s*)NULL)->vers
 BUILD_ASSERT((typeof(((ping_s*)NULL)->ver))      ~(typeof(((ping_s*)NULL)->ver))      0 == I_KEY_MAX);
 
 // THE TYPES MUST BE ABLE TO HOLD THEIR VALUES
-BUILD_ASSERT((typeof(((path_s*)NULL)->pid))          PID_MAX          == PID_MAX);
 BUILD_ASSERT((typeof(((path_s*)NULL)->latency))      LATENCY_MAX      == LATENCY_MAX);
 BUILD_ASSERT((typeof(((path_s*)NULL)->latency_min))  LATENCY_MAX      == LATENCY_MAX);
 BUILD_ASSERT((typeof(((path_s*)NULL)->latency_max))  LATENCY_MAX      == LATENCY_MAX);
@@ -204,6 +203,9 @@ BUILD_ASSERT((typeof(((node_s*)NULL)->tlast))        XTIME_MAX        == XTIME_M
 BUILD_ASSERT((typeof(((ping_s*)NULL)->ver))          I_KEY_MAX        == I_KEY_MAX);
 BUILD_ASSERT((typeof(((ping_s*)NULL)->time))         XTIME_MAX        == XTIME_MAX);
 
+BUILD_ASSERT((typeof(((hdr_x_s*)NULL)->src))         NID_MAX          == NID_MAX);
+BUILD_ASSERT((typeof(((hdr_x_s*)NULL)->dst))         NID_MAX          == NID_MAX);
+BUILD_ASSERT((typeof(((hdr_x_s*)NULL)->path))        PID_MAX          == PID_MAX);
 BUILD_ASSERT((typeof(((hdr_x_s*)NULL)->time))        XTIME_MAX        == XTIME_MAX);
 
 BUILD_ASSERT(sizeof(((ping_s*)NULL)->rnd)       == K_SIZE);

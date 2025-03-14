@@ -3,6 +3,8 @@
 
 // IFRAG BE16 (0b0100000000000000U)
 
+#define SKEL_IP6_FLOW(node, path) (((node)->nid * PATHS_N) + ((path) - (node)->paths))
+
 static const pkt_s models [H_TYPES_N] = {
 
     [H_TYPE_ETH] = {

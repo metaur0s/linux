@@ -83,7 +83,7 @@ static void keeper (struct timer_list* const timer) {
 
             path_s* const path = &node->paths[pid];
 
-            ASSERT(path->pid == pid);
+            ASSERT(path->node == node);
 
             if (path->info & K_START) { //231956
 
@@ -123,7 +123,7 @@ static void keeper (struct timer_list* const timer) {
                     } elif (path_is_ip6(path)) { hdr_ip6_s* const ip6 = PKT_IP6(&path->skel);
                         ip6->tos = BE8(path->tos);
                         ip6->ttl = BE8(path->ttl);
-                        ip6->flow = BE16((node->nid * PATHS_N) + path->pid);
+                        ip6->flow = BE16(SKEL_IP6_FLOW(node, path));
                     }
 
                     // TODO: PRECOMPUTE TCP CHECKSUM
@@ -179,7 +179,7 @@ static void keeper (struct timer_list* const timer) {
                  //      b) FROM IN (DISCOVER)
              ASSERT(path->skel.x.src  == BE16(nodeSelf));
              ASSERT(path->skel.x.dst  == BE16(node->nid));
-             ASSERT(path->skel.x.path == BE8 (path->pid));
+             ASSERT(path->skel.x.path == BE8 (PATH_ID(node, path)));
                  // path->skel.x.version --> ON encrypt()
                  // path->skel.x.dsize   --> ON encrypt()
                  // path->skel.x.time    --> ON encrypt()

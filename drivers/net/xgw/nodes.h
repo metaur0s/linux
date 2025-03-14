@@ -110,33 +110,33 @@
 struct path_s {
 // 64 -- KEEPER / IN
     // RO
-    u32 info; // KEEPER
-    u8  pid;
-    u8  timeout; // KEEPER | EM SEGUNDOS
-    u8  weight;
-    u8  weight_acks;
+    u32 info;        // KEEPER
+    u8  reserved8;
+    u8  timeout;     // KEEPER | EM SEGUNDOS
+    u16 reserved16;
     u16 latency_min; // KEEPER / IN
     u16 latency_max; // KEEPER / IN
     u16 latency_var; // KEEPER / IN / OUT
     u16 latency;     // KEEPER WRITE / OUT READ  <<---- VAI TER QUE ENFIAR ESSA PORRA ENTÃO DENTRO DO CACHE LINE DO SKEL, OU NO NODE
     // --
-    u64 acks; // KEEPER - HISTORY
     u64 syn; // O PKT->TIME QUE O CLIENTE VAI USAR, ENQUANTO NAO DESCOBRE ELE
     u64 pingSent;     // LTIME | WHEN I ASKED - PARA SABER SE ACEITA O PONG
     u64 pongReceived; // LTIME | WHEN I WAS ANSWERED - PARA SABER QUE A CONEXÃO ESTÁ VIVA
     u64 pingSeen;     // RTIME | LAST PING->TIME RECEIVED (HIS RAW TIME) - SO WE DON'T ACCEPT REPEATED/GOINGBACKS
     u64 pongSeen;     // RTIME | LAST PONG->TIME RECEIVED (HIS RAW TIME) - SO WE DON'T ACCEPT REPEATED/GOINGBACKS
-// 32 -- KEEPER / PING
-    node_s* node; // KEEPER_SEND_PINGS
-    path_s* next; // KEEPER_SEND_PINGS -- NA LISTA DE PINGS - ONLY VALID WHEN PATH STATUS >= K_UNSTABLE
     u64 reserved64;
-    u16 reserved16;
-    u8  tos; // KEEPER / IN_DISCOVER
-    u8  ttl; // KEEPER / IN_DISCOVER
-    u8  sPortIndex;
-    u8  sPortsN;
-    u8  dPortIndex;
-    u8  dPortsN;
+// 32 -- KEEPER / PING
+    node_s* node;    // KEEPER_SEND_PINGS
+    path_s* next;    // KEEPER_SEND_PINGS -- NA LISTA DE PINGS - ONLY VALID WHEN PATH STATUS >= K_UNSTABLE
+    u64 acks;        // KEEPER -- HISTORY
+    u8  weight;      // KEEPER
+    u8  weight_acks; // KEEPER
+    u8  tos;         // KEEPER / IN_DISCOVER
+    u8  ttl;         // KEEPER / IN_DISCOVER
+    u8  sPortIndex;  // KEEPER
+    u8  sPortsN;     // KEEPER
+    u8  dPortIndex;  // KEEPER
+    u8  dPortsN;     // KEEPER
 // 48 -- RO (ALMOST) - KEEPER ON START
     u64 since;
     u32 starts;
@@ -259,3 +259,5 @@ struct node_s { // DEIXA TUDO NO MESMO CACHE LINE PARA A ITERACAO DO KEEPER
 #define path_is_tcp(path)  (path->skel.type & __TCP)
 
 #define path_is_udp_tcp(path) (path->skel.type & (__UDP | __TCP))
+
+#define PATH_ID(node, path) ((path) - (node)->paths)

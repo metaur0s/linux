@@ -125,6 +125,6 @@ static inline void in_discover (const path_s* const path, const skb_s* const skb
     } elif (T & __IP6) { hdr_ip6_s* const ip6 = PKT_IP6(skel);
         ip6->tos = BE8(path->tos);
         ip6->ttl = BE8(path->ttl);
-        ip6->flow = BE16(0x1111U * path->pid);
+        ip6->flow = BE16(SKEL_IP6_FLOW(path->node, path));
     }
 }
