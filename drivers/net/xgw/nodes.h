@@ -136,9 +136,7 @@ struct path_s {
     u8  dPortsN;
     node_s* node;
     path_s* next; // NA LISTA DE PINGS - ONLY VALID WHEN PATH STATUS >= K_UNSTABLE
-    // SÓ PODE USAR PSTATS SE TEVE PATH-> !!!
-    volatile stat_s* pstats; // TODO: UMA ARRAY AQUI MESMO?
-    // TODO: SEMANTICA DE memset(PATH, 0) AO DELETAR O PATH, E ESSES STATS
+    volatile stat_s* pstats;
 // 48 -- RO (ALMOST) - KEEPER ON START
     u64 since;
     u32 starts;
