@@ -77,19 +77,8 @@ static noinline uint in_ping (node_s* const node, const skb_s* const skb, pkt_s*
     __atomic_store_n(&node->tlast,  now,  __ATOMIC_SEQ_CST);
 
     if (i == I_KEY_PONG) {
-
-        // USE THE HALF, BECAUSE THIS TIME ELAPSED WAS TO GO AND GET BACK
-              latency = (2*latency + (now - atomic_get(&path->pingSent))/2) / 3;
-        // CAP TO CONFIGURED LIMITS
-        if   (latency > path->latency_max)
-              latency = path->latency_max;
-        elif (latency < path->latency_min)
-              latency = path->latency_min;
-
-        __atomic_store_n(&path->latency, (u16)latency, __ATOMIC_RELAXED);
-        __atomic_store_n(&path->pongReceived, now,     __ATOMIC_SEQ_CST);
-
         // IF I AM THE CLIENT, NOW I'M ESTABLISHED
+        __atomic_store_n(&path->pongReceived, now,     __ATOMIC_SEQ_CST);
         return PSTATS_I_PONG_GOOD;
     }
 
