@@ -148,8 +148,8 @@ static void keeper (struct timer_list* const timer) {
                     path->skel.type    = 0; //
                     path->pongReceived = PR_LISTENING;
                 }   path->pingSent     = 0; // AINDA NAO CONSTRUI PING
-                    path->pingSeen     = 0;
-                    path->pongSeen     = 0;
+                    path->pseen[0]     = 0;
+                    path->pseen[1]     = 0;
                     path->acks         = 0;
                     path->latency      = path->latency_max;
                     path->info        ^= K_START | K_LISTEN;
@@ -173,7 +173,6 @@ static void keeper (struct timer_list* const timer) {
                     path->starts    += 1;
              ASSERT(path->pingSent == 0);
              ASSERT(path->pongReceived >= PR_CONNECTING); // PR_CONNECTING (CLIENT) | ??? (SERVER)
-             ASSERT(path->pongSeen == 0);
                  // AT THIS POINT, THE PATH->SKEL WAS BUILT
                  //      a) FROM USER (CMD)
                  //      b) FROM IN (DISCOVER)

@@ -638,8 +638,8 @@ static ssize_t __cold_as_ice __optimize_size cmd (struct file *file, const char 
             printk("XGW: %s [%s]: SINCE %llu\n",         node->name, path->name, (uintll)path->since);
             printk("XGW: %s [%s]: PING SENT %llu\n",     node->name, path->name, (uintll)path->pingSent);
             printk("XGW: %s [%s]: PONG RECEIVED %llu\n", node->name, path->name, (uintll)path->pongReceived);
-            printk("XGW: %s [%s]: PONG SEEN %llu\n",     node->name, path->name, (uintll)path->pongSeen);
-            printk("XGW: %s [%s]: PING SEEN %llu\n",     node->name, path->name, (uintll)path->pingSeen);
+            printk("XGW: %s [%s]: PING SEEN %llu\n",     node->name, path->name, (uintll)path->pseen[0]);
+            printk("XGW: %s [%s]: PONG SEEN %llu\n",     node->name, path->name, (uintll)path->pseen[1]);
             printk("XGW: %s [%s]: SYN %016llX\n",        node->name, path->name, (uintll)path->syn);
             printk("XGW: %s [%s]: SPORT #%u OF %u\n",    node->name, path->name, (uint)path->sPortIndex, (uint)path->sPortsN);
             printk("XGW: %s [%s]: DPORT #%u OF %u\n",    node->name, path->name, (uint)path->dPortIndex, (uint)path->dPortsN);

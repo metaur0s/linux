@@ -49,10 +49,7 @@ static noinline uint in_ping (node_s* const node, const skb_s* const skb, pkt_s*
             return PSTATS_I_RTIME_SKEW;
 
     { // HIS RAW TIME MUST ADVANCE (FOR EACH PING/SYN AND PONG)
-        u64* const ptr =
-            (i == I_KEY_PONG) ?
-                &path->pongSeen :
-                &path->pingSeen;
+        u64* const ptr = &path->pseen[i == I_KEY_PONG];
 
         u64 seen = atomic_get(ptr);
 
