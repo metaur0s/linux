@@ -168,7 +168,6 @@ BUILD_ASSERT((typeof(((hdr_x_s*)NULL)->version)) ~(typeof(((hdr_x_s*)NULL)->vers
 BUILD_ASSERT((typeof(((ping_s*)NULL)->ver))      ~(typeof(((ping_s*)NULL)->ver))      0 == I_KEY_MAX);
 
 // THE TYPES MUST BE ABLE TO HOLD THEIR VALUES
-BUILD_ASSERT((typeof(((path_s*)NULL)->nid))          NID_MAX          == NID_MAX);
 BUILD_ASSERT((typeof(((path_s*)NULL)->pid))          PID_MAX          == PID_MAX);
 BUILD_ASSERT((typeof(((path_s*)NULL)->latency))      LATENCY_MAX      == LATENCY_MAX);
 BUILD_ASSERT((typeof(((path_s*)NULL)->latency_min))  LATENCY_MAX      == LATENCY_MAX);

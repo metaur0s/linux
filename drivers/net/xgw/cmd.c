@@ -165,7 +165,6 @@ static ssize_t __cold_as_ice __optimize_size cmd (struct file *file, const char 
 
         if (path->info) {
 
-            ASSERT(path->nid == nid);
             ASSERT(path->pid == pid);
 
             ASSERT(path->info & P_EXIST);
@@ -968,9 +967,7 @@ static ssize_t __cold_as_ice __optimize_size cmd (struct file *file, const char 
             memset(path, 0, sizeof(path_s));
 
             path->info   = P_EXIST;
-            path->nid    = nid;
             path->pid    = pid;
-            path->pstats = &node->pstats[pid][0];
             path->node   = node;
 
         } break;

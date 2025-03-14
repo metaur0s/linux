@@ -17,10 +17,6 @@
     ASSERT((node->ipaths & (node->kpaths * IPATH_0)) == node->ipaths); \
     ASSERT(node->oVersions[O_KEY_PING] == I_KEY_PING);
 
-#define keeper_assert_path \
-    ASSERT(path->nid == node->nid); \
-    ASSERT(path->pid == pid);
-
 static inline void keeper_send_pings (void) {
 
     // SEND PINGS
@@ -87,7 +83,7 @@ static void keeper (struct timer_list* const timer) {
 
             path_s* const path = &node->paths[pid];
 
-            keeper_assert_path;
+            ASSERT(path->pid == pid);
 
             if (path->info & K_START) { //231956
 
@@ -182,7 +178,7 @@ static void keeper (struct timer_list* const timer) {
                  //      a) FROM USER (CMD)
                  //      b) FROM IN (DISCOVER)
              ASSERT(path->skel.x.src  == BE16(nodeSelf));
-             ASSERT(path->skel.x.dst  == BE16(path->nid));
+             ASSERT(path->skel.x.dst  == BE16(node->nid));
              ASSERT(path->skel.x.path == BE8 (path->pid));
                  // path->skel.x.version --> ON encrypt()
                  // path->skel.x.dsize   --> ON encrypt()

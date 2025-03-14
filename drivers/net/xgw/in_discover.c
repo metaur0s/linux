@@ -21,8 +21,6 @@ BUILD_ASSERT(IPPROTO_TCP != ETH_P_IPV6);
 
 static inline void in_discover (const path_s* const path, const skb_s* const skb, pkt_s* const skel) {
 
-    ASSERT(path->info & P_SERVER);
-
     const void* orig = SKB_NETWORK(skb);
 
     // POR SEGURANCA VAMOS EXIGIR ETH_HLEN

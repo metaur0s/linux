@@ -110,15 +110,15 @@
 struct path_s {
 // 64 -- KEEPER / IN
     // RO
-    u32 info;
-    u16 nid;
+    u32 info; // KEEPER
+    u16 reserved16;
     u8  pid;
-    u8  timeout; // CONFIG | EM SEGUNDOS
+    u8  timeout; // KEEPER | EM SEGUNDOS
     u8  weight;
     u8  weight_acks;
-    u16 latency_min; // CONFIG
-    u16 latency_max; // CONFIG
-    u16 latency_var; // CONFIG
+    u16 latency_min; // KEEPER / IN
+    u16 latency_max; // KEEPER / IN
+    u16 latency_var; // KEEPER / IN / OUT
     // --
     u64 acks; // KEEPER - HISTORY
     u64 syn; // O PKT->TIME QUE O CLIENTE VAI USAR, ENQUANTO NAO DESCOBRE ELE
@@ -136,7 +136,7 @@ struct path_s {
     u8  dPortsN;
     node_s* node;
     path_s* next; // NA LISTA DE PINGS - ONLY VALID WHEN PATH STATUS >= K_UNSTABLE
-    volatile stat_s* _pstats;
+    u64 reserved;
 // 48 -- RO (ALMOST) - KEEPER ON START
     u64 since;
     u32 starts;
