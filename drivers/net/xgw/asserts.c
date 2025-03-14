@@ -127,9 +127,9 @@ BUILD_ASSERT(PATH_TIMEOUT_MIN < PATH_TIMEOUT_MAX);
 BUILD_ASSERT((LATENCY_EFFECTIVE_MAX + 100) < KEEPER_INTERVAL_MS);
 
 //
-BUILD_ASSERT(offsetof(path_s,    info) % CACHE_LINE_SIZE == 0);
-BUILD_ASSERT(offsetof(path_s, latency) % CACHE_LINE_SIZE == 0);
-BUILD_ASSERT(offsetof(path_s,  sPorts) % CACHE_LINE_SIZE == 0);
+BUILD_ASSERT(offsetof(path_s,   info) % CACHE_LINE_SIZE == 0);
+BUILD_ASSERT(offsetof(path_s,   node) % CACHE_LINE_SIZE == 0);
+BUILD_ASSERT(offsetof(path_s, sPorts) % CACHE_LINE_SIZE == 0);
 
 BUILD_ASSERT(offsetof(node_s, opaths)      % CACHE_LINE_SIZE == 0);
 BUILD_ASSERT(offsetof(node_s, nid)         % CACHE_LINE_SIZE == 0);

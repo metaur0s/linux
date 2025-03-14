@@ -127,6 +127,8 @@ struct path_s {
     u64 pingSeen;     // RTIME | LAST PING->TIME RECEIVED (HIS RAW TIME) - SO WE DON'T ACCEPT REPEATED/GOINGBACKS
     u64 pongSeen;     // RTIME | LAST PONG->TIME RECEIVED (HIS RAW TIME) - SO WE DON'T ACCEPT REPEATED/GOINGBACKS
 // 32 -- KEEPER / PING
+    node_s* node; // KEEPER_SEND_PINGS
+    path_s* next; // KEEPER_SEND_PINGS -- NA LISTA DE PINGS - ONLY VALID WHEN PATH STATUS >= K_UNSTABLE
     u64 reserved64;
     u16 reserved16;
     u8  tos; // KEEPER / IN_DISCOVER
@@ -135,8 +137,6 @@ struct path_s {
     u8  sPortsN;
     u8  dPortIndex;
     u8  dPortsN;
-    node_s* node; // KEEPER_SEND_PINGS
-    path_s* next; // KEEPER_SEND_PINGS -- NA LISTA DE PINGS - ONLY VALID WHEN PATH STATUS >= K_UNSTABLE
 // 48 -- RO (ALMOST) - KEEPER ON START
     u64 since;
     u32 starts;
