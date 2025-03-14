@@ -78,7 +78,7 @@ static ssize_t __cold_as_ice __optimize_size cmd (struct file *file, const char 
     if (C >= CMDS_N)
         FREE_CMD_ERR(INVALID_CMD_CODE);
 
-#if 1
+#if 0
     printk("XGW: %s #%u SIZE %zd\n", cmdNames[C], C, size);
 #endif
 

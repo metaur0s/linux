@@ -296,9 +296,9 @@ struct pkt_s {
             u8  _path;
             u8  _reserved;
             u16 hsize;
-        // RCOUNTER
+        // TIME
             net_device_s* phys;
-        // LCOUNTER
+        // HASH
             u8 type;
             u8 msize;          // skb->mac_len
             u8 moffset;        // PTR(pkt) + path->moffset -> SKB_MAC(skb)
