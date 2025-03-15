@@ -621,8 +621,8 @@ static ssize_t __cold_as_ice __optimize_size cmd (struct file *file, const char 
             printk("XGW: %s [%s]: TTL %u\n",             node->name, path->name, (uint)path->ttl);
             printk("XGW: %s [%s]: TOS %02X\n",           node->name, path->name, (uint)path->tos);
             printk("XGW: %s [%s]: RTT %ujf\n",           node->name, path->name, (uint)path->rtt);
-            printk("XGW: %s [%s]: YYYYYYY %ujf\n",       node->name, path->name, (uint)path->yyyyyyy);
-            printk("XGW: %s [%s]: XXXXXXX %ujf\n",       node->name, path->name, (uint)path->xxxxxxx);
+            printk("XGW: %s [%s]: CDOWN %ujf\n",         node->name, path->name, (uint)path->cdown);
+            printk("XGW: %s [%s]: ISKEW %ujf\n",         node->name, path->name, (uint)path->iskew);
             printk("XGW: %s [%s]: RTT VAR %ujf\n",       node->name, path->name, (uint)path->rtt_var);
             printk("XGW: %s [%s]: TIMEOUT %us\n",        node->name, path->name, (uint)path->timeout);
             printk("XGW: %s [%s]: STARTS %u\n",          node->name, path->name, (uint)path->starts);

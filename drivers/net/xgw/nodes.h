@@ -109,8 +109,8 @@ struct path_s {
 // 64 -- KEEPER
     u32 info;        // KEEPER
     u32 acks;        // KEEPER -- HISTORY
-    u16 yyyyyyy;     // KEEPER
-    u16 xxxxxxx;     // KEEPER
+    u16 cdown;       // KEEPER
+    u16 iskew;       // KEEPER (WRITE) / IN (READ) --
     u16 rtt_var;     // KEEPER / IN
     u16 rtt;         // KEEPER / IN / OUT <<---- VAI TER QUE ENFIAR ESSA PORRA (rtt + rtt_var) ENTÃO DENTRO DO CACHE LINE DO SKEL
     u64 asked;       // KEEPER -- WHEN I ASKED - PARA MEDIR O RTT

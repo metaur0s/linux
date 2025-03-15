@@ -302,7 +302,7 @@ _is_xgw:
         // NOTE: CONSIDERA CLOCK SKELS LOCAL/REMOTE
         // NOTE: CONSIDERA QUE LEVOU UM LATENCY ATÉ CHEGAR AQUI
         // NOTE: CONSIDERA CPU BUSY TIMES
-        if (ABS_DIFF(ltime, get_current_ms()) > 1200)
+        if (ABS_DIFF(ltime + atomic_get(&path->rtt)/2, get_current_ms()) > atomic_get(&path->iskew))
             // ELE NAO CONHECE NOSSO TIME (OU TEM UM SKEW GRANDE)
             ret_path(PSTATS_I_LTIME_MISMATCH);
     } elif (ltime != atomic_get(&path->syn))

@@ -146,6 +146,8 @@ static void keeper (struct timer_list* const timer) {
                     path->pseen[0]     = 0;
                     path->pseen[1]     = 0;
                     path->acks         = 0;
+                    path->cdown        = 8;
+                    path->iskew        = 8 * 512; // = 4 SECONDS
                     path->rtt          = RTT_MAX;
                     path->olatency     = (RTT_MAX + RTT_VAR_MAX)/2 + 16;
                     path->info        ^= K_START | K_LISTEN;
@@ -218,6 +220,8 @@ static void keeper (struct timer_list* const timer) {
                     elif (rtt < RTT_MIN)
                           rtt = RTT_MIN;
                     // SAVE THE NEW AVERAGE
+                    if (path->cdown)
+                        __atomic_store_n(&path->iskew, (u16)(path->cdown-- * 512), __ATOMIC_RELAXED);
                     __atomic_store_n(&path->olatency, (u16)((rtt + path->rtt_var)/2 + 16), __ATOMIC_RELAXED);
                     __atomic_store_n(&path->rtt, (u16)rtt, __ATOMIC_RELAXED);
                 } else // THIS PING-PONG COULDN'T DETERMINE RTT
