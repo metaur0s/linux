@@ -113,11 +113,6 @@ typedef struct net_device_ops net_device_ops_s;
 #define BE64 __builtin_bswap64
 #endif
 
-// ALIGNDING FOR CACHE-LINE SIZE
-#define ALIGN_NEED(x) ((x) % CACHE_LINE_SIZE)
-#define ALIGN_MAKE(x) char _ [CACHE_LINE_SIZE - ((x) % CACHE_LINE_SIZE)];
-#define ALIGN_SIZE(x) ((x) + (!!ALIGN_NEED(x)) * (CACHE_LINE_SIZE - ((x) % CACHE_LINE_SIZE)) )
-
 #define ABS_DIFF(a, b) ({ \
     const typeof(a) _a = a; \
     const typeof(b) _b = b; \
@@ -128,6 +123,3 @@ typedef struct net_device_ops net_device_ops_s;
 
 #define atomic_get(ptr)      __atomic_load_n   (ptr,    __ATOMIC_RELAXED)
 #define atomic_set(ptr, v)   __atomic_store_n  (ptr, v, __ATOMIC_RELAXED)
-#define atomic_add(ptr, v)   __atomic_add_fetch(ptr, v, __ATOMIC_RELAXED)
-#define atomic_sub(ptr, v)   __atomic_sub_fetch(ptr, v, __ATOMIC_RELAXED)
-#define atomic_inc(ptr)      __atomic_add_fetch(ptr, 1, __ATOMIC_RELAXED)
