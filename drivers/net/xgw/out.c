@@ -193,8 +193,8 @@ _ret_node: _stat = nstats[nid];       goto _ret;
 _ret_dev:  _stat = dstats;
 _ret:
 
-    atomic_inc(&_stat[stat].count);
-    atomic_add(&_stat[stat].bytes, skb->len);
+    stat_inc_count(&_stat[stat].count);
+    stat_inc_bytes(&_stat[stat].bytes, skb->len);
 
     if (stat != PSTATS_O_DATA_OK)
         dev_kfree_skb(skb);

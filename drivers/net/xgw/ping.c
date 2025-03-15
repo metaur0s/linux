@@ -54,6 +54,6 @@ static void ping_send (node_s* const node, const path_s* const path, const pkt_s
         stat = PSTATS_O_PING_SKB_FAILED;
 
     // NOTE: WE WILL INFORM THE TOTAL SIZE SENT THROUGHT THE PHYSICAL INTERFACE
-    atomic_add(&node->pstats[PATH_ID(node, path)][stat].bytes, skel->hsize + PKT_ALIGN_SIZE + PING_SIZE);
-    atomic_inc(&node->pstats[PATH_ID(node, path)][stat].count);
+    stat_inc_bytes(&node->pstats[PATH_ID(node, path)][stat].bytes, skel->hsize + PKT_ALIGN_SIZE + PING_SIZE);
+    stat_inc_count(&node->pstats[PATH_ID(node, path)][stat].count);
 }

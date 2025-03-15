@@ -83,6 +83,9 @@ struct stat_s {
 // TODO: OUT {ping, pong, data} _PHYS_DOWN
 // TODO: OUT {ping, pong, data} _PHYS_NO_CARRIER
 
+#define stat_inc_count(ptr)      __atomic_add_fetch(ptr, 1, __ATOMIC_RELAXED)
+#define stat_inc_bytes(ptr, b)   __atomic_add_fetch(ptr, b, __ATOMIC_RELAXED)
+
 #define ret_dev(i)  { stat = i; goto _ret_dev;  }
 #define ret_node(i) { stat = i; goto _ret_node; }
 #define ret_path(i) { stat = i; goto _ret_path; }
