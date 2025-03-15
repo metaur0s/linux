@@ -28,7 +28,7 @@ static noinline uint in_ping (node_s* const node, const skb_s* const skb, pkt_s*
 
     path_s* const path = &node->paths[pid];
 
-    uint latency = atomic_get(&path->latency);
+    const uint lag = atomic_get(&path->rtt) / 2;
     u64 answered = atomic_get(&path->answered);
 
     // HIS RAW TIME
@@ -43,8 +43,8 @@ static noinline uint in_ping (node_s* const node, const skb_s* const skb, pkt_s*
         //          (LEVANDO EM CONTA QUE ISTO FOI UM SNAPSHOT DELE HA *LATENCY* ATÉ RECEBERMOS)
         // ESTÁ EM RELAÇÃO A
         //      (O RELOGIO DELE COMO ELE DEVE ESTAR (APROXIMADO))
-        // OBS: O LATENCY AIND PODE SER O INICIAL E NÃO O REAL
-        if (ABS_DIFF((rtime + latency), RTIME(now, tdiff)) > (2000 + path->latency_var))
+        // OBS: O RTT AINDA PODE SER O INICIAL E NÃO O REAL
+        if (ABS_DIFF((rtime + lag), RTIME(now, tdiff)) > (2000 + path->rtt_var/2))
             // A IMPRECISÃO NÃO PODE SER TÃO GRANDE ASSIM
             return PSTATS_I_RTIME_SKEW;
 
@@ -67,7 +67,7 @@ static noinline uint in_ping (node_s* const node, const skb_s* const skb, pkt_s*
         //EXCETO NO SYN!!!
         //LTIME_DIFF_RTIME(ltime, rtime) +
         // OBS.: CUIDADO COM ESTE LATENCY AQUI, POIS AINDA NAO FOI DESCOBERTO O REAL
-        LTIME_DIFF_RTIME(now, rtime + latency)
+        LTIME_DIFF_RTIME(now, rtime + lag)
     ) / (1 + !!tdiff);
 
     __atomic_store_n(&node->tdiff, tdiff, __ATOMIC_SEQ_CST); // TEM QUE SER ESCRITO ANTES DO RTIME
@@ -299,7 +299,7 @@ _is_xgw:
     // PACKET TYPE VS LTIME
     if (i != I_KEY_SYN) { // TODO: <--- REORDENAR PARA PING, PONG, SYN
         // OBS: CONSIDERA LATENCY, MAS PODE ESTAR ERRADA (SER A INICIAL, SETADA PELO USUÁRIO)
-        if (ABS_DIFF(ltime + atomic_get(&path->latency), get_current_ms()) > 2048)
+        if (ABS_DIFF(ltime + atomic_get(&path->rtt)/2, get_current_ms()) > (1000 + path->rtt_var/2))
             // ELE NAO CONHECE NOSSO TIME (OU TEM UM SKEW GRANDE)
             ret_path(PSTATS_I_LTIME_MISMATCH);
     } elif (ltime != atomic_get(&path->syn))

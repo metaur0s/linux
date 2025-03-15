@@ -147,6 +147,7 @@ static void keeper (struct timer_list* const timer) {
                     path->pseen[1]     = 0;
                     path->acks         = 0;
                     path->rtt          = path->rtt_max;
+                    path->olatency     = 800 + 16;
                     path->info        ^= K_START | K_LISTEN;
              ASSERT(path->since == 0);
              ASSERT(path->node == node);
@@ -207,16 +208,17 @@ static void keeper (struct timer_list* const timer) {
                 const uint took = answered - path->asked;
 
                 uint rtt;
-                
+
                 if (took < 800) {
                     // AVERAGE
                           rtt = (path->rtt*3 + took*1) / 4;
                     // CAP TO CONFIGURED LIMITS
-                    if   (rtt > path->latency_max)
-                          rtt = path->latency_max;
-                    elif (rtt < path->latency_min)
-                          rtt = path->latency_min;
+                    if   (rtt > path->rtt_max)
+                          rtt = path->rtt_max;
+                    elif (rtt < path->rtt_min)
+                          rtt = path->rtt_min;
                     // SAVE THE NEW AVERAGE
+                    __atomic_store_n(&path->olatency, (u16)((rtt + path->rtt_var)/2 + 16), __ATOMIC_RELAXED);
                     __atomic_store_n(&path->rtt, (u16)rtt, __ATOMIC_RELAXED);
                 } else    rtt = path->rtt;
 

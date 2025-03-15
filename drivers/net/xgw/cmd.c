@@ -456,9 +456,9 @@ static ssize_t __cold_as_ice __optimize_size cmd (struct file *file, const char 
                 // INFORMACOES QUE SAO NECESSARIAS TO START A PATH
                 if (!(pinfo & P_NAME))              CMD_ERR(PATH_NEED_NAME);
                 if (!(pinfo & P_TIMEOUT))           CMD_ERR(PATH_NEED_TIMEOUT);
-                if (!(pinfo & P_LATENCY_MIN))       CMD_ERR(PATH_NEED_LATENCY_MIN);
-                if (!(pinfo & P_LATENCY_MAX))       CMD_ERR(PATH_NEED_LATENCY_MAX);
-                if (!(pinfo & P_LATENCY_VAR))       CMD_ERR(PATH_NEED_LATENCY_VAR);
+                if (!(pinfo & P_RTT_MIN))       CMD_ERR(PATH_NEED_LATENCY_MIN);
+                if (!(pinfo & P_RTT_MAX))       CMD_ERR(PATH_NEED_LATENCY_MAX);
+                if (!(pinfo & P_RTT_VAR))       CMD_ERR(PATH_NEED_RTT_VAR);
                 if (!(pinfo & (P_CLIENT|P_SERVER))) CMD_ERR(PATH_NEED_CLT_SRV);
 
                 //
@@ -466,11 +466,11 @@ static ssize_t __cold_as_ice __optimize_size cmd (struct file *file, const char 
                              != (P_CLIENT | P_SERVER));
 
                 // ALGUMAS COISAS DEPENDEM DE OUTRAS E SÓ PODEM SER CHECADAS EM CONJUNTO
-                if (path->latency_min > path->latency_max)
+                if (path->rtt_min > path->rtt_max)
                     CMD_ERR(INVALID_LATENCY_RANGE);
 
-                if ((path->latency_min + path->latency_var) < LATENCY_EFFECTIVE_MIN
-                 || (path->latency_max + path->latency_var) > LATENCY_EFFECTIVE_MAX)
+                if ((path->rtt_min + path->rtt_var) < RTT_EFFECTIVE_MIN
+                 || (path->rtt_max + path->rtt_var) > RTT_EFFECTIVE_MAX)
                     CMD_ERR(INVALID_LATENCY_RANGE);
 
                 const uint type = path->skel.type;
@@ -629,10 +629,10 @@ static ssize_t __cold_as_ice __optimize_size cmd (struct file *file, const char 
             printk("XGW: %s [%s]: WEIGHT %u\n",          node->name, path->name, (uint)path->weight);
             printk("XGW: %s [%s]: TTL %u\n",             node->name, path->name, (uint)path->ttl);
             printk("XGW: %s [%s]: TOS %02X\n",           node->name, path->name, (uint)path->tos);
-            printk("XGW: %s [%s]: LATENCY %ujf\n",       node->name, path->name, (uint)path->latency);
-            printk("XGW: %s [%s]: LATENCY MIN %ujf\n",   node->name, path->name, (uint)path->latency_min);
-            printk("XGW: %s [%s]: LATENCY MAX %ujf\n",   node->name, path->name, (uint)path->latency_max);
-            printk("XGW: %s [%s]: LATENCY VAR %ujf\n",   node->name, path->name, (uint)path->latency_var);
+            printk("XGW: %s [%s]: RTT %ujf\n",           node->name, path->name, (uint)path->rtt);
+            printk("XGW: %s [%s]: RTT MIN %ujf\n",       node->name, path->name, (uint)path->rtt_min);
+            printk("XGW: %s [%s]: RTT MAX %ujf\n",       node->name, path->name, (uint)path->rtt_max);
+            printk("XGW: %s [%s]: RTT VAR %ujf\n",       node->name, path->name, (uint)path->rtt_var);
             printk("XGW: %s [%s]: TIMEOUT %us\n",        node->name, path->name, (uint)path->timeout);
             printk("XGW: %s [%s]: STARTS %u\n",          node->name, path->name, (uint)path->starts);
             printk("XGW: %s [%s]: SINCE %llu\n",         node->name, path->name, (uintll)path->since);
@@ -660,9 +660,9 @@ static ssize_t __cold_as_ice __optimize_size cmd (struct file *file, const char 
         (path->info & P_VID                 ) ? " VID"            : "",
         (path->info & P_TOS                 ) ? " TOS"            : "",
         (path->info & P_TTL                 ) ? " TTL"            : "",
-        (path->info & P_LATENCY_MIN         ) ? " LATENCY-MIN"    : "",
-        (path->info & P_LATENCY_MAX         ) ? " LATENCY-MAX"    : "",
-        (path->info & P_LATENCY_VAR         ) ? " LATENCY-VAR"    : "",
+        (path->info & P_RTT_MIN         ) ? " LATENCY-MIN"    : "",
+        (path->info & P_RTT_MAX         ) ? " LATENCY-MAX"    : "",
+        (path->info & P_RTT_VAR         ) ? " LATENCY-VAR"    : "",
         (path->info & P_TIMEOUT             ) ? " TIMEOUT"        : "",
         (path->info & P_NAME                ) ? " NAME"           : "",
         (path->info & P_DHCP                ) ? " DHCP"           : "",
@@ -946,10 +946,7 @@ static ssize_t __cold_as_ice __optimize_size cmd (struct file *file, const char 
          // path->tdiff        = 0
          // path->tos          = 0
          // path->ttl          = 0
-         // path->latency      = 0
-         // path->latency_min  = 0
-         // path->latency_max  = 0
-         // path->latency_var  = 0
+         // path->rtt          = 0
          // path->node         = NULL
          // path->next         = NULL
          // path->skel.phys    = NULL
@@ -964,8 +961,11 @@ static ssize_t __cold_as_ice __optimize_size cmd (struct file *file, const char 
          // path->skel.phys    = NULL
             memset(path, 0, sizeof(path_s));
 
-            path->info = P_EXIST;
-            path->node = node;
+            path->info    = P_EXIST;
+            path->node    = node;
+            path->rtt_min = RTT_MIN;
+            path->rtt_max = RTT_MAX;
+            path->rtt_var = RTT_VAR_MAX;
 
         } break;
 
@@ -1128,40 +1128,40 @@ static ssize_t __cold_as_ice __optimize_size cmd (struct file *file, const char 
 
         case CMD_PATH_SET_LATENCY_MIN: { // TODO: ARREDONDAR PARA CIMA?
 
-            const uint latency_min = CMD_VALUE(latency);
+            const uint rtt_min = CMD_VALUE(rtt);
 
-            if (latency_min < LATENCY_MIN
-             || latency_min > LATENCY_MAX)
+            if (rtt_min < RTT_MIN
+             || rtt_min > RTT_MAX)
                 CMD_ERR(INVALID_LATENCY);
 
-            path->latency_min = latency_min;
-            path->info |= P_LATENCY_MIN;
+            path->rtt_min = rtt_min;
+            path->info |= P_RTT_MIN;
 
         } break;
 
         case CMD_PATH_SET_LATENCY_MAX: { // TODO: ARREDONDAR PARA CIMA?
 
-            const uint latency_max = CMD_VALUE(latency);
+            const uint rtt_max = CMD_VALUE(rtt);
 
-            if (latency_max < LATENCY_MIN
-             || latency_max > LATENCY_MAX)
+            if (rtt_max < RTT_MIN
+             || rtt_max > RTT_MAX)
                 CMD_ERR(INVALID_LATENCY);
 
-            path->latency_max = latency_max;
-            path->info |= P_LATENCY_MAX;
+            path->rtt_max = rtt_max;
+            path->info |= P_RTT_MAX;
 
         } break;
 
-        case CMD_PATH_SET_LATENCY_VAR: { // TODO: ARREDONDAR PARA CIMA?
+        case CMD_PATH_SET_RTT_VAR: { // TODO: ARREDONDAR PARA CIMA?
 
-            const uintll latency_var = CMD_VALUE(latency_var);
+            const uintll rtt_var = CMD_VALUE(rtt_var);
 
-            if (latency_var < LATENCY_VAR_MIN
-             || latency_var > LATENCY_VAR_MAX)
+            if (rtt_var < RTT_VAR_MIN
+             || rtt_var > RTT_VAR_MAX)
                 CMD_ERR(INVALID_LATENCY);
 
-            path->latency_var = latency_var;
-            path->info |= P_LATENCY_VAR;
+            path->rtt_var = rtt_var;
+            path->info |= P_RTT_VAR;
 
         } break;
 

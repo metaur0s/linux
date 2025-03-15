@@ -185,7 +185,7 @@ UDP_PORTS_N = 65536
     CMD_ERR_INVALID_WEIGHT,
     CMD_ERR_INVALID_TIMEOUT,
     CMD_ERR_INVALID_LATENCY,
-    CMD_ERR_INVALID_LATENCY_VAR,
+    CMD_ERR_INVALID_RTT_VAR,
     CMD_ERR_INVALID_LATENCY_RANGE,
     CMD_ERR_PATH_USE_DHCP_NOT_IP,
     CMD_ERR_PATH_USE_DHCP_NOT_IP_4,
@@ -207,7 +207,7 @@ UDP_PORTS_N = 65536
     CMD_ERR_PATH_NEED_TIMEOUT,
     CMD_ERR_PATH_NEED_LATENCY_MIN,
     CMD_ERR_PATH_NEED_LATENCY_MAX,
-    CMD_ERR_PATH_NEED_LATENCY_VAR,
+    CMD_ERR_PATH_NEED_RTT_VAR,
     CMD_ERR_PATH_NEED_PHYS,
     CMD_ERR_PATH_NEED_TOS,
     CMD_ERR_PATH_NEED_TTL,
@@ -385,7 +385,7 @@ CMD_ERRS = (
     'CMD_ERR_INVALID_WEIGHT',
     'CMD_ERR_INVALID_TIMEOUT',
     'CMD_ERR_INVALID_LATENCY',
-    'CMD_ERR_INVALID_LATENCY_VAR',
+    'CMD_ERR_INVALID_RTT_VAR',
     'CMD_ERR_INVALID_LATENCY_RANGE',
     'CMD_ERR_PATH_USE_DHCP_NOT_IP',
     'CMD_ERR_PATH_USE_DHCP_NOT_IP_4',
@@ -407,7 +407,7 @@ CMD_ERRS = (
     'CMD_ERR_PATH_NEED_TIMEOUT',
     'CMD_ERR_PATH_NEED_LATENCY_MIN',
     'CMD_ERR_PATH_NEED_LATENCY_MAX',
-    'CMD_ERR_PATH_NEED_LATENCY_VAR',
+    'CMD_ERR_PATH_NEED_RTT_VAR',
     'CMD_ERR_PATH_NEED_PHYS',
     'CMD_ERR_PATH_NEED_TOS',
     'CMD_ERR_PATH_NEED_TTL',
@@ -709,28 +709,16 @@ while args:
                     v = int(v)
                     assert PATH_TIMEOUT_MIN <= v <= PATH_TIMEOUT_MAX
                     COMM(CMD_PATH_SET_TIMEOUT, nid, pid, U16(v))
-                case 'latency-min':
-                    v = int(v)
-                    assert 0 <= v <= 1000
-                    COMM(CMD_PATH_SET_RTT_MIN, nid, pid, U16(v))
-                case 'latency-max':
-                    v = int(v)
-                    assert 0 <= v <= 1000
-                    COMM(CMD_PATH_SET_RTT_MAX, nid, pid, U16(v))
-                case 'latency-var':
-                    v = int(v)
-                    assert 0 <= v <= 1000
-                    COMM(CMD_PATH_SET_RTT_VAR, nid, pid, U16(v))
                 case 'rtt-min':
-                    v = int(v) // 2
+                    v = int(v)
                     assert 0 <= v <= 1000
                     COMM(CMD_PATH_SET_RTT_MIN, nid, pid, U16(v))
                 case 'rtt-max':
-                    v = int(v) // 2
+                    v = int(v)
                     assert 0 <= v <= 1000
                     COMM(CMD_PATH_SET_RTT_MAX, nid, pid, U16(v))
                 case 'rtt-var':
-                    v = int(v) // 2
+                    v = int(v)
                     assert 0 <= v <= 1000
                     COMM(CMD_PATH_SET_RTT_VAR, nid, pid, U16(v))
                 case 'conns-n':

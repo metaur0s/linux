@@ -62,9 +62,9 @@
 #define P_TTL                 (1U << 11)
 #define P_VPROTO              (1U << 12)
 #define P_VID                 (1U << 13)
-#define P_LATENCY_MIN         (1U << 14)
-#define P_LATENCY_MAX         (1U << 15)
-#define P_LATENCY_VAR         (1U << 16)
+#define P_RTT_MIN             (1U << 14)
+#define P_RTT_MAX             (1U << 15)
+#define P_RTT_VAR             (1U << 16)
 #define P_TIMEOUT             (1U << 17)
 #define P_NAME                (1U << 18)
 #define P_DHCP                (1U << 19)
@@ -87,15 +87,15 @@
 // TODO: P_DHCP ?
 #define __P_TYPE_CLR (P_MAC_SRC | P_MAC_DST | P_ADDR_SRC | P_ADDR_DST | P_VPROTO | P_VID | P_DHCP)
 
-#define LATENCY_MIN 10
-#define LATENCY_MAX 625
+#define RTT_MIN  10
+#define RTT_MAX 650
 
-#define LATENCY_VAR_MIN 10
-#define LATENCY_VAR_MAX 120
+#define RTT_VAR_MIN  10
+#define RTT_VAR_MAX 300
 
-// ITS THE LATENCY + LATENCY_VAR
-#define LATENCY_EFFECTIVE_MIN 20
-#define LATENCY_EFFECTIVE_MAX 650
+// ITS THE RTT + RTT_VAR
+#define RTT_EFFECTIVE_MIN  20
+#define RTT_EFFECTIVE_MAX 650
 
 // NOTE: NAO ADIANTA SER MUITO LONGO POIS OS KEYS PODEM ACABAR SENDO INUTILIZADOS
 // NOTE: NAO ADIANTA SER LONGO POIS FICARA UM TEMPAO TRAVADO (SERVER)
@@ -110,11 +110,11 @@
 struct path_s {
 // 64 -- KEEPER
     u32 info;        // KEEPER
-    u16 latency;     // KEEPER / IN / OUT <<---- VAI TER QUE ENFIAR ESSA PORRA (latency + latency_var) ENTÃO DENTRO DO CACHE LINE DO SKEL
-    u16 latency_min; // KEEPER
-    u16 latency_max; // KEEPER
-    u16 latency_var; // KEEPER / IN / OUT
     u32 acks;        // KEEPER -- HISTORY
+    u16 rtt_min;     // KEEPER
+    u16 rtt_max;     // KEEPER
+    u16 rtt_var;     // KEEPER / IN / OUT
+    u16 rtt;         // KEEPER / IN / OUT <<---- VAI TER QUE ENFIAR ESSA PORRA (rtt + rtt_var) ENTÃO DENTRO DO CACHE LINE DO SKEL
     u64 asked;       // KEEPER -- WHEN I ASKED - PARA MEDIR O RTT
     node_s* node;    // KEEPER_SEND_PINGS
     path_s* next;    // KEEPER_SEND_PINGS -- NA LISTA DE PINGS - ONLY VALID WHEN PATH STATUS >= K_UNSTABLE
@@ -129,15 +129,14 @@ struct path_s {
     u16 weight_acks; // KEEPER
 // RO -- QUASE NAO USADO
     char name [PATH_NAME_SIZE]; // 32
-    u16 timeout;     // KEEPER -- EM SEGUNDOS
-    u8  tos;         // KEEPER / IN_DISCOVER
-    u8  ttl;         // KEEPER / IN_DISCOVER
-    u8  sPortIndex;  // KEEPER -- TODO: PRECISA DE UM "elatency EFFECTIVE LATENCY"
-    u8  sPortsN;     // KEEPER
-    u8  dPortIndex;  // KEEPER
-    u8  dPortsN;     // KEEPER
     u16 sPorts [PATH_PORTS_N]; // 8 EM BIG ENDIAN
     u16 dPorts [PATH_PORTS_N]; // 8
+    u8  sPortIndex:4, sPortsN:4;
+    u8  dPortIndex:4, dPortsN:4;
+    u8  tos;         // KEEPER / IN_DISCOVER
+    u8  ttl;         // KEEPER / IN_DISCOVER
+    u16 timeout;     // KEEPER -- EM SEGUNDOS
+    u16 olatency;    // KEEPER (WRITE) / OUT (READ) -- (RTT + RTT_VAR)/2 + CPU TIME + IMPRECISION
 // 112 -- IN READ, OUT READ, IN WRITE (ON RECEIVE PING, WHILE OUT IS DISABLED)
     pkt_s skel;
 };

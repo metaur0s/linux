@@ -158,8 +158,8 @@ static netdev_tx_t out (skb_s* const skb, net_device_s* const dev) {
 
         path = &node->paths[pid];
 
-        // CONSIDERAR O LATENCY (SÓ DE IDA) + CPU BUSY TIME + IMPRECISOES
-        burst_new = ((now + atomic_get(&path->latency) + atomic_get(&path->latency_var) + 16) * PATHS_N) + pid;
+        // CONSIDERAR O TEMPO DE IDA + CPU BUSY TIME + IMPRECISOES
+        burst_new = ((now + atomic_get(&path->olatency)) * PATHS_N) + pid;
 
         // STORE STREAM TIMEOUT + PID
         // IF THIS COMPARE EXCHANGE FAIL, IT'S BECAUSE SOME OTHER OUT RUNNED FOR THIS STREAM HASH, AND:
