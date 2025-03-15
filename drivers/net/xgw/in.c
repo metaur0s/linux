@@ -22,8 +22,9 @@ static noinline uint in_ping (node_s* const node, const skb_s* const skb, pkt_s*
     if ((now - tlast) > 45000)
         tdiff = 0;
 
-    const uint pid = BE8(pkt->x.path);
-    const uint i   = BE8(pkt->x.version);
+    const uint pid  = BE8(pkt->x.path);
+    const uint i    = BE8(pkt->x.version);
+    const u64 ltime = BE64(pkt->x.time);
 
     path_s* const path = &node->paths[pid];
 
@@ -65,7 +66,10 @@ static noinline uint in_ping (node_s* const node, const skb_s* const skb, pkt_s*
     // OBS.: CUIDADO COM ESTE LATENCY AQUI, POIS AINDA NAO FOI DESCOBERTO O REAL
     // NOTE: ESTAMOS MISTURANDO TDIFF QUE É PER-NODE, COM O RTT QUE É PER-PATH.
     // NOTE: PATHS INICIALIZANDO VAO AFETAR O TDIFF, E ASSIM OS PATHS NÃO-INICIALIZADOS.
-    tdiff = (8*tdiff + LTIME_DIFF_RTIME(now, rtime + lag)) / (1 + 8*!!tdiff);
+    tdiff = (8*tdiff + LTIME_DIFF_RTIME(now, rtime + lag)*1) / (8*(!!tdiff) + 1);
+
+    if (i != I_KEY_SYN)
+        tdiff = (tdiff*3 + LTIME_DIFF_RTIME(ltime, rtime)*1) / 4;
 
     __atomic_store_n(&node->tdiff, tdiff, __ATOMIC_SEQ_CST); // TEM QUE SER ESCRITO ANTES DO RTIME
     __atomic_store_n(&node->tlast,  now,  __ATOMIC_SEQ_CST);
