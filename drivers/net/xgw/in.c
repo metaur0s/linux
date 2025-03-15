@@ -22,9 +22,8 @@ static noinline uint in_ping (node_s* const node, const skb_s* const skb, pkt_s*
     if ((now - tlast) > 45000)
         tdiff = 0;
 
-    const uint pid    = BE8  (pkt->x.path);
-    const uint i      = BE8  (pkt->x.version);
-          u64  ltime  = BE64 (pkt->x.time);
+    const uint pid = BE8(pkt->x.path);
+    const uint i   = BE8(pkt->x.version);
 
     path_s* const path = &node->paths[pid];
 
@@ -44,7 +43,10 @@ static noinline uint in_ping (node_s* const node, const skb_s* const skb, pkt_s*
         // ESTÁ EM RELAÇÃO A
         //      (O RELOGIO DELE COMO ELE DEVE ESTAR (APROXIMADO))
         // OBS: O RTT AINDA PODE SER O INICIAL E NÃO O REAL
-        if (ABS_DIFF((rtime + lag), RTIME(now, tdiff)) > (2000 + path->rtt_var/2))
+        // NOTE: ESTAMOS MISTURANDO TDIFF QUE É PER-NODE, COM O RTT QUE É PER-PATH.
+        // NOTE: PATHS INICIALIZANDO VAO AFETAR O TDIFF, E ASSIM OS PATHS NÃO-INICIALIZADOS.
+        //if (ABS_DIFF((rtime + lag), RTIME(now, tdiff)) > (2000 + path->rtt_var/2))
+        if (ABS_DIFF((rtime + lag), RTIME(now, tdiff)) > (8192 + path->iskew))
             // A IMPRECISÃO NÃO PODE SER TÃO GRANDE ASSIM
             return PSTATS_I_RTIME_SKEW;
 
@@ -60,15 +62,11 @@ static noinline uint in_ping (node_s* const node, const skb_s* const skb, pkt_s*
 
     ping_receive(node, ping);
 
-    tdiff = (
-        // CONSIDERA O NOSSO TDIFF ATUAL, QUE SE NÃO FOR RECENTE, ESTÁ COMO 0, E O WEIGHT SERÁ CANCELADO NA DIVISÃO
-        tdiff +
-        // CONSIDERA TAMBÉM O QUE O PEER USA COMO TDIFF
-        //EXCETO NO SYN!!!
-        //LTIME_DIFF_RTIME(ltime, rtime) +
-        // OBS.: CUIDADO COM ESTE LATENCY AQUI, POIS AINDA NAO FOI DESCOBERTO O REAL
-        LTIME_DIFF_RTIME(now, rtime + lag)
-    ) / (1 + !!tdiff);
+    // CONSIDERA O NOSSO TDIFF ATUAL, QUE SE NÃO FOR RECENTE, ESTÁ COMO 0, E O WEIGHT SERÁ CANCELADO NA DIVISÃO
+    // OBS.: CUIDADO COM ESTE LATENCY AQUI, POIS AINDA NAO FOI DESCOBERTO O REAL
+    // NOTE: ESTAMOS MISTURANDO TDIFF QUE É PER-NODE, COM O RTT QUE É PER-PATH.
+    // NOTE: PATHS INICIALIZANDO VAO AFETAR O TDIFF, E ASSIM OS PATHS NÃO-INICIALIZADOS.
+    tdiff = (8*tdiff + LTIME_DIFF_RTIME(now, rtime + lag)) / (1 + 8*!!tdiff);
 
     __atomic_store_n(&node->tdiff, tdiff, __ATOMIC_SEQ_CST); // TEM QUE SER ESCRITO ANTES DO RTIME
     __atomic_store_n(&node->tlast,  now,  __ATOMIC_SEQ_CST);
