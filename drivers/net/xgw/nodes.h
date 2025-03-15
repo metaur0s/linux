@@ -116,7 +116,7 @@ struct path_s {
     u32 starts;      // KEEPER
     u32 acks;        // KEEPER -- HISTORY
     u64 asked;       // KEEPER -- WHEN I ASKED - PARA MEDIR O RTT
-    u16 timeout;     // KEEPER | EM SEGUNDOS
+    u16 timeout;     // KEEPER -- EM SEGUNDOS
     u8  weight;      // KEEPER
     u8  weight_acks; // KEEPER
     u8  sPortIndex;  // KEEPER
