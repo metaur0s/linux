@@ -63,23 +63,22 @@
 #define P_VPROTO              (1U << 12)
 #define P_VID                 (1U << 13)
 #define P_RTT_MIN             (1U << 14)
-#define P_RTT_MAX             (1U << 15)
-#define P_RTT_VAR             (1U << 16)
-#define P_TIMEOUT             (1U << 17)
-#define P_NAME                (1U << 18)
-#define P_DHCP                (1U << 19)
-#define P_DHCP_MAC_DST_SERVER (1U << 20)
-#define P_DHCP_MAC_DST_GW     (1U << 21)
-#define P_EXIST               (1U << 22)
+#define P_RTT_VAR             (1U << 15)
+#define P_TIMEOUT             (1U << 16)
+#define P_NAME                (1U << 17)
+#define P_DHCP                (1U << 18)
+#define P_DHCP_MAC_DST_SERVER (1U << 19)
+#define P_DHCP_MAC_DST_GW     (1U << 20)
+#define P_EXIST               (1U << 21)
 // TODO: P_INFO_WEIGHT_NODE
 // TODO: P_INFO_WEIGHT_ACKS
-#define P_INFO               ((1U << 23) - 1)
-#define K_START               (1U << 23)
-#define K_SUSPEND             (1U << 24)
-#define K_SUSPENDING          (1U << 25)
-#define K_LISTEN              (1U << 26) // TODO: RENAME TO K_DISCOVERING
-#define K_ESTABLISHED         (1U << 27) // TODO: RENAME TO K_PINGING
-#define P_ALL                ((1U << 28) - 1)
+#define P_INFO               ((1U << 22) - 1)
+#define K_START               (1U << 22)
+#define K_SUSPEND             (1U << 23)
+#define K_SUSPENDING          (1U << 24)
+#define K_LISTEN              (1U << 25) // TODO: RENAME TO K_DISCOVERING
+#define K_ESTABLISHED         (1U << 26) // TODO: RENAME TO K_PINGING
+#define P_ALL                ((1U << 27) - 1)
 
 // P_VPROTO -> NOTE: IT IS THE ETH->PROTO, NOT THE VLAN->PROTO
 
@@ -88,7 +87,7 @@
 #define __P_TYPE_CLR (P_MAC_SRC | P_MAC_DST | P_ADDR_SRC | P_ADDR_DST | P_VPROTO | P_VID | P_DHCP)
 
 #define RTT_MIN  10
-#define RTT_MAX 650
+#define RTT_MAX 700
 
 #define RTT_VAR_MIN  10
 #define RTT_VAR_MAX 300
@@ -112,7 +111,7 @@ struct path_s {
     u32 info;        // KEEPER
     u32 acks;        // KEEPER -- HISTORY
     u16 rtt_min;     // KEEPER
-    u16 rtt_max;     // KEEPER
+    u16 xxxxxxx;     // KEEPER
     u16 rtt_var;     // KEEPER / IN / OUT
     u16 rtt;         // KEEPER / IN / OUT <<---- VAI TER QUE ENFIAR ESSA PORRA (rtt + rtt_var) ENTÃO DENTRO DO CACHE LINE DO SKEL
     u64 asked;       // KEEPER -- WHEN I ASKED - PARA MEDIR O RTT

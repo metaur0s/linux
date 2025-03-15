@@ -176,7 +176,6 @@ BUILD_ASSERT((typeof(((ping_s*)NULL)->ver))      ~(typeof(((ping_s*)NULL)->ver))
 // THE TYPES MUST BE ABLE TO HOLD THEIR VALUES
 BUILD_ASSERT((typeof(((path_s*)NULL)->rtt))         RTT_MAX          == RTT_MAX);
 BUILD_ASSERT((typeof(((path_s*)NULL)->rtt_min))     RTT_MAX          == RTT_MAX);
-BUILD_ASSERT((typeof(((path_s*)NULL)->rtt_max))     RTT_MAX          == RTT_MAX);
 BUILD_ASSERT((typeof(((path_s*)NULL)->rtt_var))     RTT_VAR_MAX      == RTT_VAR_MAX);
 BUILD_ASSERT((typeof(((path_s*)NULL)->timeout))     PATH_TIMEOUT_MAX == PATH_TIMEOUT_MAX);
 BUILD_ASSERT((typeof(((path_s*)NULL)->since))       XTIME_MAX        == XTIME_MAX);
@@ -218,3 +217,35 @@ BUILD_ASSERT(sizeof(((node_s*)NULL)->secret) == SECRET_SIZE);
 
 //BUILD_ASSERT((typeof(((node_s*)NULL)->info))N_INFO == N_INFO);
 //BUILD_ASSERT((typeof(((node_s*)NULL)->connsN))CONNS_N_MAX == CONNS_N_MAX);
+
+//
+BUILD_ASSERT(P_ALL == (
+    P_ON                  |
+    P_CLIENT              |
+    P_SERVER              |
+    P_PHYS                |
+    P_MAC_SRC             |
+    P_MAC_DST             |
+    P_ADDR_SRC            |
+    P_ADDR_DST            |
+    P_PORT_SRC            |
+    P_PORT_DST            |
+    P_TOS                 |
+    P_TTL                 |
+    P_VPROTO              |
+    P_VID                 |
+    P_RTT_MIN             |
+    P_RTT_VAR             |
+    P_TIMEOUT             |
+    P_NAME                |
+    P_DHCP                |
+    P_DHCP_MAC_DST_SERVER |
+    P_DHCP_MAC_DST_GW     |
+    P_EXIST               |
+    P_INFO                |
+    K_START               |
+    K_SUSPEND             |
+    K_SUSPENDING          |
+    K_LISTEN              |
+    K_ESTABLISHED
+));
