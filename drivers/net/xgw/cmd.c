@@ -1116,13 +1116,13 @@ static ssize_t __cold_as_ice __optimize_size cmd (struct file *file, const char 
 
         } break;
 
-        case CMD_PATH_SET_LATENCY_MIN: { // TODO: ARREDONDAR PARA CIMA?
+        case CMD_PATH_SET_RTT_MIN: { // TODO: ARREDONDAR PARA CIMA?
 
             const uint rtt_min = CMD_VALUE(rtt);
 
             if (rtt_min < RTT_MIN
              || rtt_min > RTT_MAX)
-                CMD_ERR(INVALID_LATENCY);
+                CMD_ERR(INVALID_RTT);
 
             path->rtt_min = rtt_min;
             path->info |= P_RTT_MIN;
@@ -1135,7 +1135,7 @@ static ssize_t __cold_as_ice __optimize_size cmd (struct file *file, const char 
 
             if (rtt_var < RTT_VAR_MIN
              || rtt_var > RTT_VAR_MAX)
-                CMD_ERR(INVALID_LATENCY);
+                CMD_ERR(INVALID_RTT);
 
             path->rtt_var = rtt_var;
             path->info |= P_RTT_VAR;
