@@ -456,8 +456,7 @@ static ssize_t __cold_as_ice __optimize_size cmd (struct file *file, const char 
                 // INFORMACOES QUE SAO NECESSARIAS TO START A PATH
                 if (!(pinfo & P_NAME))              CMD_ERR(PATH_NEED_NAME);
                 if (!(pinfo & P_TIMEOUT))           CMD_ERR(PATH_NEED_TIMEOUT);
-                if (!(pinfo & P_RTT_MIN))       CMD_ERR(PATH_NEED_LATENCY_MIN);
-                if (!(pinfo & P_RTT_VAR))       CMD_ERR(PATH_NEED_RTT_VAR);
+                if (!(pinfo & P_RTT_VAR))           CMD_ERR(PATH_NEED_RTT_VAR);
                 if (!(pinfo & (P_CLIENT|P_SERVER))) CMD_ERR(PATH_NEED_CLT_SRV);
 
                 //
@@ -622,7 +621,7 @@ static ssize_t __cold_as_ice __optimize_size cmd (struct file *file, const char 
             printk("XGW: %s [%s]: TTL %u\n",             node->name, path->name, (uint)path->ttl);
             printk("XGW: %s [%s]: TOS %02X\n",           node->name, path->name, (uint)path->tos);
             printk("XGW: %s [%s]: RTT %ujf\n",           node->name, path->name, (uint)path->rtt);
-            printk("XGW: %s [%s]: RTT MIN %ujf\n",       node->name, path->name, (uint)path->rtt_min);
+            printk("XGW: %s [%s]: YYYYYYY %ujf\n",       node->name, path->name, (uint)path->yyyyyyy);
             printk("XGW: %s [%s]: XXXXXXX %ujf\n",       node->name, path->name, (uint)path->xxxxxxx);
             printk("XGW: %s [%s]: RTT VAR %ujf\n",       node->name, path->name, (uint)path->rtt_var);
             printk("XGW: %s [%s]: TIMEOUT %us\n",        node->name, path->name, (uint)path->timeout);
@@ -636,7 +635,7 @@ static ssize_t __cold_as_ice __optimize_size cmd (struct file *file, const char 
             printk("XGW: %s [%s]: SPORT #%u OF %u\n",    node->name, path->name, (uint)path->sPortIndex, (uint)path->sPortsN);
             printk("XGW: %s [%s]: DPORT #%u OF %u\n",    node->name, path->name, (uint)path->dPortIndex, (uint)path->dPortsN);
 
-            printk("XGW: %s [%s]: INFO: 0x%02X%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s\n", node->name, path->name,
+            printk("XGW: %s [%s]: INFO: 0x%02X%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s\n", node->name, path->name,
            (uint)path->info,
         (path->info & P_ON                  ) ? " ON"             : "",
         (path->info & P_CLIENT              ) ? " CLIENT"         : "",
@@ -652,7 +651,6 @@ static ssize_t __cold_as_ice __optimize_size cmd (struct file *file, const char 
         (path->info & P_VID                 ) ? " VID"            : "",
         (path->info & P_TOS                 ) ? " TOS"            : "",
         (path->info & P_TTL                 ) ? " TTL"            : "",
-        (path->info & P_RTT_MIN             ) ? " LATENCY-MIN"    : "",
         (path->info & P_RTT_VAR             ) ? " LATENCY-VAR"    : "",
         (path->info & P_TIMEOUT             ) ? " TIMEOUT"        : "",
         (path->info & P_NAME                ) ? " NAME"           : "",
@@ -954,7 +952,6 @@ static ssize_t __cold_as_ice __optimize_size cmd (struct file *file, const char 
 
             path->info    = P_EXIST;
             path->node    = node;
-            path->rtt_min = RTT_MIN;
             path->rtt_var = RTT_VAR_MAX;
 
         } break;
@@ -1113,19 +1110,6 @@ static ssize_t __cold_as_ice __optimize_size cmd (struct file *file, const char 
 
             path->timeout = timeout;
             path->info |= P_TIMEOUT;
-
-        } break;
-
-        case CMD_PATH_SET_RTT_MIN: { // TODO: ARREDONDAR PARA CIMA?
-
-            const uint rtt_min = CMD_VALUE(rtt);
-
-            if (rtt_min < RTT_MIN
-             || rtt_min > RTT_MAX)
-                CMD_ERR(INVALID_RTT);
-
-            path->rtt_min = rtt_min;
-            path->info |= P_RTT_MIN;
 
         } break;
 

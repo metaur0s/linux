@@ -215,8 +215,8 @@ static void keeper (struct timer_list* const timer) {
                     // CAP TO CONFIGURED LIMITS
                     if   (rtt > RTT_MAX)
                           rtt = RTT_MAX;
-                    elif (rtt < path->rtt_min)
-                          rtt = path->rtt_min;
+                    elif (rtt < RTT_MIN)
+                          rtt = RTT_MIN;
                     // SAVE THE NEW AVERAGE
                     __atomic_store_n(&path->olatency, (u16)((rtt + path->rtt_var)/2 + 16), __ATOMIC_RELAXED);
                     __atomic_store_n(&path->rtt, (u16)rtt, __ATOMIC_RELAXED);
