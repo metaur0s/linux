@@ -110,34 +110,34 @@
 struct path_s {
 // 64 -- KEEPER
     u32 info;        // KEEPER
+    u16 latency;     // KEEPER / IN / OUT <<---- VAI TER QUE ENFIAR ESSA PORRA (latency + latency_var) ENTÃO DENTRO DO CACHE LINE DO SKEL
     u16 latency_min; // KEEPER
     u16 latency_max; // KEEPER
-    u64 since;       // KEEPER
-    u32 starts;      // KEEPER
+    u16 latency_var; // KEEPER / IN / OUT
     u32 acks;        // KEEPER -- HISTORY
+    u64 since;       // KEEPER
     u64 asked;       // KEEPER -- WHEN I ASKED - PARA MEDIR O RTT
+    u64 syn;         // KEEPER_SEND_PINGS / IN -- O PKT->TIME QUE O CLIENTE VAI USAR, ENQUANTO NAO DESCOBRE ELE
+    node_s* node;    // KEEPER_SEND_PINGS
+    path_s* next;    // KEEPER_SEND_PINGS -- NA LISTA DE PINGS - ONLY VALID WHEN PATH STATUS >= K_UNSTABLE
+// KEEPER / IN
+    u64 answered;    // KEEPER (READ) / IN_PING (WRITE) -- WHEN I RECEIVED ANSWER - PARA PARA MEDIR O RTT E SABER QUE A CONEXÃO ESTÁ VIVA
+    u64 pseen[2];    // IN_PING -- LAST PING/PONG->TIME RECEIVED (HIS RAW TIME) - SO WE DON'T ACCEPT REPEATED/GOINGBACKS
+// RO (MOSTLY)
+    u32 starts;      // KEEPER
     u16 timeout;     // KEEPER -- EM SEGUNDOS
-    u8  weight;      // KEEPER
-    u8  weight_acks; // KEEPER
-    u8  sPortIndex;  // KEEPER
+    u16 weight;      // KEEPER
+    u16 weight_acks; // KEEPER
+// RO -- QUASE NAO USADO
+    u8  tos;         // KEEPER / IN_DISCOVER
+    u8  ttl;         // KEEPER / IN_DISCOVER
+    u8  sPortIndex;  // KEEPER -- TODO: PRECISA DE UM "elatency EFFECTIVE LATENCY"
     u8  sPortsN;     // KEEPER
     u8  dPortIndex;  // KEEPER
     u8  dPortsN;     // KEEPER
-    node_s* node;    // KEEPER_SEND_PINGS
-    path_s* next;    // KEEPER_SEND_PINGS -- NA LISTA DE PINGS - ONLY VALID WHEN PATH STATUS >= K_UNSTABLE
-    u64 syn;         // KEEPER_SEND_PINGS / IN -- O PKT->TIME QUE O CLIENTE VAI USAR, ENQUANTO NAO DESCOBRE ELE
-// 28 -- KEEPER / IN
-    u64 answered;    // KEEPER (READ) / IN_PING (WRITE) -- WHEN I RECEIVED ANSWER - PARA PARA MEDIR O RTT E SABER QUE A CONEXÃO ESTÁ VIVA
-    u64 pseen[2];    // IN_PING -- LAST PING/PONG->TIME RECEIVED (HIS RAW TIME) - SO WE DON'T ACCEPT REPEATED/GOINGBACKS
-    u16 reserved16;
-    u16 latency;     // KEEPER / IN / OUT <<---- VAI TER QUE ENFIAR ESSA PORRA (latency + latency_var) ENTÃO DENTRO DO CACHE LINE DO SKEL
-// 52 -- READ ONLY
-    u16 latency_var; // KEEPER / IN / OUT
-    u8  tos;         // KEEPER / IN_DISCOVER
-    u8  ttl;         // KEEPER / IN_DISCOVER
-    char name [PATH_NAME_SIZE]; // 32
     u16 sPorts [PATH_PORTS_N]; // 8 EM BIG ENDIAN
     u16 dPorts [PATH_PORTS_N]; // 8
+    char name [PATH_NAME_SIZE]; // 32
 // 112 -- IN READ, OUT READ, IN WRITE (ON RECEIVE PING, WHILE OUT IS DISABLED)
     pkt_s skel;
 };
