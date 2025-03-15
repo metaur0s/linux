@@ -204,10 +204,10 @@ static void keeper (struct timer_list* const timer) {
                     goto _suspend;
                 }
 
+                uint rtt;
+
                 // SE NAO RECEBEU UM PONG, ESTE RTT SERÁ UM OVERFLOW
                 const uint took = answered - path->asked;
-
-                uint rtt;
 
                 if (took < 800) {
                     // AVERAGE
@@ -220,7 +220,8 @@ static void keeper (struct timer_list* const timer) {
                     // SAVE THE NEW AVERAGE
                     __atomic_store_n(&path->olatency, (u16)((rtt + path->rtt_var)/2 + 16), __ATOMIC_RELAXED);
                     __atomic_store_n(&path->rtt, (u16)rtt, __ATOMIC_RELAXED);
-                } else    rtt = path->rtt;
+                } else // THIS PING-PONG COULDN'T DETERMINE RTT
+                    rtt = path->rtt;
 
                 // A SECOND ELAPSED
                 const uint acks = ((u64)(took <= (rtt + path->rtt_var)) << (ACKS_N - 1)) | (path->acks >> 1);
