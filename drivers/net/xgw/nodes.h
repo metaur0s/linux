@@ -8,7 +8,7 @@
 
 //
 #define NODE_NAME_SIZE 32
-#define PATH_NAME_SIZE 20 // "super-ISP-1-ip6-udp\0"
+#define PATH_NAME_SIZE 32 // "super-ISP-1-ip6-udp\0"
 
 //
 #define NODES_N 65536
@@ -37,7 +37,7 @@
 
 // HOW MANY ACKS IN HISTORY
 // (WORD LENGTH)
-#define ACKS_N 64
+#define ACKS_N 32
 
 // NODE INFO
 #define N_ON      (1U << 0)
@@ -101,47 +101,43 @@
 // NOTE: NAO ADIANTA SER LONGO POIS FICARA UM TEMPAO TRAVADO (SERVER)
 // NOTE: NAO ADIANTA SER LONGO POIS FICARA UM TEMPAO TRAVADO (CLIENT)
 // EM SEGUNDOS
-#define PATH_TIMEOUT_MIN   1
-#define PATH_TIMEOUT_MAX 255
+#define PATH_TIMEOUT_MIN     1
+#define PATH_TIMEOUT_MAX 65535
 
 //
 #define PATH_SIZE 256
 
 struct path_s {
-// 64 -- KEEPER / IN
-    // RO
+// 64 -- KEEPER
     u32 info;        // KEEPER
-    u8  reserved8;
-    u8  timeout;     // KEEPER | EM SEGUNDOS
-    u16 reserved16;
-    u16 latency_min; // KEEPER / IN
-    u16 latency_max; // KEEPER / IN
-    u16 latency_var; // KEEPER / IN / OUT
-    u16 latency;     // KEEPER / IN / OUT <<---- VAI TER QUE ENFIAR ESSA PORRA (latency + latency_var) ENTÃO DENTRO DO CACHE LINE DO SKEL
-    // --
-    u64 syn; // O PKT->TIME QUE O CLIENTE VAI USAR, ENQUANTO NAO DESCOBRE ELE
-    u64 pingSent;     // LTIME | WHEN I ASKED - PARA SABER SE ACEITA O PONG
-    u64 pongReceived; // LTIME | WHEN I WAS ANSWERED - PARA SABER QUE A CONEXÃO ESTÁ VIVA
-    u64 pseen[2];     // RTIME | LAST PING/PONG->TIME RECEIVED (HIS RAW TIME) - SO WE DON'T ACCEPT REPEATED/GOINGBACKS
-    u64 reserved64;
-// 32
-    node_s* node;    // KEEPER_SEND_PINGS
-    path_s* next;    // KEEPER_SEND_PINGS -- NA LISTA DE PINGS - ONLY VALID WHEN PATH STATUS >= K_UNSTABLE
-    u64 acks;        // KEEPER -- HISTORY
+    u16 latency_min; // KEEPER
+    u16 latency_max; // KEEPER
+    u64 since;       // KEEPER
+    u32 starts;      // KEEPER
+    u32 acks;        // KEEPER -- HISTORY
+    u64 asked;       // KEEPER -- WHEN I ASKED - PARA MEDIR O RTT
+    u16 timeout;     // KEEPER | EM SEGUNDOS
     u8  weight;      // KEEPER
     u8  weight_acks; // KEEPER
-    u8  tos;         // KEEPER / IN_DISCOVER
-    u8  ttl;         // KEEPER / IN_DISCOVER
     u8  sPortIndex;  // KEEPER
     u8  sPortsN;     // KEEPER
     u8  dPortIndex;  // KEEPER
     u8  dPortsN;     // KEEPER
-// 48 -- RO (ALMOST) - KEEPER ON START
-    u64 since;
-    u32 starts;
-    char name [PATH_NAME_SIZE];
-    u16 sPorts [PATH_PORTS_N]; // EM BIG ENDIAN
-    u16 dPorts [PATH_PORTS_N];
+    node_s* node;    // KEEPER_SEND_PINGS
+    path_s* next;    // KEEPER_SEND_PINGS -- NA LISTA DE PINGS - ONLY VALID WHEN PATH STATUS >= K_UNSTABLE
+    u64 syn;         // KEEPER_SEND_PINGS / IN -- O PKT->TIME QUE O CLIENTE VAI USAR, ENQUANTO NAO DESCOBRE ELE
+// 28 -- KEEPER / IN
+    u64 answered;    // KEEPER (READ) / IN_PING (WRITE) -- WHEN I RECEIVED ANSWER - PARA PARA MEDIR O RTT E SABER QUE A CONEXÃO ESTÁ VIVA
+    u64 pseen[2];    // IN_PING -- LAST PING/PONG->TIME RECEIVED (HIS RAW TIME) - SO WE DON'T ACCEPT REPEATED/GOINGBACKS
+    u16 reserved16;
+    u16 latency;     // KEEPER / IN / OUT <<---- VAI TER QUE ENFIAR ESSA PORRA (latency + latency_var) ENTÃO DENTRO DO CACHE LINE DO SKEL
+// 52 -- READ ONLY
+    u16 latency_var; // KEEPER / IN / OUT
+    u8  tos;         // KEEPER / IN_DISCOVER
+    u8  ttl;         // KEEPER / IN_DISCOVER
+    char name [PATH_NAME_SIZE]; // 32
+    u16 sPorts [PATH_PORTS_N]; // 8 EM BIG ENDIAN
+    u16 dPorts [PATH_PORTS_N]; // 8
 // 112 -- IN READ, OUT READ, IN WRITE (ON RECEIVE PING, WHILE OUT IS DISABLED)
     pkt_s skel;
 };

@@ -636,8 +636,8 @@ static ssize_t __cold_as_ice __optimize_size cmd (struct file *file, const char 
             printk("XGW: %s [%s]: TIMEOUT %us\n",        node->name, path->name, (uint)path->timeout);
             printk("XGW: %s [%s]: STARTS %u\n",          node->name, path->name, (uint)path->starts);
             printk("XGW: %s [%s]: SINCE %llu\n",         node->name, path->name, (uintll)path->since);
-            printk("XGW: %s [%s]: PING SENT %llu\n",     node->name, path->name, (uintll)path->pingSent);
-            printk("XGW: %s [%s]: PONG RECEIVED %llu\n", node->name, path->name, (uintll)path->pongReceived);
+            printk("XGW: %s [%s]: ASKED %llu\n",         node->name, path->name, (uintll)path->asked);
+            printk("XGW: %s [%s]: ANSWERED %llu\n",      node->name, path->name, (uintll)path->answered);
             printk("XGW: %s [%s]: PING SEEN %llu\n",     node->name, path->name, (uintll)path->pseen[0]);
             printk("XGW: %s [%s]: PONG SEEN %llu\n",     node->name, path->name, (uintll)path->pseen[1]);
             printk("XGW: %s [%s]: SYN %016llX\n",        node->name, path->name, (uintll)path->syn);
@@ -939,8 +939,8 @@ static ssize_t __cold_as_ice __optimize_size cmd (struct file *file, const char 
          // path->starts       = 0
          // path->timeout      = 0
          // path->acks         = 0
-         // path->pingSent     = 0
-         // path->pongReceived = 0
+         // path->asked        = 0
+         // path->answered     = 0
          // path->syn          = 0
          // path->rtime        = 0
          // path->tdiff        = 0

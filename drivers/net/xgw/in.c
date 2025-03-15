@@ -28,8 +28,8 @@ static noinline uint in_ping (node_s* const node, const skb_s* const skb, pkt_s*
 
     path_s* const path = &node->paths[pid];
 
-    uint latency     = atomic_get(&path->latency);
-    u64 pongReceived = atomic_get(&path->pongReceived);
+    uint latency = atomic_get(&path->latency);
+    u64 answered = atomic_get(&path->answered);
 
     // HIS RAW TIME
     const ping_s* const ping = PKT_DATA(pkt);
@@ -75,21 +75,21 @@ static noinline uint in_ping (node_s* const node, const skb_s* const skb, pkt_s*
 
     if (i == I_KEY_PONG) {
         // IF I AM THE CLIENT, NOW I'M ESTABLISHED
-        __atomic_store_n(&path->pongReceived, now,     __ATOMIC_SEQ_CST);
+        __atomic_store_n(&path->answered, now, __ATOMIC_SEQ_CST);
         return PSTATS_I_PONG_GOOD;
     }
 
     // THIS IS A PING
     pkt_s* skel; pkt_s temp_skel;
 
-    if (pongReceived == PR_LISTENING) {
+    if (answered == PR_LISTENING) {
         // LISTENING - PATH HAS NO SKEL
 
         if (i == I_KEY_SYN) {
             // LEARN O PATH EM UM HEADER TEMPORARIO
             skel = &temp_skel;
         } else { // SYN-ACK
-            if (!__atomic_compare_exchange_n(&path->pongReceived, &pongReceived, PR_ACCEPTING, 0, __ATOMIC_SEQ_CST, __ATOMIC_RELAXED))
+            if (!__atomic_compare_exchange_n(&path->answered, &answered, PR_ACCEPTING, 0, __ATOMIC_SEQ_CST, __ATOMIC_RELAXED))
                 // COULD NOT LOCK THE PATH
                 return PSTATS_I_PING_GOOD_ACCEPT_RACED;
             // LEARN ON PATH
@@ -101,7 +101,7 @@ static noinline uint in_ping (node_s* const node, const skb_s* const skb, pkt_s*
         if (skel == &path->skel)
             // AGORA JA PODE USAR O PATH->SKEL
             // LIBERA O KEEPER
-            __atomic_store_n(&path->pongReceived, now, __ATOMIC_SEQ_CST); // PR_ACCEPTING -> PR_ESTABLISHED
+            __atomic_store_n(&path->answered, now, __ATOMIC_SEQ_CST); // PR_ACCEPTING -> PR_ESTABLISHED
     } else
         // ESTABLISHED
         skel = &path->skel;
@@ -267,7 +267,7 @@ _is_xgw:
     path_s* const path = &node->paths[pid];
 
     // SITUATION VS PACKET TYPE
-    switch (atomic_get(&path->pongReceived)) {
+    switch (atomic_get(&path->answered)) {
 
         case PR_CONNECTING:
             if (i != I_KEY_PONG)

@@ -1,22 +1,4 @@
 
-#define keeper_assert_node \
-    ASSERT(!node_is_off(node)); \
-    ASSERT(*node->ptr == node); \
-    ASSERT(node->info & N_CONNS_N); \
-    ASSERT(node->info & N_MTU); \
-    ASSERT(node->info & N_NAME); \
-    ASSERT(node->mtu >= MTU_MIN); \
-    ASSERT(node->mtu <= MTU_MAX); \
-    ASSERT(node->connsN >= CONNS_MIN); \
-    ASSERT(node->connsN <= CONNS_MAX); \
-    ASSERT((node->info   & N_INFO) == node->info); \
-    ASSERT((node->opaths & OPATHS) == node->opaths); \
-    ASSERT((node->ipaths & IPATHS) == node->ipaths); \
-    ASSERT((node->kpaths & KPATHS) == node->kpaths); \
-    ASSERT((node->opaths & (node->kpaths * OPATH_0)) == node->opaths); \
-    ASSERT((node->ipaths & (node->kpaths * IPATH_0)) == node->ipaths); \
-    ASSERT(node->oVersions[O_KEY_PING] == I_KEY_PING);
-
 static inline void keeper_send_pings (void) {
 
     // SEND PINGS
@@ -29,10 +11,10 @@ static inline void keeper_send_pings (void) {
 
                 const u64 now = get_current_ms();
 
-                __atomic_store_n(&path->pingSent, now, __ATOMIC_RELAXED);
+                __atomic_store_n(&path->asked, now, __ATOMIC_RELAXED);
 
                 const uint o =
-                    atomic_get(&path->pongReceived) == PR_CONNECTING ?
+                    atomic_get(&path->answered) == PR_CONNECTING ?
                         O_KEY_SYN :
                         O_KEY_PING;
 
@@ -67,7 +49,22 @@ static void keeper (struct timer_list* const timer) {
 
     for (node_s* node = knodes; node; node = node->next) {
 
-        keeper_assert_node;
+        ASSERT(!node_is_off(node));
+        ASSERT(*node->ptr == node);
+        ASSERT(node->info & N_CONNS_N);
+        ASSERT(node->info & N_MTU);
+        ASSERT(node->info & N_NAME);
+        ASSERT(node->mtu >= MTU_MIN);
+        ASSERT(node->mtu <= MTU_MAX);
+        ASSERT(node->connsN >= CONNS_MIN);
+        ASSERT(node->connsN <= CONNS_MAX);
+        ASSERT((node->info   & N_INFO) == node->info);
+        ASSERT((node->opaths & OPATHS) == node->opaths);
+        ASSERT((node->ipaths & IPATHS) == node->ipaths);
+        ASSERT((node->kpaths & KPATHS) == node->kpaths);
+        ASSERT((node->opaths & (node->kpaths * OPATH_0)) == node->opaths);
+        ASSERT((node->ipaths & (node->kpaths * IPATH_0)) == node->ipaths);
+        ASSERT(node->oVersions[O_KEY_PING] == I_KEY_PING);
 
 #ifdef CONFIG_XGW_BEEP // SITUACAO DESTE NODE, CONFORME OS PATHS
         uint stableWeights = 0, stableSum = 0;
@@ -142,12 +139,12 @@ static void keeper (struct timer_list* const timer) {
                     // TODO: FAZER ISSO A TODOS OS NODES-PATHS AO SETAR O SELF
                     // TODO: TEM QUE REPENSAR O CRYPTO DERIVATE, POIS SENAO SE MUDAR O SELF, TERA DE SETAR NOVAMENTE O SECRET
                     path->skel.x.src   = BE16(nodeSelf);
-                    path->pongReceived = PR_CONNECTING;
+                    path->answered = PR_CONNECTING;
                 } else {
                     printk("XGW: %s [%s]: LISTENING\n", node->name, path->name);
                     path->skel.type    = 0; //
-                    path->pongReceived = PR_LISTENING;
-                }   path->pingSent     = 0; // AINDA NAO CONSTRUI PING
+                    path->answered = PR_LISTENING;
+                }   path->asked     = 0; // AINDA NAO CONSTRUI PING
                     path->pseen[0]     = 0;
                     path->pseen[1]     = 0;
                     path->acks         = 0;
@@ -163,7 +160,7 @@ static void keeper (struct timer_list* const timer) {
 
             if (path->info & K_LISTEN) {
 
-                if (__atomic_load_n(&path->pongReceived, __ATOMIC_SEQ_CST) >= PR_CONNECTING) {
+                if (__atomic_load_n(&path->answered, __ATOMIC_SEQ_CST) >= PR_CONNECTING) {
 
                     if (path->info & P_SERVER)
                         printk("XGW: %s [%s]: ACCEPTED ON PHYS %s\n", node->name, path->name, path->skel.phys->name);
@@ -171,8 +168,8 @@ static void keeper (struct timer_list* const timer) {
                     path->info      ^= K_LISTEN | K_ESTABLISHED;
                     path->since      = now;
                     path->starts    += 1;
-             ASSERT(path->pingSent == 0);
-             ASSERT(path->pongReceived >= PR_CONNECTING); // PR_CONNECTING (CLIENT) | ??? (SERVER)
+             ASSERT(path->asked == 0);
+             ASSERT(path->answered >= PR_CONNECTING); // PR_CONNECTING (CLIENT) | ??? (SERVER)
                  // AT THIS POINT, THE PATH->SKEL WAS BUILT
                  //      a) FROM USER (CMD)
                  //      b) FROM IN (DISCOVER)
@@ -200,16 +197,16 @@ static void keeper (struct timer_list* const timer) {
                     goto _suspend;
                 }
 
-                const u64 pongReceived = atomic_get(&path->pongReceived);
+                const u64 answered = atomic_get(&path->answered);
 
-                if (((pongReceived > PR_CONNECTING ? pongReceived : path->since) + 1000ULL*path->timeout) < now) {
+                if (((answered > PR_CONNECTING ? answered : path->since) + 1000ULL*path->timeout) < now) {
                     // TIMED OUT WAITING FOR PONGS
                     printk("XGW: %s [%s]: TIMED OUT\n", node->name, path->name);
                     goto _suspend;
                 }
 
                 //
-                const u64 took = pongReceived - path->pingSent;
+                const u64 took = answered - path->asked;
 
                 // USE THE HALF, BECAUSE THIS TIME ELAPSED WAS TO GO AND GET BACK
                 u64   latency = (path->latency*2 + took/2) / 3;
@@ -222,7 +219,7 @@ static void keeper (struct timer_list* const timer) {
                 __atomic_store_n(&path->latency, (u16)latency, __ATOMIC_RELAXED);
 
                 // A SECOND ELAPSED
-                const u64 acks = ((u64)(took <= 2*(latency + path->latency_var)) << 63) | (path->acks >> 1);
+                const uint acks = ((u64)(took <= 2*(latency + path->latency_var)) << (ACKS_N - 1)) | (path->acks >> 1);
 
                 if (path->acks != acks) {
                     path->acks = acks;
@@ -231,11 +228,11 @@ static void keeper (struct timer_list* const timer) {
                     const char* str;
 
                     switch (acks) {
-                        case 0b0000000000000000000000000000000000000000000000000000000000000000ULL: str = "LOST";       break;
-                        case 0b1000000000000000000000000000000000000000000000000000000000000000ULL: str = "RECOVERING"; break;
-                        case 0b0111111111111111111111111111111111111111111111111111111111111111ULL: str = "UNSTABLE";   break;
-                        case 0b1111111111111111111111111111111111111111111111111111111111111111ULL: str = "STABLE";     break;
-                        default:                                                                    str = NULL;
+                        case 0b00000000000000000000000000000000U: str = "LOST";       break;
+                        case 0b10000000000000000000000000000000U: str = "RECOVERING"; break;
+                        case 0b01111111111111111111111111111111U: str = "UNSTABLE";   break;
+                        case 0b11111111111111111111111111111111U: str = "STABLE";     break;
+                        default:                                  str = NULL;
                     }
 
                     if (str)
@@ -244,10 +241,10 @@ static void keeper (struct timer_list* const timer) {
 
                 // DOS PIORES AOS MELHORES
                 opaths |= ( // bin(((1 << 12) - 1) << (64 - 12))
-                    ((u64)(acks >= 0b1111000000000000000000000000000000000000000000000000000000000000ULL) << (3*PATHS_N)) | // BASTA QUE ESTEJA FUNCIONANDO ENTAO
-                    ((u64)(acks >= 0b1111111000000000000000000000000000000000000000000000000000000000ULL) << (2*PATHS_N)) |
-                    ((u64)(acks >= 0b1111111111110000000000000000000000000000000000000000000000000000ULL) << (1*PATHS_N)) | // NOTE: THIS ONE SHOULD BE REPEATED
-                    ((u64)(acks >= 0b1111111111110000000000000000000000000000000000000000000000000000ULL) << (0*PATHS_N)) // TODO: REMOVE THIS REPETITION LIMITATION
+                    ((u64)(acks >= 0b11110000000000000000000000000000U) << (3*PATHS_N)) | // BASTA QUE ESTEJA FUNCIONANDO ENTAO
+                    ((u64)(acks >= 0b11111111000000000000000000000000U) << (2*PATHS_N)) |
+                    ((u64)(acks >= 0b11111111111111100000000000000000U) << (1*PATHS_N)) | // NOTE: THIS ONE SHOULD BE REPEATED
+                    ((u64)(acks >= 0b11111111111111100000000000000000U) << (0*PATHS_N)) // TODO: REMOVE THIS REPETITION LIMITATION
                 ) << pid;
             }
 

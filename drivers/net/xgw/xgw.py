@@ -10,7 +10,7 @@ import binascii
 import ipaddress
 
 NODE_NAME_SIZE = 32
-PATH_NAME_SIZE = 20
+PATH_NAME_SIZE = 32
 
 PORTS_N = 65536
 
@@ -39,6 +39,9 @@ PATHS_N = 16
 PATH_PORTS_N = 4
 NODE_NAME_SIZE = 32
 PATH_WEIGHT_MAX = 31
+
+PATH_TIMEOUT_MIN =     1
+PATH_TIMEOUT_MAX = 65535
 
 CMDS_N = 89
 CMD_ERRS_N = 78
@@ -704,8 +707,8 @@ while args:
                     COMM(CMD_NODE_SET_MTU, nid, U16(v))
                 case 'timeout':
                     v = int(v)
-                    assert 0 <= v <= 255
-                    COMM(CMD_PATH_SET_TIMEOUT, nid, pid, U8(v))
+                    assert PATH_TIMEOUT_MIN <= v <= PATH_TIMEOUT_MAX
+                    COMM(CMD_PATH_SET_TIMEOUT, nid, pid, U16(v))
                 case 'latency-min':
                     v = int(v)
                     assert 0 <= v <= 1000
