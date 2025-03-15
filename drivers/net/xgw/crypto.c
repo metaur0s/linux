@@ -105,10 +105,10 @@ u64 decrypt (const u64 K[K_LEN], u64* restrict pos, u64* restrict const end, u64
 
             E += F += G += H += x;
 
-            A += E += K[E % K_LEN];
-            B += F += K[F % K_LEN];
-            C += G += K[G % K_LEN];
-            D += H += K[H % K_LEN];
+            A += H += K[E % K_LEN];
+            B += G += K[F % K_LEN];
+            C += F += K[G % K_LEN];
+            D += E += K[H % K_LEN];
 
         } while (x >>= (24 + (x % 32)));
 
