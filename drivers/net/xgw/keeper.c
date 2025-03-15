@@ -125,11 +125,9 @@ static void keeper (struct timer_list* const timer) {
 
                     // TODO: PRECOMPUTE TCP CHECKSUM
                     // TODO: PRECOMPUTE UDP CHECKSUM (FOR IPV6)
-                    if (path_is_udp_tcp(path)) { // TODO: ALTERNAR TAMBEM O DPORT
-                        path->sPortIndex += 1;
-                        path->sPortIndex %= path->sPortsN;
-                        path->dPortIndex += path->sPortIndex == 0;
-                        path->dPortIndex %= path->dPortsN;
+                    if (path_is_udp_tcp(path)) {
+                        path->sPortIndex = ((uint)path->sPortIndex + 1                      ) % path->sPortsN;
+                        path->dPortIndex = ((uint)path->dPortIndex + (path->sPortIndex == 0)) % path->dPortsN;
                         // BOTH UDP AND TCP PORTS START ON TRANSPORT
                         hdr_udp_s* const udp = PKT_UDP(&path->skel);
                         udp->sport = BE16(path->sPorts[path->sPortIndex]);
