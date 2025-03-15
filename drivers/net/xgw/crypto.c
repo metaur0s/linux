@@ -4,8 +4,8 @@
 static inline u64   swap64 (const u64 x) { const uint q = popcount(x); return (x >> q) | (x << (64 - q)); }
 static inline u64 unswap64 (const u64 x) { const uint q = popcount(x); return (x << q) | (x >> (64 - q)); }
 
-#define ENC(x) (  swap64(  swap64(  swap64(  swap64(  swap64(  swap64(  swap64((x) + A) + B) + C) + D) + E) + F) + G) + H)
-#define DEC(x) (unswap64(unswap64(unswap64(unswap64(unswap64(unswap64(unswap64((x) - H) - G) - F) - E) - D) - C) - B) - A)
+#define ENC(x) (  swap64(  swap64(  swap64((x) + A) + B) + C) + D)
+#define DEC(x) (unswap64(unswap64(unswap64((x) - D) - C) - B) - A)
 
 static inline void __crypt_fetch_data (const u64* const pos, const u64* const end) {
 
@@ -54,18 +54,18 @@ u64 encrypt (const u64 K[K_LEN], u64* restrict pos, u64* restrict const end, u64
         // AVALANCHE OF ORIGINAL THROUGH KEYS
         // DONT LET THE ORIGINAL CONTROL THE ACCUMULATION AND LOOP
         // E FAZ O A AFETAR O H, ETC
-        x += ((A + C) ^ E) + G;
+        x += ((A + B) ^ C) + D;
 
         do {
 
             // RANDOMLY ADD THE PREVIOUS ORIG AND ALL THE KEYS
-            B += D += F += H += x;
+            E += F += G += H += x;
 
             // RANDOMLY ADD OUR CONSTANTS
-            B += A += K[B % K_LEN];
-            D += C += K[D % K_LEN];
-            F += E += K[F % K_LEN];
-            H += G += K[H % K_LEN];
+            A += E += K[E % K_LEN];
+            B += F += K[F % K_LEN];
+            C += G += K[G % K_LEN];
+            D += H += K[H % K_LEN];
 
             // THIS HAS 2 EFFECTS:
             //      1 - RANDOMIZES THE AMOUNT OF LOOP ITERATIONS
@@ -99,16 +99,16 @@ u64 decrypt (const u64 K[K_LEN], u64* restrict pos, u64* restrict const end, u64
 
     loop {
 
-        x += ((A + C) ^ E) + G;
+        x += ((A + B) ^ C) + D;
 
         do {
 
-            B += D += F += H += x;
+            E += F += G += H += x;
 
-            B += A += K[B % K_LEN];
-            D += C += K[D % K_LEN];
-            F += E += K[F % K_LEN];
-            H += G += K[H % K_LEN];
+            A += E += K[E % K_LEN];
+            B += F += K[F % K_LEN];
+            C += G += K[G % K_LEN];
+            D += H += K[H % K_LEN];
 
         } while (x >>= (24 + (x % 32)));
 
