@@ -125,10 +125,11 @@ struct path_s {
     u64 pseen[2];    // IN_PING -- LAST PING/PONG->TIME RECEIVED (HIS RAW TIME) - SO WE DON'T ACCEPT REPEATED/GOINGBACKS
 // RO (MOSTLY)
     u32 starts;      // KEEPER
-    u16 timeout;     // KEEPER -- EM SEGUNDOS
     u16 weight;      // KEEPER
     u16 weight_acks; // KEEPER
 // RO -- QUASE NAO USADO
+    char name [PATH_NAME_SIZE]; // 32
+    u16 timeout;     // KEEPER -- EM SEGUNDOS
     u8  tos;         // KEEPER / IN_DISCOVER
     u8  ttl;         // KEEPER / IN_DISCOVER
     u8  sPortIndex;  // KEEPER -- TODO: PRECISA DE UM "elatency EFFECTIVE LATENCY"
@@ -137,7 +138,6 @@ struct path_s {
     u8  dPortsN;     // KEEPER
     u16 sPorts [PATH_PORTS_N]; // 8 EM BIG ENDIAN
     u16 dPorts [PATH_PORTS_N]; // 8
-    char name [PATH_NAME_SIZE]; // 32
 // 112 -- IN READ, OUT READ, IN WRITE (ON RECEIVE PING, WHILE OUT IS DISABLED)
     pkt_s skel;
 };
