@@ -12,8 +12,8 @@ BUILD_ASSERT(sizeof(cmd_arg_addr6_t) == sizeof(((path_s*)NULL)->skel.encap_ip6.i
 BUILD_ASSERT(sizeof(cmd_arg_mac_t)   == sizeof(((path_s*)NULL)->skel.encap_eth.eth.dmac));
 BUILD_ASSERT(sizeof(cmd_arg_mac_t)   == sizeof(((path_s*)NULL)->skel.encap_eth.eth.smac));
 
-BUILD_ASSERT(sizeof(cmd_arg_addr4_t)       == 4);
-BUILD_ASSERT(sizeof(cmd_arg_addr6_t)       == 16);
+BUILD_ASSERT(sizeof(cmd_arg_addr4_t)       == sizeof(u32));
+BUILD_ASSERT(sizeof(cmd_arg_addr6_t)       == sizeof(u16)*8);
 BUILD_ASSERT(sizeof(cmd_arg_code_t)        == sizeof(u8));
 BUILD_ASSERT(sizeof(cmd_arg_connsN_t)      == sizeof(u32));
 BUILD_ASSERT(sizeof(cmd_arg_did_t)         == sizeof(u8));
@@ -67,6 +67,7 @@ BUILD_ASSERT(sizeof(cmd_arg_type_t)        == CMD_ARG_SIZE(type));
 BUILD_ASSERT((cmd_arg_timeout_t) PATH_TIMEOUT_MAX == PATH_TIMEOUT_MAX);
 BUILD_ASSERT((cmd_arg_nid_t)     NID_MAX          == NID_MAX);
 BUILD_ASSERT((cmd_arg_pid_t)     PID_MAX          == PID_MAX);
+BUILD_ASSERT((cmd_arg_code_t)    CMDS_N           == CMDS_N);
 
 //
 BUILD_ASSERT(sizeof(hdr_eth_s)  == 14);
