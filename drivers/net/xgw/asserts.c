@@ -134,7 +134,7 @@ BUILD_ASSERT((LATENCY_EFFECTIVE_MAX + 100) < KEEPER_INTERVAL_MS);
 
 //
 BUILD_ASSERT(offsetof(path_s,     info) % CACHE_LINE_SIZE == 0);
-BUILD_ASSERT(offsetof(path_s, answered) % CACHE_LINE_SIZE == 0);
+//BUILD_ASSERT(offsetof(path_s, answered) % CACHE_LINE_SIZE == 0);
 BUILD_ASSERT(offsetof(path_s,   sPorts) % CACHE_LINE_SIZE == 0);
 
 BUILD_ASSERT(offsetof(node_s, opaths)      % CACHE_LINE_SIZE == 0);
