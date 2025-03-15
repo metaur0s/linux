@@ -43,7 +43,7 @@ PATH_WEIGHT_MAX = 31
 PATH_TIMEOUT_MIN =     1
 PATH_TIMEOUT_MAX = 65535
 
-CMDS_N = 88
+CMDS_N = 87
 CMD_ERRS_N = 77
 
 # ALL UDP PORTS
@@ -99,7 +99,6 @@ UDP_PORTS_N = 65536
     CMD_PATH_SET_CLIENT,
     CMD_PATH_SET_SERVER,
     CMD_PATH_SET_TIMEOUT,
-    CMD_PATH_SET_RTT_MIN,
     CMD_PATH_SET_RTT_VAR,
     CMD_PATH_SET_DHCP,
     CMD_PATH_SET_PHYS,
@@ -297,7 +296,6 @@ CMD_CODES = (
     'PATH_SET_CLIENT',
     'PATH_SET_SERVER',
     'PATH_SET_TIMEOUT',
-    'PATH_SET_RTT_MIN',
     'PATH_SET_RTT_VAR',
     'PATH_SET_DHCP',
     'PATH_SET_PHYS',
@@ -705,14 +703,6 @@ while args:
                     v = int(v)
                     assert PATH_TIMEOUT_MIN <= v <= PATH_TIMEOUT_MAX
                     COMM(CMD_PATH_SET_TIMEOUT, nid, pid, U16(v))
-                case 'rtt-min':
-                    v = int(v)
-                    assert 0 <= v <= 1000
-                    COMM(CMD_PATH_SET_RTT_MIN, nid, pid, U16(v))
-                case 'rtt-max':
-                    v = int(v)
-                    assert 0 <= v <= 1000
-                    COMM(CMD_PATH_SET_RTT_MAX, nid, pid, U16(v))
                 case 'rtt-var':
                     v = int(v)
                     assert 0 <= v <= 1000

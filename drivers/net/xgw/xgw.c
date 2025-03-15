@@ -12,7 +12,7 @@
 
 #ifdef CONFIG_XGW_ASSERT
 #define ASSERT(c) ({ if (unlikely(!(c))) printk("XGW: %s:%d: ASSERT FAILED: %s\n", __FILE__, __LINE__, #c); })
-#elif 0
+#elif 1
 #define ASSERT(c) __attribute__((assume(c)))
 #else
 #define ASSERT(c) ({})

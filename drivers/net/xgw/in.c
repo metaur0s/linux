@@ -45,7 +45,6 @@ static noinline uint in_ping (node_s* const node, const skb_s* const skb, pkt_s*
         // OBS: O RTT AINDA PODE SER O INICIAL E NÃO O REAL
         // NOTE: ESTAMOS MISTURANDO TDIFF QUE É PER-NODE, COM O RTT QUE É PER-PATH.
         // NOTE: PATHS INICIALIZANDO VAO AFETAR O TDIFF, E ASSIM OS PATHS NÃO-INICIALIZADOS.
-        //if (ABS_DIFF((rtime + lag), RTIME(now, tdiff)) > (2000 + path->rtt_var/2))
         if (ABS_DIFF((rtime + lag), RTIME(now, tdiff)) > (8192 + path->iskew))
             // A IMPRECISÃO NÃO PODE SER TÃO GRANDE ASSIM
             return PSTATS_I_RTIME_SKEW;

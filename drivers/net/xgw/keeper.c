@@ -141,15 +141,15 @@ static void keeper (struct timer_list* const timer) {
                 } else {
                     printk("XGW: %s [%s]: LISTENING\n", node->name, path->name);
                     path->skel.type    = 0; //
-                    path->answered = PR_LISTENING;
-                }   path->asked     = 0; // AINDA NAO CONSTRUI PING
+                    path->answered     = PR_LISTENING;
+                }   path->asked        = 0; // AINDA NAO CONSTRUI PING
                     path->pseen[0]     = 0;
                     path->pseen[1]     = 0;
                     path->acks         = 0;
-                    path->cdown        = 8;
-                    path->iskew        = 8 * 512; // = 4 SECONDS
+                    path->cdown        = 16;
+                    path->iskew        = 16 * 256; // = 4 SECONDS
                     path->rtt          = RTT_MAX;
-                    path->olatency     = (RTT_MAX + RTT_VAR_MAX)/2 + 16;
+                 // path->olatency    == ?
                     path->info        ^= K_START | K_LISTEN;
              ASSERT(path->since == 0);
              ASSERT(path->node == node);
@@ -193,6 +193,9 @@ static void keeper (struct timer_list* const timer) {
 
             if (path->info & K_ESTABLISHED) {
 
+                ASSERT(path->rtt >= RTT_MIN);
+                ASSERT(path->rtt <= RTT_MAX);
+
                 if (!(path->skel.phys->flags & IFF_UP)) {
                     printk("XGW: %s [%s]: PHYS %s IS DOWN\n", node->name, path->name, path->skel.phys->name);
                     goto _suspend;
@@ -206,7 +209,7 @@ static void keeper (struct timer_list* const timer) {
                     goto _suspend;
                 }
 
-                uint rtt;
+                uint rtt, acks;
 
                 // SE NAO RECEBEU UM PONG, ESTE RTT SERÁ UM OVERFLOW
                 const uint took = answered - path->asked;
@@ -221,14 +224,13 @@ static void keeper (struct timer_list* const timer) {
                           rtt = RTT_MIN;
                     // SAVE THE NEW AVERAGE
                     if (path->cdown)
-                        __atomic_store_n(&path->iskew, (u16)(path->cdown-- * 512), __ATOMIC_RELAXED);
+                        __atomic_store_n(&path->iskew, (u16)(path->cdown-- * 256), __ATOMIC_RELAXED);
                     __atomic_store_n(&path->olatency, (u16)((rtt + path->rtt_var)/2 + 16), __ATOMIC_RELAXED);
                     __atomic_store_n(&path->rtt, (u16)rtt, __ATOMIC_RELAXED);
-                } else // THIS PING-PONG COULDN'T DETERMINE RTT
-                    rtt = path->rtt;
-
-                // A SECOND ELAPSED
-                const uint acks = ((u64)(took <= (rtt + path->rtt_var)) << (ACKS_N - 1)) | (path->acks >> 1);
+                    // A SECOND ELAPSED
+                    acks = (path->acks >> 1) | ((uint)(took <= (rtt + path->rtt_var)) << (ACKS_N - 1));
+                } else
+                    acks = (path->acks >> 1);
 
                 if (path->acks != acks) {
                     path->acks = acks;

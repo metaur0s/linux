@@ -28,7 +28,6 @@ typedef u8  cmd_arg_type_t;
 typedef u8  cmd_arg_weight_node_t;
 typedef u8  cmd_arg_weight_acks_t;
 typedef u16 cmd_arg_timeout_t;
-typedef u16 cmd_arg_rtt_t;
 typedef u16 cmd_arg_rtt_var_t;
 typedef u16 cmd_arg_ppp_session_t;
 
