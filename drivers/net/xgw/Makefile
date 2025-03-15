@@ -25,44 +25,19 @@ endif
 
 CFLAGS_xgw.o += -mpopcnt
 
-# TODO: CLANG NAO TEM ABM
-ifneq ($(CONFIG_CC_IS_CLANG),y)
-ifneq ($(CONFIG_XGW_ABM),)
-CFLAGS_xgw.o += -mabm
-endif
-endif
-
-#ifneq ($(CONFIG_XGW_TBM),)
-#CFLAGS_xgw.o += -mtbm
-#endif
-
-ifneq ($(CONFIG_XGW_FMA),)
-CFLAGS_xgw.o += -mfma
-endif
-
-ifneq ($(CONFIG_XGW_FMA4),)
-CFLAGS_xgw.o += -mfma4
-endif
-
-ifneq ($(CONFIG_XGW_F16C),)
-CFLAGS_xgw.o += -mf16c
-endif
+# -mabm
+# -mbmi
+# -mbmi2
+# -mf16c
+# -mfma
+# -mfma4
+# -mpclmul
+# -mtbm
 
 ifneq ($(CONFIG_XGW_RDRAND),)
 CFLAGS_xgw.o += -mrdrnd
 endif
 
-ifneq ($(CONFIG_XGW_PCLMUL),)
-CFLAGS_xgw.o += -mpclmul
-endif
-
-ifneq ($(CONFIG_XGW_BMI),)
-CFLAGS_xgw.o += -mbmi
-endif
-
-ifneq ($(CONFIG_XGW_BMI2),)
-CFLAGS_xgw.o += -mbmi2
-endif
 
 # -moutline-atomics
 # -mno-outline-atomics

@@ -5,38 +5,6 @@ menuconfig XGW
 
 if XGW
 
-    config    XGW_ABM
-        bool "XGW_ABM"
-        default n
-
-    config    XGW_TBM
-        bool "XGW_TBM"
-        default n
-
-    config    XGW_BMI
-        bool "XGW_BMI"
-        default n
-
-    config    XGW_BMI2
-        bool "XGW_BMI2"
-        default n
-
-    config    XGW_FMA
-        bool "XGW_FMA"
-        default n
-
-    config    XGW_FMA4
-        bool "XGW_FMA4"
-        default n
-
-    config    XGW_F16C
-        bool "XGW_F16C"
-        default n
-
-    config    XGW_PCLMUL
-        bool "XGW_PCLMUL"
-        default n
-
     config    XGW_ASSERT
         bool "XGW_ASSERT"
         default n
