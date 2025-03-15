@@ -146,7 +146,7 @@ static void keeper (struct timer_list* const timer) {
                     path->pseen[0]     = 0;
                     path->pseen[1]     = 0;
                     path->acks         = 0;
-                    path->latency      = path->latency_max;
+                    path->rtt          = path->rtt_max;
                     path->info        ^= K_START | K_LISTEN;
              ASSERT(path->since == 0);
              ASSERT(path->node == node);
@@ -203,21 +203,25 @@ static void keeper (struct timer_list* const timer) {
                     goto _suspend;
                 }
 
-                //
-                const u64 took = answered - path->asked;
+                // SE NAO RECEBEU UM PONG, ESTE RTT SERÁ UM OVERFLOW
+                const uint took = answered - path->asked;
 
-                // USE THE HALF, BECAUSE THIS TIME ELAPSED WAS TO GO AND GET BACK
-                u64   latency = (path->latency*2 + took/2) / 3;
-                // CAP TO CONFIGURED LIMITS
-                if   (latency > path->latency_max)
-                      latency = path->latency_max;
-                elif (latency < path->latency_min)
-                      latency = path->latency_min;
-
-                __atomic_store_n(&path->latency, (u16)latency, __ATOMIC_RELAXED);
+                uint rtt;
+                
+                if (took < 800) {
+                    // AVERAGE
+                          rtt = (path->rtt*3 + took*1) / 4;
+                    // CAP TO CONFIGURED LIMITS
+                    if   (rtt > path->latency_max)
+                          rtt = path->latency_max;
+                    elif (rtt < path->latency_min)
+                          rtt = path->latency_min;
+                    // SAVE THE NEW AVERAGE
+                    __atomic_store_n(&path->rtt, (u16)rtt, __ATOMIC_RELAXED);
+                } else    rtt = path->rtt;
 
                 // A SECOND ELAPSED
-                const uint acks = ((u64)(took <= 2*(latency + path->latency_var)) << (ACKS_N - 1)) | (path->acks >> 1);
+                const uint acks = ((u64)(took <= (rtt + path->rtt_var)) << (ACKS_N - 1)) | (path->acks >> 1);
 
                 if (path->acks != acks) {
                     path->acks = acks;
@@ -234,11 +238,11 @@ static void keeper (struct timer_list* const timer) {
                     }
 
                     if (str)
-                        printk("XGW: %s [%s]: %s WITH LATENCY %u\n", node->name, path->name, str, (uint)path->latency);
+                        printk("XGW: %s [%s]: %s WITH RTT %u +%u\n", node->name, path->name, str, (uint)path->rtt, (uint)path->rtt_var);
                 }
 
                 // DOS PIORES AOS MELHORES
-                opaths |= ( // bin(((1 << 12) - 1) << (64 - 12))
+                opaths |= (
                     ((u64)(acks >= 0b11110000000000000000000000000000U) << (3*PATHS_N)) | // BASTA QUE ESTEJA FUNCIONANDO ENTAO
                     ((u64)(acks >= 0b11111111000000000000000000000000U) << (2*PATHS_N)) |
                     ((u64)(acks >= 0b11111111111111100000000000000000U) << (1*PATHS_N)) | // NOTE: THIS ONE SHOULD BE REPEATED
