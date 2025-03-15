@@ -121,5 +121,5 @@ typedef struct net_device_ops net_device_ops_s;
         _b - _a ; \
 })
 
-#define atomic_get(ptr)      __atomic_load_n   (ptr,    __ATOMIC_RELAXED)
-#define atomic_set(ptr, v)   __atomic_store_n  (ptr, v, __ATOMIC_RELAXED)
+#define atomic_get(ptr)      __atomic_load_n (ptr,    __ATOMIC_RELAXED)
+#define atomic_set(ptr, v)   __atomic_store_n(ptr, v, __ATOMIC_RELAXED)
