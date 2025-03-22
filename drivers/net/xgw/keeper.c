@@ -44,6 +44,13 @@ static void keeper (struct timer_list* const timer)
 
 #ifdef CONFIG_HIGH_RES_TIMERS
     ASSERT(timer == &kTimer);
+//    { ktime_t period = KEEPER_INTERVAL_MS * NSEC_PER_MSEC;
+//        // TODO: The number of overruns are returned.
+//        hrtimer_forward_now(timer, period);
+//    }
+    hrtimer_add_expires_ns(timer, (u64)KEEPER_INTERVAL_MS * NSEC_PER_MSEC);
+#else
+    timer->expires = jiffies + KEEPER_INTERVAL_JIFFIES;
 #endif
 
 #ifdef CONFIG_XGW_BEEP
@@ -55,16 +62,6 @@ static void keeper (struct timer_list* const timer)
     unsigned long iflags;
 
     spin_lock_irqsave(&xlock, iflags);
-
-#ifdef CONFIG_HIGH_RES_TIMERS
-//    { ktime_t period = KEEPER_INTERVAL_MS * NSEC_PER_MSEC;
-//        // TODO: The number of overruns are returned.
-//        hrtimer_forward_now(timer, period);
-//    }
-    hrtimer_add_expires_ns(timer, (u64)KEEPER_INTERVAL_MS * NSEC_PER_MSEC);
-#else
-    timer->expires = jiffies + KEEPER_INTERVAL_JIFFIES;
-#endif
 
     const u64 now = get_current_ms();
 
@@ -394,5 +391,16 @@ _skip:
 #ifndef CONFIG_HIGH_RES_TIMERS
 static DEFINE_TIMER(kTimer, keeper);
 #endif
+
+static void keeper_launch (void) {
+#ifdef CONFIG_HIGH_RES_TIMERS
+    hrtimer_init(&kTimer, CLOCK_BOOTTIME, HRTIMER_MODE_REL);
+	kTimer.function = keeper;
+	hrtimer_start(&kTimer, ns_to_ktime(KEEPER_LAUNCH_DELAY_SECS * NSEC_PER_SEC), HRTIMER_MODE_REL);
+#else
+    kTimer.expires = jiffies + KEEPER_LAUNCH_DELAY_SECS * HZ;
+    add_timer(&kTimer);
+#endif
+}
 
 // TODO: CONFIRMAR QUE NAO ESTA REPETINDO O LINKING DO PING NO LINKED LIST

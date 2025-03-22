@@ -24,6 +24,8 @@
 #define KEEPER_INTERVAL_MS 900
 #define KEEPER_INTERVAL_JIFFIES ((9 * HZ) / 10)
 
+#define KEEPER_LAUNCH_DELAY_SECS 10
+
 // HASHEIA E AGRUPA POR INTERFACE INDEX
 // NOTE: SE MUDAR DE INTERFACE VAI TER QUE REMOVER DA LISTA PRIMEIRO, E SÓ DEPOIS JOGAR PARA OUTRO
 #define PING_QUEUES_N 8
@@ -227,14 +229,7 @@ static int __init xgw_init (void) {
 #endif
 
     // LAUNCH KEEPER
-#ifdef CONFIG_HIGH_RES_TIMERS
-    hrtimer_init(&kTimer, CLOCK_BOOTTIME, HRTIMER_MODE_REL);
-	kTimer.function = keeper;
-	hrtimer_start(&kTimer, ns_to_ktime(10*NSEC_PER_SEC), HRTIMER_MODE_REL);
-#else
-    kTimer.expires = jiffies + 10*HZ;
-    add_timer(&kTimer);
-#endif
+    keeper_launch();
 
     // EXPOSE CMD
     proc_create("xgw", 0600, NULL, &xgwProcOps);
