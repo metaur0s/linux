@@ -14,37 +14,12 @@
 // WE DARE TO REDO SOME THINGS HERE, SO IF WE INLINE, THOSE WILL BE SURPLEFUOUS.
 static noinline uint in_ping (node_s* const node, const skb_s* const skb, pkt_s* const pkt) {
 
-#if 1
-    {
-        static int volatile ctr = 0;
-
-        if (atomic_inc(&ctr) % 50 == 0) {
-
-            ktime_t ptime = skb->tstamp;
-            ktime_t gtime = ktime_get();
-            ktime_t rtime = ktime_get_real();
-            ktime_t btime = ktime_get_boottime();
-
-            printk("ktime_get() %d ktime_get_real() %d ktime_get_boottime() %d\n",
-                (gtime - ptime) <= (50*NSEC_PER_MSEC),
-                (rtime - ptime) <= (50*NSEC_PER_MSEC),
-                (btime - ptime) <= (50*NSEC_PER_MSEC)
-            );
-        }
-    }
-#endif
-
-    s64 tdiff;
+    s64 tdiff = __atomic_load_n(&node->tdiff, __ATOMIC_RELAXED);
 
     const u64 now = get_current_ms();
 
     ASSERT(now >= XTIME_MIN);
     ASSERT(now <= XTIME_MAX);
-
-    if ((now - __atomic_load_n(&node->tlast, __ATOMIC_SEQ_CST)) <= 30000)
-        tdiff = __atomic_load_n(&node->tdiff, __ATOMIC_SEQ_CST);
-    else // NOTE: ENTÃO SE A O TDIFF REAL FOR DE FATO 0, ENTAO ISSO ESTA ERRADO
-        tdiff = 0;
 
     ASSERT(tdiff >= TDIFF_MIN);
     ASSERT(tdiff <= TDIFF_MAX);
@@ -97,24 +72,17 @@ static noinline uint in_ping (node_s* const node, const skb_s* const skb, pkt_s*
 
     ping_receive(node, ping);
 
-    //
-    const uint npaths = popcount(atomic_get(&node->ipaths)) ?: 1;
-
-    ASSERT(npaths >= 1);
-    ASSERT(npaths <= PATHS_N);
-
-    // CALCULA EU MESMO
     // CONSIDERA O NOSSO TDIFF ATUAL, QUE SE NÃO FOR RECENTE, ESTÁ COMO 0, E O WEIGHT SERÁ CANCELADO NA DIVISÃO
-    // NOTE: ESTAMOS MISTURANDO TDIFF QUE É PER-NODE, COM O RTT QUE É PER-PATH.
-    // NOTE: PATHS INICIALIZANDO VAO AFETAR O TDIFF, E ASSIM OS PATHS NÃO-INICIALIZADOS.
-    // LEMBRANDO QUE VAMOS RECEBER ATE PATHS_N PONGS A CADA SEGUNDO, MAS QUE A CADA SEGUNDO QUEREMOS QUE AFETE SO 1/2
-    tdiff = ( tdiff*npaths + // (npaths*2 - 1) ?
-        // OBS.: CUIDADO COM ESTE LATENCY AQUI, POIS AINDA NAO FOI DESCOBERTO O REAL
+    tdiff = ( tdiff*4 + // (npaths*2 - 1) ?
+        // OBS.: CUIDADO COM ESTE LAG AQUI, POIS AINDA NAO FOI DESCOBERTO O REAL
+        // NOTE: ESTAMOS MISTURANDO TDIFF QUE É PER-NODE, COM O RTT QUE É PER-PATH.
+        // NOTE: PATHS INICIALIZANDO VAO AFETAR O TDIFF, E ASSIM OS PATHS NÃO-INICIALIZADOS.
         LTIME_DIFF_RTIME(now, rtime + lag) +
         // SE NIVELA AO PEER
-        LTIME_DIFF_RTIME(ltime, rtime) * (i != I_KEY_SYN)
-    ) / ((!!tdiff)*npaths + 1 + (i != I_KEY_SYN));
+        LTIME_DIFF_RTIME(ltime, rtime) * (i != I_KEY_SYN) * 2
+    ) / ((!!tdiff)*4 + 1 + (i != I_KEY_SYN)*2);
 
+    //
     __atomic_store_n(&node->tdiff, tdiff, __ATOMIC_SEQ_CST);
     __atomic_store_n(&node->tlast,   now, __ATOMIC_SEQ_CST);
 
@@ -325,6 +293,9 @@ _is_xgw:
                 if (0)
                     // LIMITAR A QUANTIDADE DE SYNS RECEBIVEIS A CADA KEEPER INTERVAL
                     ret_path(PSTATS_I_LISTENING_SYN_TOO_MANY);
+                if (ltime != atomic_get(&path->syn))
+                    // ELE NAO CONHECE NOSSO CODIGO
+                    ret_path(PSTATS_I_LISTENING_SYN_WRONG);
             } elif (i != I_KEY_PING)
                     // LISTENING SO RECEBE SYN E PING
                     ret_path(PSTATS_I_LISTENING_NOT_SYN_OR_PING);
@@ -341,8 +312,7 @@ _is_xgw:
                 ret_path(PSTATS_I_ESTABLISHED_SYN);
     }
 
-    // PACKET TYPE VS LTIME
-    if (i != I_KEY_SYN) { // TODO: <--- REORDENAR PARA PING, PONG, SYN
+    if (i != I_KEY_SYN)
         // NOTE: CONSIDERA QUE O PEER ESTIMOU NOSSO TIME A PARTIR DO RTT CALCULADO POR ELE, QUE PODE SER ATE RTT_MAX (E QUE ESTES SAO DIFERENTES DOS NOSSOS)
         // NOTE: CONSIDERA CLOCK SKELS LOCAL/REMOTE
         // NOTE: CONSIDERA QUE LEVOU UM LATENCY ATÉ CHEGAR AQUI
@@ -350,9 +320,6 @@ _is_xgw:
         if (ABS_DIFF(ltime + atomic_get(&path->rtt)/2, get_current_ms()) > atomic_get(&path->iskew))
             // ELE NAO CONHECE NOSSO TIME (OU TEM UM SKEW GRANDE)
             ret_path(PSTATS_I_LTIME_MISMATCH);
-    } elif (ltime != atomic_get(&path->syn))
-            // ELE NAO CONHECE NOSSO CODIGO
-            ret_path(PSTATS_I_LTIME_MISMATCH_SYN_OR_PONG);
 
     // DECRYPT
     if (pkt_decrypt(node, i, pkt, size) != hash)

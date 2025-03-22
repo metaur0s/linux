@@ -293,6 +293,22 @@ _skip:
 
         if (node->info & N_ON) {
             // SALVA
+
+            { // NOTE: ENTÃO SE A O TDIFF REAL FOR DE FATO 0, ENTAO ISSO ESTA ERRADO
+                s64 tdiff = __atomic_load_n(&node->tdiff, __ATOMIC_SEQ_CST);
+                u64 tlast = __atomic_load_n(&node->tlast, __ATOMIC_SEQ_CST);
+
+                ASSERT(tdiff >= TDIFF_MIN);
+                ASSERT(tdiff <= TDIFF_MAX);
+
+                const uintll lost = now - tlast;
+
+                if (lost > 32768) {
+                    printk("XGW: %s: LOST TDIFF AFTER %llu MS\n", node->name, lost);
+                    __atomic_compare_exchange_n(&node->tdiff, &tdiff, (s64)0, 0, __ATOMIC_RELAXED, __ATOMIC_RELAXED);
+                }
+            }
+
             if (node->opaths != opaths) {
 #ifdef CONFIG_XGW_NMAP
                 if (!opaths)
@@ -304,6 +320,7 @@ _skip:
 #endif
                 __atomic_store_n(&node->opaths, opaths, __ATOMIC_SEQ_CST);
             }
+
 #ifdef CONFIG_XGW_BEEP
             if (node->weights) {
                 // (0 ... 1) * BEEP MAX
@@ -312,6 +329,7 @@ _skip:
                     beep = q;
             }
 #endif
+
         } elif (nodes[node->nid] == node) {
             // VAI FORCAR UM INTERVALO SEM O IN/OUT ACESSAR O NODE
             // ALSO NEEDS A BREAK TIME FOR CHANGING COUNTERS
