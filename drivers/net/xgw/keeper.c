@@ -31,27 +31,10 @@ static inline void keeper_send_pings (void) {
     }
 }
 
-#ifdef CONFIG_HIGH_RES_TIMERS
-static struct hrtimer kTimer;
-#endif
+static void keeper (struct timer_list* const timer) {
 
-#ifdef CONFIG_HIGH_RES_TIMERS
-static enum hrtimer_restart keeper (struct hrtimer* const timer)
-#else
-static void keeper (struct timer_list* const timer)
-#endif
-{
-
-#ifdef CONFIG_HIGH_RES_TIMERS
-    ASSERT(timer == &kTimer);
-    { ktime_t period = KEEPER_INTERVAL_MS * NSEC_PER_MSEC;
-        // TODO: The number of overruns are returned.
-        hrtimer_forward_now(timer, period);
-    }
-//    hrtimer_add_expires_ns(timer, (u64)KEEPER_INTERVAL_MS * NSEC_PER_MSEC);
-#else
-    timer->expires = jiffies + KEEPER_INTERVAL_JIFFIES;
-#endif
+    // jiffies +
+    timer->expires += KEEPER_INTERVAL_JIFFIES;
 
 #ifdef CONFIG_XGW_BEEP
     uint beep = 0; // O OBJETIVO É BEEPAR CONFORME A SITUAÇÃO DO PIOR node
@@ -381,26 +364,9 @@ _skip:
     }
 #endif
 
-#ifdef CONFIG_HIGH_RES_TIMERS
-    return HRTIMER_RESTART;
-#else
     add_timer_on(timer, 0);
-#endif
 }
 
-#ifndef CONFIG_HIGH_RES_TIMERS
 static DEFINE_TIMER(kTimer, keeper);
-#endif
-
-static void keeper_launch (void) {
-#ifdef CONFIG_HIGH_RES_TIMERS
-    hrtimer_init(&kTimer, CLOCK_BOOTTIME, HRTIMER_MODE_REL);
-	kTimer.function = keeper;
-	hrtimer_start(&kTimer, ns_to_ktime(KEEPER_LAUNCH_DELAY_SECS * NSEC_PER_SEC), HRTIMER_MODE_REL);
-#else
-    kTimer.expires = jiffies + KEEPER_LAUNCH_DELAY_SECS * HZ;
-    add_timer(&kTimer);
-#endif
-}
 
 // TODO: CONFIRMAR QUE NAO ESTA REPETINDO O LINKING DO PING NO LINKED LIST

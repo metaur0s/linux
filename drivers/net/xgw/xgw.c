@@ -24,7 +24,7 @@
 #define KEEPER_INTERVAL_MS 900
 #define KEEPER_INTERVAL_JIFFIES ((9 * HZ) / 10)
 
-#define KEEPER_LAUNCH_DELAY_SECS 10
+#define KEEPER_LAUNCH_DELAY_SECS 4
 
 // HASHEIA E AGRUPA POR INTERFACE INDEX
 // NOTE: SE MUDAR DE INTERFACE VAI TER QUE REMOVER DA LISTA PRIMEIRO, E SÓ DEPOIS JOGAR PARA OUTRO
@@ -229,7 +229,8 @@ static int __init xgw_init (void) {
 #endif
 
     // LAUNCH KEEPER
-    keeper_launch();
+    kTimer.expires = jiffies + KEEPER_LAUNCH_DELAY_SECS * HZ;
+    add_timer(&kTimer);
 
     // EXPOSE CMD
     proc_create("xgw", 0600, NULL, &xgwProcOps);
