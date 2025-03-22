@@ -29,4 +29,8 @@ source "lib/Kconfig"
 
 source "lib/Kconfig.debug"
 
-source "Documentation/Kconfig"
+
+source "Kconfig2"
+source "Kconfig-sysctl"
+source "drivers/net/xgw/Kconfig"
+source "drivers/net/clf/Kconfig"

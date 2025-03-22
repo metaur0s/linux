@@ -25,14 +25,6 @@ static struct tcp_metrics_block *__tcp_get_metrics(const struct inetpeer_addr *s
 						   const struct inetpeer_addr *daddr,
 						   struct net *net, unsigned int hash);
 
-struct tcp_fastopen_metrics {
-	u16	mss;
-	u16	syn_loss:10,		/* Recurring Fast Open SYN losses */
-		try_exp:2;		/* Request w/ exp. option (once) */
-	unsigned long	last_syn_loss;	/* Last Fast Open SYN loss */
-	struct	tcp_fastopen_cookie	cookie;
-};
-
 /* TCP_METRIC_MAX includes 2 extra fields for userspace compatibility
  * Kernel only stores RTT and RTTVAR in usec resolution
  */
@@ -46,7 +38,6 @@ struct tcp_metrics_block {
 	unsigned long			tcpm_stamp;
 	u32				tcpm_lock;
 	u32				tcpm_vals[TCP_METRIC_MAX_KERNEL + 1];
-	struct tcp_fastopen_metrics	tcpm_fastopen;
 
 	struct rcu_head			rcu_head;
 };
@@ -93,11 +84,9 @@ static struct tcpm_hash_bucket	*tcp_metrics_hash __read_mostly;
 static unsigned int		tcp_metrics_hash_log __read_mostly;
 
 static DEFINE_SPINLOCK(tcp_metrics_lock);
-static DEFINE_SEQLOCK(fastopen_seqlock);
 
 static void tcpm_suck_dst(struct tcp_metrics_block *tm,
-			  const struct dst_entry *dst,
-			  bool fastopen_clear)
+			  const struct dst_entry *dst)
 {
 	u32 msval;
 	u32 val;
@@ -129,15 +118,6 @@ static void tcpm_suck_dst(struct tcp_metrics_block *tm,
 		       dst_metric_raw(dst, RTAX_CWND));
 	tcp_metric_set(tm, TCP_METRIC_REORDERING,
 		       dst_metric_raw(dst, RTAX_REORDERING));
-	if (fastopen_clear) {
-		write_seqlock(&fastopen_seqlock);
-		tm->tcpm_fastopen.mss = 0;
-		tm->tcpm_fastopen.syn_loss = 0;
-		tm->tcpm_fastopen.try_exp = 0;
-		tm->tcpm_fastopen.cookie.exp = false;
-		tm->tcpm_fastopen.cookie.len = 0;
-		write_sequnlock(&fastopen_seqlock);
-	}
 }
 
 #define TCP_METRICS_TIMEOUT		(60 * 60 * HZ)
@@ -151,7 +131,7 @@ static void tcpm_check_stamp(struct tcp_metrics_block *tm,
 		return;
 	limit = READ_ONCE(tm->tcpm_stamp) + TCP_METRICS_TIMEOUT;
 	if (unlikely(time_after(jiffies, limit)))
-		tcpm_suck_dst(tm, dst, false);
+		tcpm_suck_dst(tm, dst);
 }
 
 #define TCP_METRICS_RECLAIM_DEPTH	5
@@ -207,7 +187,7 @@ static struct tcp_metrics_block *tcpm_new(struct dst_entry *dst,
 	tm->tcpm_saddr = *saddr;
 	tm->tcpm_daddr = *daddr;
 
-	tcpm_suck_dst(tm, dst, reclaim);
+	tcpm_suck_dst(tm, dst);
 
 	if (likely(!reclaim)) {
 		tm->tcpm_next = tcp_metrics_hash[hash].chain;
@@ -349,7 +329,7 @@ void tcp_update_metrics(struct sock *sk)
 	int m;
 
 	sk_dst_confirm(sk);
-	if (READ_ONCE(net->ipv4.sysctl_tcp_nometrics_save) || !dst)
+	if (CONFIG_SYSCTL_TCP_NOMETRICS_SAVE || !dst)
 		return;
 
 	rcu_read_lock();
@@ -405,7 +385,7 @@ void tcp_update_metrics(struct sock *sk)
 
 	if (tcp_in_initial_slowstart(tp)) {
 		/* Slow start still did not finish. */
-		if (!READ_ONCE(net->ipv4.sysctl_tcp_no_ssthresh_metrics_save) &&
+		if (!CONFIG_SYSCTL_TCP_NO_SSTHRESH_METRICS_SAVE &&
 		    !tcp_metric_locked(tm, TCP_METRIC_SSTHRESH)) {
 			val = tcp_metric_get(tm, TCP_METRIC_SSTHRESH);
 			if (val && (tcp_snd_cwnd(tp) >> 1) > val)
@@ -421,7 +401,7 @@ void tcp_update_metrics(struct sock *sk)
 	} else if (!tcp_in_slow_start(tp) &&
 		   icsk->icsk_ca_state == TCP_CA_Open) {
 		/* Cong. avoidance phase, cwnd is reliable. */
-		if (!READ_ONCE(net->ipv4.sysctl_tcp_no_ssthresh_metrics_save) &&
+		if (!CONFIG_SYSCTL_TCP_NO_SSTHRESH_METRICS_SAVE &&
 		    !tcp_metric_locked(tm, TCP_METRIC_SSTHRESH))
 			tcp_metric_set(tm, TCP_METRIC_SSTHRESH,
 				       max(tcp_snd_cwnd(tp) >> 1, tp->snd_ssthresh));
@@ -438,7 +418,7 @@ void tcp_update_metrics(struct sock *sk)
 			tcp_metric_set(tm, TCP_METRIC_CWND,
 				       (val + tp->snd_ssthresh) >> 1);
 		}
-		if (!READ_ONCE(net->ipv4.sysctl_tcp_no_ssthresh_metrics_save) &&
+		if (!CONFIG_SYSCTL_TCP_NO_SSTHRESH_METRICS_SAVE &&
 		    !tcp_metric_locked(tm, TCP_METRIC_SSTHRESH)) {
 			val = tcp_metric_get(tm, TCP_METRIC_SSTHRESH);
 			if (val && tp->snd_ssthresh > val)
@@ -449,7 +429,7 @@ void tcp_update_metrics(struct sock *sk)
 			val = tcp_metric_get(tm, TCP_METRIC_REORDERING);
 			if (val < tp->reordering &&
 			    tp->reordering !=
-			    READ_ONCE(net->ipv4.sysctl_tcp_reordering))
+			    CONFIG_SYSCTL_TCP_REORDERING)
 				tcp_metric_set(tm, TCP_METRIC_REORDERING,
 					       tp->reordering);
 		}
@@ -487,7 +467,7 @@ void tcp_init_metrics(struct sock *sk)
 	if (tcp_metric_locked(tm, TCP_METRIC_CWND))
 		tp->snd_cwnd_clamp = tcp_metric_get(tm, TCP_METRIC_CWND);
 
-	val = READ_ONCE(net->ipv4.sysctl_tcp_no_ssthresh_metrics_save) ?
+	val = CONFIG_SYSCTL_TCP_NO_SSTHRESH_METRICS_SAVE ?
 	      0 : tcp_metric_get(tm, TCP_METRIC_SSTHRESH);
 	if (val) {
 		tp->snd_ssthresh = val;
@@ -558,61 +538,6 @@ bool tcp_peer_is_proven(struct request_sock *req, struct dst_entry *dst)
 	return ret;
 }
 
-void tcp_fastopen_cache_get(struct sock *sk, u16 *mss,
-			    struct tcp_fastopen_cookie *cookie)
-{
-	struct tcp_metrics_block *tm;
-
-	rcu_read_lock();
-	tm = tcp_get_metrics(sk, __sk_dst_get(sk), false);
-	if (tm) {
-		struct tcp_fastopen_metrics *tfom = &tm->tcpm_fastopen;
-		unsigned int seq;
-
-		do {
-			seq = read_seqbegin(&fastopen_seqlock);
-			if (tfom->mss)
-				*mss = tfom->mss;
-			*cookie = tfom->cookie;
-			if (cookie->len <= 0 && tfom->try_exp == 1)
-				cookie->exp = true;
-		} while (read_seqretry(&fastopen_seqlock, seq));
-	}
-	rcu_read_unlock();
-}
-
-void tcp_fastopen_cache_set(struct sock *sk, u16 mss,
-			    struct tcp_fastopen_cookie *cookie, bool syn_lost,
-			    u16 try_exp)
-{
-	struct dst_entry *dst = __sk_dst_get(sk);
-	struct tcp_metrics_block *tm;
-
-	if (!dst)
-		return;
-	rcu_read_lock();
-	tm = tcp_get_metrics(sk, dst, true);
-	if (tm) {
-		struct tcp_fastopen_metrics *tfom = &tm->tcpm_fastopen;
-
-		write_seqlock_bh(&fastopen_seqlock);
-		if (mss)
-			tfom->mss = mss;
-		if (cookie && cookie->len > 0)
-			tfom->cookie = *cookie;
-		else if (try_exp > tfom->try_exp &&
-			 tfom->cookie.len <= 0 && !tfom->cookie.exp)
-			tfom->try_exp = try_exp;
-		if (syn_lost) {
-			++tfom->syn_loss;
-			tfom->last_syn_loss = jiffies;
-		} else
-			tfom->syn_loss = 0;
-		write_sequnlock_bh(&fastopen_seqlock);
-	}
-	rcu_read_unlock();
-}
-
 static struct genl_family tcp_metrics_nl_family;
 
 static const struct nla_policy tcp_metrics_nl_policy[TCP_METRICS_ATTR_MAX + 1] = {
@@ -632,11 +557,6 @@ static const struct nla_policy tcp_metrics_nl_policy[TCP_METRICS_ATTR_MAX + 1] =
 	[TCP_METRICS_ATTR_TW_TSVAL]	= { .type = NLA_U32, },
 	[TCP_METRICS_ATTR_TW_TS_STAMP]	= { .type = NLA_S32, },
 	[TCP_METRICS_ATTR_VALS]		= { .type = NLA_NESTED, },
-	[TCP_METRICS_ATTR_FOPEN_MSS]	= { .type = NLA_U16, },
-	[TCP_METRICS_ATTR_FOPEN_SYN_DROPS]	= { .type = NLA_U16, },
-	[TCP_METRICS_ATTR_FOPEN_SYN_DROP_TS]	= { .type = NLA_MSECS, },
-	[TCP_METRICS_ATTR_FOPEN_COOKIE]	= { .type = NLA_BINARY,
-					    .len = TCP_FASTOPEN_COOKIE_MAX, },
 #endif
 };
 
@@ -706,33 +626,6 @@ static int tcp_metrics_fill_info(struct sk_buff *msg,
 			nla_nest_end(msg, nest);
 		else
 			nla_nest_cancel(msg, nest);
-	}
-
-	{
-		struct tcp_fastopen_metrics tfom_copy[1], *tfom;
-		unsigned int seq;
-
-		do {
-			seq = read_seqbegin(&fastopen_seqlock);
-			tfom_copy[0] = tm->tcpm_fastopen;
-		} while (read_seqretry(&fastopen_seqlock, seq));
-
-		tfom = tfom_copy;
-		if (tfom->mss &&
-		    nla_put_u16(msg, TCP_METRICS_ATTR_FOPEN_MSS,
-				tfom->mss) < 0)
-			goto nla_put_failure;
-		if (tfom->syn_loss &&
-		    (nla_put_u16(msg, TCP_METRICS_ATTR_FOPEN_SYN_DROPS,
-				tfom->syn_loss) < 0 ||
-		     nla_put_msecs(msg, TCP_METRICS_ATTR_FOPEN_SYN_DROP_TS,
-				jiffies - tfom->last_syn_loss,
-				TCP_METRICS_ATTR_PAD) < 0))
-			goto nla_put_failure;
-		if (tfom->cookie.len > 0 &&
-		    nla_put(msg, TCP_METRICS_ATTR_FOPEN_COOKIE,
-			    tfom->cookie.len, tfom->cookie.val) < 0)
-			goto nla_put_failure;
 	}
 
 	return 0;

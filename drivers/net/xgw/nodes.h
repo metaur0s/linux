@@ -1,0 +1,253 @@
+
+//
+#define CONNS_MIN CONFIG_XGW_CONNS_MIN
+#define CONNS_MAX CONFIG_XGW_CONNS_MAX
+
+//
+#define CONNS_SIZE(connsN) ((connsN) * sizeof(u64))
+
+//
+#define NODE_NAME_SIZE 32
+#define PATH_NAME_SIZE 32 // "super-ISP-1-ip6-udp\0"
+
+//
+#define NODES_N 65536
+
+// MANY PATHS ARE GOOD FOR:
+//  - TRAFFIC SHAPING
+//  - TRAFFIC RATING (ISP WON'T SEE A SINGLE CONNECTION WITH TOO MANY SPEED/CUMULATIVE USAGE)
+//  - MORE SECURITY (MORE CODES USED) --- NOT ANYMORE
+//  - MORE SECURITY (MORE KEYS GENERATED)
+//  - MORE SECURITY (MORE KEYS GENERATED THUS EXPIRATION IS FASTER)
+//  - RESILIENCY AGAINST BROKEN PATHS
+//  - NIC HASHING
+//  - RECEIVE CAN BE DISTRIBUTED TO MORE CPUS
+#define PATHS_N 16
+
+//
+#define NID_MAX (NODES_N - 1)
+#define PID_MAX (PATHS_N - 1)
+
+//
+#define PATH_PORTS_N 4
+
+// TODO: ASSERT( (typeof(path->weight))PATH_WEIGHT_MAX == PATH_WEIGHT_MAX )
+// TODO: ASSERT( (typeof(node->weights))(PATH_WEIGHT_MAX * PATHS_N) == (PATH_WEIGHT_MAX * PATHS_N) )
+#define PATH_WEIGHT_MAX 255
+
+// HOW MANY ACKS IN HISTORY (WORD LENGTH)
+#define ACKS_N 32
+
+// NODE INFO
+#define N_ON      (1U << 0)
+#define N_NAME    (1U << 1)
+#define N_MTU     (1U << 2)
+#define N_CONNS_N (1U << 3)
+#define N_SECRET  (1U << 4)
+#define N_INFO   ((1U << 5) - 1)
+
+// PATH STATUS/INFO
+#define P_ON                  (1U <<  0)
+#define P_CLIENT              (1U <<  1)
+#define P_SERVER              (1U <<  2)
+#define P_PHYS                (1U <<  3)
+#define P_MAC_SRC             (1U <<  4)
+#define P_MAC_DST             (1U <<  5)
+#define P_ADDR_SRC            (1U <<  6)
+#define P_ADDR_DST            (1U <<  7)
+#define P_PORT_SRC            (1U <<  8)
+#define P_PORT_DST            (1U <<  9)
+#define P_TOS                 (1U << 10)
+#define P_TTL                 (1U << 11)
+#define P_VPROTO              (1U << 12)
+#define P_VID                 (1U << 13)
+#define P_RTT_VAR             (1U << 14)
+#define P_TIMEOUT             (1U << 15)
+#define P_NAME                (1U << 16)
+#define P_DHCP                (1U << 17)
+#define P_DHCP_MAC_DST_SERVER (1U << 18)
+#define P_DHCP_MAC_DST_GW     (1U << 19)
+#define P_EXIST               (1U << 20)
+// TODO: P_INFO_WEIGHT_NODE
+// TODO: P_INFO_WEIGHT_ACKS
+#define P_INFO               ((1U << 21) - 1)
+#define K_START               (1U << 21)
+#define K_SUSPEND             (1U << 22)
+#define K_SUSPENDING          (1U << 23)
+#define K_LISTEN              (1U << 24) // TODO: RENAME TO K_DISCOVERING
+#define K_ESTABLISHED         (1U << 25) // TODO: RENAME TO K_PINGING
+#define P_ALL                ((1U << 26) - 1)
+
+// P_VPROTO -> NOTE: IT IS THE ETH->PROTO, NOT THE VLAN->PROTO
+
+// INFORMACOES QUE SAO PERDIDAS AO MUDAR O TIPO DE ENCAPSULAMENTO
+// TODO: P_DHCP ?
+#define __P_TYPE_CLR (P_MAC_SRC | P_MAC_DST | P_ADDR_SRC | P_ADDR_DST | P_VPROTO | P_VID | P_DHCP)
+
+#define RTT_MAX 768
+
+#define RTT_VAR_MIN   2
+#define RTT_VAR_MAX 256
+
+// NOTE: NAO ADIANTA SER MUITO LONGO POIS OS KEYS PODEM ACABAR SENDO INUTILIZADOS
+// NOTE: NAO ADIANTA SER LONGO POIS FICARA UM TEMPAO TRAVADO (SERVER)
+// NOTE: NAO ADIANTA SER LONGO POIS FICARA UM TEMPAO TRAVADO (CLIENT)
+#define PATH_TIMEOUT_MIN  15000
+#define PATH_TIMEOUT_MAX  65500
+
+// 0.25 sec - 3 sec
+#define PATH_ISKEW_MIN  256
+#define PATH_ISKEW_STEP 128
+#define PATH_ISKEW_MAX 3072
+
+//
+#define PATH_SIZE 256
+
+struct path_s {
+// 64 -- KEEPER
+    u32 info;        // KEEPER
+    u32 acks;        // KEEPER -- HISTORY
+    u16 reserved16;  // KEEPER
+    u16 iskew;       // KEEPER (WRITE) / IN (READ) --
+    u16 rtt_var;     // KEEPER / IN
+    u16 rtt;         // KEEPER / IN / OUT <<---- VAI TER QUE ENFIAR ESSA PORRA (rtt + rtt_var) ENTÃO DENTRO DO CACHE LINE DO SKEL
+    u64 asked;       // KEEPER -- WHEN I ASKED - PARA MEDIR O RTT
+    node_s* node;    // KEEPER_SEND_PINGS
+    path_s* next;    // KEEPER_SEND_PINGS -- NA LISTA DE PINGS - ONLY VALID WHEN PATH STATUS >= K_UNSTABLE
+// KEEPER / IN
+    u64 answered;    // KEEPER (READ) / IN_PING (WRITE) -- WHEN I RECEIVED ANSWER - PARA PARA MEDIR O RTT E SABER QUE A CONEXÃO ESTÁ VIVA
+    u64 pseen[2];    // IN_PING -- LAST PING/PONG->TIME RECEIVED (HIS RAW TIME) - SO WE DON'T ACCEPT REPEATED/GOINGBACKS
+// RO (MOSTLY)
+    u64 syn;         // KEEPER_SEND_PINGS / IN -- O PKT->TIME QUE O CLIENTE VAI USAR, ENQUANTO NAO DESCOBRE ELE
+    u64 since;       // KEEPER
+    u32 starts;      // KEEPER
+    u16 weight;      // KEEPER
+    u16 weight_acks; // KEEPER
+// RO -- QUASE NAO USADO
+    char name [PATH_NAME_SIZE]; // 32
+    u16 sPorts [PATH_PORTS_N]; // 8 EM BIG ENDIAN
+    u16 dPorts [PATH_PORTS_N]; // 8
+    u8  sPortIndex:4, sPortsN:4;
+    u8  dPortIndex:4, dPortsN:4;
+    u8  tos;         // KEEPER / IN_DISCOVER
+    u8  ttl;         // KEEPER / IN_DISCOVER
+    u16 timeout;     // KEEPER -- EM SEGUNDOS
+    u16 olatency;    // KEEPER (WRITE) / OUT (READ) -- (RTT + RTT_VAR)/2 + CPU TIME + IMPRECISION
+// 112 -- IN READ, OUT READ, IN WRITE (ON RECEIVE PING, WHILE OUT IS DISABLED)
+    pkt_s skel;
+};
+
+// A ARRAY DE INPUT É PARA AGUENTAR DEMORA/PERDA DE PACOTES
+// A CADA INTERVALO SAO ENVIADOS UM PING POR PATH *ATIVO*
+#define I_KEYS_ALL     256
+#define I_KEYS_DYNAMIC 253 // NAO TEM QUE CONSIDERAR O OVERFLOW POIS NO KEEPER NAO PRECISA SER ATOMIC
+#define I_KEY_PING     253
+#define I_KEY_PONG     254 // TEM QUE CABER E PREENCHER O PKT->VERSION
+#define I_KEY_SYN      255
+#define I_KEY_MAX      255
+
+// A ARRAY DE OUTPUT É PARA NAO PRECISAR DE LOCK
+#define O_KEYS_ALL     11
+#define O_KEYS_DYNAMIC  8 // TEM QUE SER DAR OVERFLOW CONFORME NODE->OCYCLE
+#define O_KEY_PING      8
+#define O_KEY_PONG      9
+#define O_KEY_SYN      10
+#define O_KEY_MAX      10
+
+//
+#define OPATH_0 0x0001000100010001ULL
+#define IPATH_0 0x0001U
+#define KPATH_0 0x0001U
+
+#define OPATHS  0xFFFFFFFFFFFFFFFFULL
+#define IPATHS  0xFFFFU
+#define KPATHS  0xFFFFU
+
+#define OPATH(pid) (OPATH_0 << (pid))
+#define IPATH(pid) (IPATH_0 << (pid))
+#define KPATH(pid) (KPATH_0 << (pid))
+
+// FOR THE NODE
+#define NODE_WEIGHTS_MAX (PATHS_N * PATH_WEIGHT_MAX)
+
+// TODO: USE ATTRIBUTES ALIGNMENT CACHE
+// THIS IS NOT CLEARED ON START
+#define NODE_SIZE_INIT offsetof(node_s, oKeys)
+
+struct node_s { // DEIXA TUDO NO MESMO CACHE LINE PARA A ITERACAO DO KEEPER
+// 64 -- KEEPER / IN / OUT
+    u64 opaths; // PATHS ALLOWED TO OUT
+    u16 kpaths; // PATHS TO KEEP
+    u16 ipaths; // PATHS ALLOWED TO IN
+    u16 mtu;
+    u16 weights;
+    u64* conns; // JIFFIES (60) | PID (4) -- GROUPS OF CONNECTIONS WITH SAME HASH
+    u32 connsN; // O OUT PRECISA DISSO  ((((1 << node->order) * PAGE_SIZE) - offsetof(node_s, conns)) / sizeof(conn_s))
+    u32 iCycle; // NOTE: O OVERFLOW VAI SER AOS BILHOES
+    u8  oCycle; // O OVERFLOW TEM QUE SER MULTIPLO DE O_KEYS_DYNAMIC
+    u8  oIndex; // QUAL SERA USADO PARA ENCRIPTAR
+    u8  oVersions [O_KEYS_ALL];
+    u8 info;
+    u16 reserved16;
+    s64 tdiff;
+    u64 tlast; //
+// 32 -- RO - KEEPER/CMD
+    u16 nid;
+#ifdef CONFIG_XGW_NMAP
+    u16 gw;
+#else
+    u16 _gw;
+#endif
+    u32 reserved32;
+    node_s** ptr;
+    node_s* next;
+    net_device_s* dev; // TODO: USA MUITO NO IN, E TALVEZ NO OUT E NO CMD
+// 32 -- RO - NAME
+    char name [NODE_NAME_SIZE];
+// 128 --
+    u64 syns [PATHS_N]; // THE DEFAULT ONES
+// 4096 -- PATHS
+    path_s paths [PATHS_N];
+// 8192 --
+    volatile stat_s pstats [PATHS_N] [32];
+// ---------------------- NODE_SIZE_INIT -----------------------------
+// -- KEEPER/OUT READ, IN WRITE
+    u64 oKeys [O_KEYS_ALL] [K_LEN];
+// -- IN READ, KEEPER WRITE
+    u64 iKeys [I_KEYS_ALL] [K_LEN];
+// -- RO
+    u64 secret [SECRET_KEYS_N] [K_LEN]; // TODO: PARA SER DINAMICO, TERA QUE RESETAR TAMBEM O node->paths[*].pstats
+};
+
+#define node_is_off(node)  (((uintptr_t)(node)) & 1)
+
+#define nodes_set_on(nid, node)  __atomic_store_n(&nodes[nid], node, __ATOMIC_SEQ_CST)
+#define nodes_set_off(nid, node) __atomic_store_n(&nodes[nid], (node_s*)((uintptr_t)(node) | 1), __ATOMIC_SEQ_CST)
+
+// GETS A NODE WHILE THE LOCK IS NOT HOLD
+// NOTE: CALLER MUST THEN HANDLE THE OFF BIT
+#define nodes_get_unlocked(nid) __atomic_load_n(&nodes[nid], __ATOMIC_SEQ_CST)
+
+// GETS A NODE WHILE THE LOCK IS HOLD, WITH THE STATUS
+// NOTE: CALLER MUST THEN HANDLE THE OFF BIT
+#define nodes_get_locked_suspended(nid) (nodes[nid])
+
+// GETS A NODE WHILE THE LOCK IS HOLD, WITHOUT THE STATUS
+#if 1
+#define nodes_get_locked_unsuspended(nid) ((node_s*)((uintptr_t)nodes[nid] & ~((uintptr_t)1)))
+#else
+#define nodes_get_locked_unsuspended(nid) ((node_s*)(((uintptr_t)nodes[nid] >> 1) << 1))
+#endif
+
+//
+#define path_is_eth(path)  (path->skel.type & __ETH)
+#define path_is_vlan(path) (path->skel.type & __VLAN)
+#define path_is_ppp(path)  (path->skel.type & __PPP)
+#define path_is_ip4(path)  (path->skel.type & __IP4)
+#define path_is_ip6(path)  (path->skel.type & __IP6)
+#define path_is_udp(path)  (path->skel.type & __UDP)
+#define path_is_tcp(path)  (path->skel.type & __TCP)
+
+#define path_is_udp_tcp(path) (path->skel.type & (__UDP | __TCP))
+
+#define PATH_ID(node, path) ((path) - (node)->paths)
