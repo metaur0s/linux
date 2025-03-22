@@ -73,7 +73,7 @@ static noinline uint in_ping (node_s* const node, const skb_s* const skb, pkt_s*
     ping_receive(node, ping);
 
     // CONSIDERA O NOSSO TDIFF ATUAL, QUE SE NÃO FOR RECENTE, ESTÁ COMO 0, E O WEIGHT SERÁ CANCELADO NA DIVISÃO
-    tdiff = ( tdiff*4 + // (npaths*2 - 1) ?
+    tdiff = ( tdiff*4 +
         // OBS.: CUIDADO COM ESTE LAG AQUI, POIS AINDA NAO FOI DESCOBERTO O REAL
         // NOTE: ESTAMOS MISTURANDO TDIFF QUE É PER-NODE, COM O RTT QUE É PER-PATH.
         // NOTE: PATHS INICIALIZANDO VAO AFETAR O TDIFF, E ASSIM OS PATHS NÃO-INICIALIZADOS.

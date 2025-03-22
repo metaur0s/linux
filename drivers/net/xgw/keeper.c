@@ -303,8 +303,9 @@ _skip:
 
                 const uintll lost = now - tlast;
 
-                if (lost > 32768) {
+                if (tlast && lost > 32768) {
                     printk("XGW: %s: LOST TDIFF AFTER %llu MS\n", node->name, lost);
+                    __atomic_store_n(&node->tlast, 0, __ATOMIC_SEQ_CST);
                     __atomic_compare_exchange_n(&node->tdiff, &tdiff, (s64)0, 0, __ATOMIC_RELAXED, __ATOMIC_RELAXED);
                 }
             }
