@@ -44,11 +44,11 @@ static void keeper (struct timer_list* const timer)
 
 #ifdef CONFIG_HIGH_RES_TIMERS
     ASSERT(timer == &kTimer);
-//    { ktime_t period = KEEPER_INTERVAL_MS * NSEC_PER_MSEC;
-//        // TODO: The number of overruns are returned.
-//        hrtimer_forward_now(timer, period);
-//    }
-    hrtimer_add_expires_ns(timer, (u64)KEEPER_INTERVAL_MS * NSEC_PER_MSEC);
+    { ktime_t period = KEEPER_INTERVAL_MS * NSEC_PER_MSEC;
+        // TODO: The number of overruns are returned.
+        hrtimer_forward_now(timer, period);
+    }
+//    hrtimer_add_expires_ns(timer, (u64)KEEPER_INTERVAL_MS * NSEC_PER_MSEC);
 #else
     timer->expires = jiffies + KEEPER_INTERVAL_JIFFIES;
 #endif
