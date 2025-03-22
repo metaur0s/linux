@@ -14,6 +14,26 @@
 // WE DARE TO REDO SOME THINGS HERE, SO IF WE INLINE, THOSE WILL BE SURPLEFUOUS.
 static noinline uint in_ping (node_s* const node, const skb_s* const skb, pkt_s* const pkt) {
 
+#if 1
+    {
+        static int volatile ctr = 0;
+
+        if (atomic_inc(&ctr) % 50 == 0) {
+
+            ktime_t ptime = skb->tstamp;
+            ktime_t gtime = ktime_get();
+            ktime_t rtime = ktime_get_real();
+            ktime_t btime = ktime_get_boottime();
+
+            printk("ktime_get() %d ktime_get_real() %d ktime_get_boottime() %d\n",
+                (gtime - ptime) <= (50*NSEC_PER_MSEC),
+                (rtime - ptime) <= (50*NSEC_PER_MSEC),
+                (btime - ptime) <= (50*NSEC_PER_MSEC)
+            );
+        }
+    }
+#endif
+
     s64 tdiff;
 
     const u64 now = get_current_ms();
