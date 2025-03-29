@@ -1,7 +1,7 @@
 
 #define ANSWERED_LISTENING  ((u64)0)
 #define ANSWERED_ACCEPTING  ((u64)1)
-#define ANSWERED_CONNECTING ((u64)900) // TEM QUE SER GRANDE SUFICIENTE PARA QUE ((path->answered - path->asked) > RTT)
+#define ANSWERED_CONNECTING ((u64)1200) // TEM QUE SER GRANDE SUFICIENTE PARA QUE ((path->answered - path->asked) > RTT_MAX)
 
 #define XTIME_MIN ((u64)(2048ULL))
 #define XTIME_MAX ((u64)(4ULL*12*31*24*3600*1000))
