@@ -115,7 +115,7 @@
 #define PATH_OADD_DEFAULT 64
 
 //
-#define PATH_SIZE 896
+#define PATH_SIZE 768
 
 struct path_s {
 // 64 -- KEEPER
@@ -151,8 +151,8 @@ struct path_s {
     u16 olatency;    // KEEPER (WRITE) / OUT (READ) -- (RTT + RTT_VAR)/2 + CPU TIME + IMPRECISION
 // 112 -- IN READ, OUT READ, IN WRITE (ON RECEIVE PING, WHILE OUT IS DISABLED)
     pkt_s skel;
-// 640
-    volatile stat_s stats [40];
+// 512
+    volatile stat_s stats [32];
 };
 
 // A ARRAY DE INPUT É PARA AGUENTAR DEMORA/PERDA DE PACOTES
