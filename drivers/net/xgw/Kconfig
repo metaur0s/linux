@@ -1,0 +1,100 @@
+
+menuconfig XGW
+    bool  "XGW"
+    default n
+
+if XGW
+
+    config    XGW_ASSERT
+        bool "XGW_ASSERT"
+        default n
+
+    config    XGW_DEBUG
+        bool "XGW_DEBUG"
+        default n
+
+if XGW_DEBUG
+
+    config    XGW_DEBUG_IDROP
+        bool "XGW_DEBUG_IDROP"
+        default n
+
+    config    XGW_DEBUG_ODROP
+        bool "XGW_DEBUG_ODROP"
+        default n
+
+endif
+
+    config    XGW_NMAP
+        bool "XGW_NMAP"
+        default n
+
+    config    XGW_GATEWAY
+        bool "XGW_GATEWAY"
+        default n
+
+    config    XGW_GATEWAY_TCP_PROXY
+        bool "XGW_GATEWAY_TCP_PROXY"
+        depends on XGW_GATEWAY
+        default n
+
+    config   XGW_GATEWAY_TCP_PROXY_PORT
+        int "XGW_GATEWAY_TCP_PROXY_PORT"
+        depends on XGW_GATEWAY_TCP_PROXY
+        default 80
+
+    config    XGW_RDRAND
+        bool "XGW_RDRAND"
+        default n
+
+    config    XGW_RDTSC
+        bool "XGW_RDTSC"
+        default y
+
+    config    XGW_BEEP
+        bool "XGW_BEEP"
+        default n
+
+    config   XGW_BEEP_BASE
+        int "XGW_BEEP_BASE"
+        default 2000
+        depends on XGW_BEEP
+
+    config   XGW_BEEP_MAX
+        int "XGW_BEEP_MAX"
+        default 2500
+        depends on XGW_BEEP
+
+    config XGW_CONNS_MIN
+      int "XGW_CONNS_MIN"
+        default 1
+
+    config XGW_CONNS_MAX
+      int "XGW_CONNS_MAX"
+        default 524288
+
+    config XGW_RANDOM_INIT_IPAIRS
+      hex "XGW_RANDOM_INIT_IPAIRS"
+        default 0x7f8e60fe040b73a1
+
+    config XGW_RANDOM_INIT_OPAIRS
+      hex "XGW_RANDOM_INIT_OPAIRS"
+        default 0xbd86b79f3de791dc
+
+    config XGW_RANDOM_ENCRYPT_SEED
+      hex "XGW_RANDOM_ENCRYPT_SEED"
+        default 0xb9f3acba3f6efdcf
+
+    config XGW_RANDOM_ENCRYPT_ALIGN
+      hex "XGW_RANDOM_ENCRYPT_ALIGN"
+        default 0x625185f5756462d8
+
+    config XGW_RANDOM_PING
+      hex "XGW_RANDOM_PING"
+        default 0x59114f654f2185ad
+
+    config XGW_RANDOM_INIT
+      hex "XGW_RANDOM_INIT"
+        default 0xb5bea7cb62e5ffd4
+
+endif
