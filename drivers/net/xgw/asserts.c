@@ -101,7 +101,7 @@ BUILD_ASSERT(sizeof(((node_s*)NULL)->oKeys)  == (O_KEYS_ALL * K_SIZE));
 BUILD_ASSERT(sizeof(((node_s*)NULL)->iKeys)  == (I_KEYS_ALL * K_SIZE));
 BUILD_ASSERT(sizeof(((node_s*)NULL)->secret) == (SECRET_KEYS_N * K_SIZE));
 BUILD_ASSERT(sizeof(((node_s*)NULL)->syns)   == 128);
-BUILD_ASSERT(sizeof(((node_s*)NULL)->paths)  == 14336);
+BUILD_ASSERT(sizeof(((node_s*)NULL)->paths)  == 12288);
 
 // -- NAO PRECISAREMOS CHECAR LIMITES, POIS NAO CABEM MESMO
 // -- E TEM QUE CABER TODOS
