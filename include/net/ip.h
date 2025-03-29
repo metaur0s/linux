@@ -384,7 +384,6 @@ static inline bool inet_port_requires_bind_service(struct net *net, unsigned sho
 {
 	return port < PROT_SOCK;
 }
-#endif
 
 __be32 inet_current_timestamp(void);
 

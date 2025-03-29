@@ -1,0 +1,10 @@
+--- include/uapi/linux/tcp.h	2025-03-21 18:07:40.000000000 -0300
++++ include/uapi/linux/tcp.h	2025-03-23 22:21:02.000000000 -0300
+@@ -131,7 +127,6 @@
+ #define TCP_AO_GET_KEYS		41	/* List MKT(s) */
+ #define TCP_AO_REPAIR		42	/* Get/Set SNEs and ISNs */
+ 
+-#define TCP_IS_MPTCP		43	/* Is MPTCP being used? */
+ 
+ #define TCP_REPAIR_ON		1
+ #define TCP_REPAIR_OFF		0

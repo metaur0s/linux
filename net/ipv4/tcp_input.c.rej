@@ -1,0 +1,30 @@
+--- net/ipv4/tcp_input.c	2025-03-21 18:07:40.000000000 -0300
++++ net/ipv4/tcp_input.c	2025-03-23 22:21:02.000000000 -0300
+@@ -5429,7 +5371,6 @@
+ 		else
+ 			__skb_queue_tail(&tmp, nskb); /* defer rbtree insertion */
+ 		skb_set_owner_r(nskb, sk);
+-		mptcp_skb_ext_move(nskb, skb);
+ 
+ 		/* Copy data, releasing collapsed skbs. */
+ 		while (copy > 0) {
+@@ -6628,19 +6451,6 @@
+ 
+ 	tcp_mstamp_refresh(tp);
+ 	tp->rx_opt.saw_tstamp = 0;
+-	req = rcu_dereference_protected(tp->fastopen_rsk,
+-					lockdep_sock_is_held(sk));
+-	if (req) {
+-		bool req_stolen;
+-
+-		WARN_ON_ONCE(sk->sk_state != TCP_SYN_RECV &&
+-		    sk->sk_state != TCP_FIN_WAIT1);
+-
+-		if (!tcp_check_req(sk, skb, req, true, &req_stolen)) {
+-			SKB_DR_SET(reason, TCP_FASTOPEN);
+-			goto discard;
+-		}
+-	}
+ 
+ 	if (!th->ack && !th->rst && !th->syn) {
+ 		SKB_DR_SET(reason, TCP_FLAGS);

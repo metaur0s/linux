@@ -1,0 +1,23 @@
+--- include/net/sock.h	2025-03-21 18:07:40.000000000 -0300
++++ include/net/sock.h	2025-03-23 22:21:02.000000000 -0300
+@@ -1282,9 +1280,6 @@
+ 	unsigned int		inuse_idx;
+ #endif
+ 
+-#if IS_ENABLED(CONFIG_MPTCP)
+-	int			(*forward_alloc_get)(const struct sock *sk);
+-#endif
+ 
+ 	bool			(*stream_memory_free)(const struct sock *sk, int wake);
+ 	bool			(*sock_is_readable)(struct sock *sk);
+@@ -1348,10 +1343,6 @@
+ 
+ static inline int sk_forward_alloc_get(const struct sock *sk)
+ {
+-#if IS_ENABLED(CONFIG_MPTCP)
+-	if (sk->sk_prot->forward_alloc_get)
+-		return sk->sk_prot->forward_alloc_get(sk);
+-#endif
+ 	return READ_ONCE(sk->sk_forward_alloc);
+ }
+ 

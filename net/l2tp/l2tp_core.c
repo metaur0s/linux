@@ -1298,7 +1298,7 @@ static int l2tp_xmit_core(struct l2tp_session *session, struct sk_buff *skb, uns
 				      &sk->sk_v6_daddr, udp_len);
 		else
 #endif
-			udp_set_csum(sk->sk_no_check_tx, skb, inet->inet_saddr,
+			udp_set_csum(1, skb, inet->inet_saddr,
 				     inet->inet_daddr, udp_len);
 		break;
 
@@ -1477,7 +1477,6 @@ static int l2tp_tunnel_sock_create(struct net *net,
 			udp_conf.family = AF_INET;
 			udp_conf.local_ip = cfg->local_ip;
 			udp_conf.peer_ip = cfg->peer_ip;
-			udp_conf.use_udp_checksums = cfg->use_udp_checksums;
 		}
 
 		udp_conf.local_udp_port = htons(cfg->local_udp_port);

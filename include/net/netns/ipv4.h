@@ -38,8 +38,6 @@ struct inet_timewait_death_row {
 	int			sysctl_max_tw_buckets;
 };
 
-struct tcp_fastopen_context;
-
 #ifdef CONFIG_IP_ROUTE_MULTIPATH
 struct sysctl_fib_multipath_hash_seed {
 	u32 user_seed;
@@ -47,6 +45,10 @@ struct sysctl_fib_multipath_hash_seed {
 };
 #endif
 
+#define CONFIG_SYSCTL_TCP_FIN_TIMEOUT      (CONFIG_SYSCTL_TCP_FIN_TIMEOUT_*HZ)      // TCP_FIN_TIMEOUT
+#define CONFIG_SYSCTL_TCP_KEEPALIVE_INTVL  (CONFIG_SYSCTL_TCP_KEEPALIVE_INTVL_*HZ)  // TCP_KEEPALIVE_INTVL
+#define CONFIG_SYSCTL_TCP_KEEPALIVE_TIME   (CONFIG_SYSCTL_TCP_KEEPALIVE_TIME_*HZ)   // TCP_KEEPALIVE_TIME
+#define CONFIG_SYSCTL_TCP_KEEPALIVE_PROBES (CONFIG_SYSCTL_TCP_KEEPALIVE_PROBES_*HZ) // TCP_KEEPALIVE_PROBES
 struct netns_ipv4 {
 	/* Cacheline organization can be found documented in
 	 * Documentation/networking/net_cachelines/netns_ipv4_sysctl.rst.
@@ -69,7 +71,7 @@ struct netns_ipv4 {
 
 	/* TXRX readonly hotpath cache lines */
 	__cacheline_group_begin(netns_ipv4_read_txrx);
-	u8 sysctl_tcp_moderate_rcvbuf;
+	u8 __klmknjsj;
 	__cacheline_group_end(netns_ipv4_read_txrx);
 
 	/* RX readonly hotpath cache line */
@@ -78,7 +80,7 @@ struct netns_ipv4 {
 	u8 sysctl_tcp_early_demux;
 	u8 sysctl_tcp_l3mdev_accept;
 	/* 3 bytes hole, try to pack */
-	int sysctl_tcp_reordering;
+	int __abcdefg;
 	int sysctl_tcp_rmem[3];
 	__cacheline_group_end(netns_ipv4_read_rx);
 
@@ -120,9 +122,6 @@ struct netns_ipv4 {
 	struct inet_peer_base	*peers;
 	struct fqdir		*fqdir;
 
-	u8 sysctl_icmp_echo_ignore_all;
-	u8 sysctl_icmp_echo_enable_probe;
-	u8 sysctl_icmp_echo_ignore_broadcasts;
 	u8 sysctl_icmp_ignore_bogus_error_responses;
 	u8 sysctl_icmp_errors_use_inbound_ifaddr;
 	int sysctl_icmp_ratelimit;
@@ -135,12 +134,9 @@ struct netns_ipv4 {
 	int ip_rt_mtu_expires;
 	int ip_rt_min_advmss;
 
-	struct local_ports ip_local_ports;
-
 	u8 sysctl_tcp_ecn;
 	u8 sysctl_tcp_ecn_fallback;
 
-	u8 sysctl_ip_default_ttl;
 	u8 sysctl_ip_no_pmtu_disc;
 	u8 sysctl_ip_fwd_update_priority;
 	u8 sysctl_ip_nonlocal_bind;
@@ -210,13 +206,7 @@ struct netns_ipv4 {
 	unsigned int sysctl_tcp_child_ehash_entries;
 	unsigned long sysctl_tcp_comp_sack_delay_ns;
 	unsigned long sysctl_tcp_comp_sack_slack_ns;
-	int sysctl_max_syn_backlog;
-	int sysctl_tcp_fastopen;
 	const struct tcp_congestion_ops __rcu  *tcp_congestion_control;
-	struct tcp_fastopen_context __rcu *tcp_fastopen_ctx;
-	unsigned int sysctl_tcp_fastopen_blackhole_timeout;
-	atomic_t tfo_active_disable_times;
-	unsigned long tfo_active_disable_stamp;
 	u32 tcp_challenge_timestamp;
 	u32 tcp_challenge_count;
 	u8 sysctl_tcp_plb_enabled;
@@ -229,7 +219,6 @@ struct netns_ipv4 {
 	int sysctl_udp_rmem_min;
 
 	u8 sysctl_fib_notify_on_flag_change;
-	u8 sysctl_tcp_syn_linear_timeouts;
 
 #ifdef CONFIG_NET_L3_MASTER_DEV
 	u8 sysctl_udp_l3mdev_accept;
@@ -244,12 +233,6 @@ struct netns_ipv4 {
 
 	atomic_t dev_addr_genid;
 
-	unsigned int sysctl_udp_child_hash_entries;
-
-#ifdef CONFIG_SYSCTL
-	unsigned long *sysctl_local_reserved_ports;
-	int sysctl_ip_prot_sock;
-#endif
 
 #ifdef CONFIG_IP_MROUTE
 #ifndef CONFIG_IP_MROUTE_MULTIPLE_TABLES
