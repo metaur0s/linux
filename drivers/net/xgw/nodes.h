@@ -35,8 +35,8 @@
 // TODO: ASSERT( (typeof(node->weights))(PATH_WEIGHT_MAX * PATHS_N) == (PATH_WEIGHT_MAX * PATHS_N) )
 #define PATH_WEIGHT_MAX 255
 
-// HOW MANY ACKS IN HISTORY (WORD LENGTH)
-#define ACKS_N 32
+// HOW MANY ACKS IN HISTORY (WORD WIDTH IN BITS)
+#define ACKS_N 64
 
 // NODE INFO
 #define N_ON      (1U << 0)
