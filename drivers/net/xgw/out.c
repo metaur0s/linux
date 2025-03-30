@@ -137,8 +137,8 @@ static netdev_tx_t out (skb_s* const skb, net_device_s* const dev) {
 
     const u64 _now = get_current_ms();
 
-    ASSERT(_now >= XTIME_MIN);
-    ASSERT(_now <= XTIME_MAX);
+    ASSERT(_now >= RTIME_MIN);
+    ASSERT(_now <= RTIME_MAX);
 
     path_s* path; u64 burst, burst_new; uint pid;
 

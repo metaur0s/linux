@@ -16,15 +16,15 @@ static noinline uint in_ping (node_s* const node, const skb_s* const skb, pkt_s*
     ASSERT(i == I_KEY_PING
         || i == I_KEY_PONG
         || i == I_KEY_SYN);
-    ASSERT(rtime >= XTIME_MIN);
-    ASSERT(rtime <= XTIME_MAX);
+    ASSERT(rtime >= PTIME_MIN);
+    ASSERT(rtime <= PTIME_MAX);
 
     path_s* const path = &node->paths[pid];
 
     const u64 now = path->mask + get_current_ms();
 
-    ASSERT(now >= (PMASK_MIN + XTIME_MIN));
-    ASSERT(now <= (PMASK_MAX + XTIME_MAX));
+    ASSERT(now >= PTIME_MIN);
+    ASSERT(now <= PTIME_MAX);
 
     s64 tdiff;
 
@@ -40,8 +40,8 @@ static noinline uint in_ping (node_s* const node, const skb_s* const skb, pkt_s*
 
     } else {
 
-        ASSERT(ltime >= XTIME_MIN);
-        ASSERT(ltime <= XTIME_MAX);
+        ASSERT(ltime >= PTIME_MIN);
+        ASSERT(ltime <= PTIME_MAX);
 
         // HIS RAW TIME MUST ADVANCE
         // SEPARATE PING AND PONG
@@ -49,8 +49,8 @@ static noinline uint in_ping (node_s* const node, const skb_s* const skb, pkt_s*
 
         u64 seen = atomic_get(ptr);
 
-        ASSERT(seen >= XTIME_MIN || seen == 0);
-        ASSERT(seen <= XTIME_MAX);
+        ASSERT(seen >= PTIME_MIN || seen == 0);
+        ASSERT(seen <= PTIME_MAX);
 
         // CONSIDERA QUE PODE TER PERDIDO ALGUNS PINGS
         if (seen && (rtime - seen) > 49152)
@@ -93,7 +93,7 @@ static noinline uint in_ping (node_s* const node, const skb_s* const skb, pkt_s*
 
     u64 answered = __atomic_load_n(&path->answered, __ATOMIC_SEQ_CST);
 
-    if (answered >= XTIME_MIN) {
+    if (answered >= PTIME_MIN) {
         // IF I AM A CLIENT, I ALREADY RECEIVED A PONG
         // IF I AM A SERVER, I ALREADY RECEIVED A SYN AND A SYN-ACK
 
@@ -286,7 +286,7 @@ _is_xgw:
     // SITUATION VS PACKET TYPE
     switch (atomic_get(&path->answered)) {
 
-        default: // >= XTIME_MIN
+        default: // >= PTIME_MIN
             if (i == I_KEY_SYN)
                 // ESTABLISHED RECEBE TUDO MENOS SYN
                 ret_path(PSTATS_I_ESTABLISHED_REFUSE_SYN);

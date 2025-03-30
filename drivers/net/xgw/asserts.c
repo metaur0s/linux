@@ -117,11 +117,11 @@ BUILD_ASSERT((typeof(((path_s*)NULL)->cdown))       RTT_VAR_STEPS    == RTT_VAR_
 BUILD_ASSERT((typeof(((path_s*)NULL)->oadd))        PATH_OADD_MAX    == PATH_OADD_MAX);
 BUILD_ASSERT((typeof(((path_s*)NULL)->acks))        ACKS_SERVER      == ACKS_SERVER);
 BUILD_ASSERT((typeof(((path_s*)NULL)->acks))        ACKS_CLIENT      == ACKS_CLIENT);
-BUILD_ASSERT((typeof(((path_s*)NULL)->since))       XTIME_MAX        == XTIME_MAX);
-BUILD_ASSERT((typeof(((path_s*)NULL)->asked))       XTIME_MAX        == XTIME_MAX);
-BUILD_ASSERT((typeof(((path_s*)NULL)->answered))    XTIME_MAX        == XTIME_MAX);
-BUILD_ASSERT((typeof(((path_s*)NULL)->pseen[0]))    XTIME_MAX        == XTIME_MAX);
-BUILD_ASSERT((typeof(((path_s*)NULL)->pseen[1]))    XTIME_MAX        == XTIME_MAX);
+BUILD_ASSERT((typeof(((path_s*)NULL)->since))       RTIME_MAX        == RTIME_MAX);
+BUILD_ASSERT((typeof(((path_s*)NULL)->asked))       PTIME_MAX        == PTIME_MAX);
+BUILD_ASSERT((typeof(((path_s*)NULL)->answered))    PTIME_MAX        == PTIME_MAX);
+BUILD_ASSERT((typeof(((path_s*)NULL)->pseen[0]))    PTIME_MAX        == PTIME_MAX);
+BUILD_ASSERT((typeof(((path_s*)NULL)->pseen[1]))    PTIME_MAX        == PTIME_MAX);
 BUILD_ASSERT((typeof(((path_s*)NULL)->tdiff))       TDIFF_MIN        == TDIFF_MIN);
 BUILD_ASSERT((typeof(((path_s*)NULL)->tdiff))       TDIFF_MAX        == TDIFF_MAX);
 BUILD_ASSERT((typeof(((path_s*)NULL)->info))        P_INFO           == P_INFO);
@@ -143,11 +143,11 @@ BUILD_ASSERT((typeof(((node_s*)NULL)->opaths))      OPATHS           == OPATHS);
 BUILD_ASSERT((typeof(((node_s*)NULL)->ipaths))      IPATHS           == IPATHS);
 BUILD_ASSERT((typeof(((node_s*)NULL)->info))        N_INFO           == N_INFO);
 BUILD_ASSERT((typeof(((ping_s*)NULL)->ver))         I_KEY_MAX        == I_KEY_MAX);
-BUILD_ASSERT((typeof(((ping_s*)NULL)->time))        XTIME_MAX        == XTIME_MAX);
+BUILD_ASSERT((typeof(((ping_s*)NULL)->time))        PTIME_MAX        == PTIME_MAX);
 BUILD_ASSERT((typeof(((hdr_x_s*)NULL)->src))        NID_MAX          == NID_MAX);
 BUILD_ASSERT((typeof(((hdr_x_s*)NULL)->dst))        NID_MAX          == NID_MAX);
 BUILD_ASSERT((typeof(((hdr_x_s*)NULL)->path))       PID_MAX          == PID_MAX);
-BUILD_ASSERT((typeof(((hdr_x_s*)NULL)->time))       XTIME_MAX        == XTIME_MAX);
+BUILD_ASSERT((typeof(((hdr_x_s*)NULL)->time))       PTIME_MAX        == PTIME_MAX);
 
 BUILD_ASSERT(sizeof(((ping_s*)NULL)->rnd)       == K_SIZE);
 BUILD_ASSERT(sizeof(((node_s*)NULL)->secret[0]) == K_SIZE);
@@ -194,4 +194,4 @@ BUILD_ASSERT(CMDS_N == 87);
 BUILD_ASSERT(CMD_ERRS_N == 76);
 
 //
-BUILD_ASSERT((PMASK_MAX + XTIME_MAX + TDIFF_MAX) < 0xFFFFFFFFFFFFFFFFULL);
+BUILD_ASSERT((PMASK_MAX + RTIME_MAX + TDIFF_MAX) < 0xFFFFFFFFFFFFFFFFULL);

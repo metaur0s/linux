@@ -94,10 +94,13 @@ static void keeper (struct timer_list* const timer) {
             ASSERT(path->cdown <= RTT_VAR_STEPS);
             ASSERT(path->tdiff >= TDIFF_MIN);
             ASSERT(path->tdiff <= TDIFF_MAX);
-            ASSERT(path->asked >= XTIME_MIN || path->asked == 0);
-            ASSERT(path->asked <= XTIME_MAX);
-            ASSERT(path->answered >= XTIME_MIN || path->answered == ANSWERED_LISTENING || path->answered == ANSWERED_ACCEPTING || path->answered == ANSWERED_CONNECTING);
-            ASSERT(path->answered <= XTIME_MAX);
+            ASSERT(path->asked >= PTIME_MIN || path->asked == 0);
+            ASSERT(path->asked <= PTIME_MAX);
+            ASSERT(path->answered >= PTIME_MIN
+                || path->answered == ANSWERED_LISTENING
+                || path->answered == ANSWERED_ACCEPTING
+                || path->answered == ANSWERED_CONNECTING);
+            ASSERT(path->answered <= PTIME_MAX);
             ASSERT(path->oadd >= PATH_OADD_MIN);
             ASSERT(path->oadd <= PATH_OADD_MAX);
             ASSERT(path->mask >= PMASK_MIN);
@@ -217,8 +220,8 @@ static void keeper (struct timer_list* const timer) {
                 const u64 answered = atomic_get(&path->answered);
 
                 ASSERT(answered == ANSWERED_CONNECTING
-                    || answered >= XTIME_MIN);
-                ASSERT(answered <= XTIME_MAX);
+                    || answered >= PTIME_MIN);
+                ASSERT(answered <= PTIME_MAX);
 
                 // SE NAO RECEBEU UM PONG, ESTE RTT SERÁ UM OVERFLOW
                 // É POR ISSO QUE ANSWERED_CONNECTING TEM QUE SER MAIOR DO QUE O RTT_MAX,
