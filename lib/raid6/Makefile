@@ -69,10 +69,6 @@ targets += neon1.c neon2.c neon4.c neon8.c
 $(obj)/neon%.c: $(src)/neon.uc $(src)/unroll.awk FORCE
 	$(call if_changed,unroll)
 
-targets += s390vx8.c
-$(obj)/s390vx%.c: $(src)/s390vx.uc $(src)/unroll.awk FORCE
-	$(call if_changed,unroll)
-
 quiet_cmd_mktable = TABLE   $@
       cmd_mktable = $(obj)/mktables > $@
 
