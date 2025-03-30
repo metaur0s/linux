@@ -75,6 +75,16 @@
 #define LTIME(rtime, tdiff) ((u64)((rtime) + (tdiff)))
 #define RTIME(ltime, tdiff) ((u64)((ltime) - (tdiff)))
 
+#define ANSWERED_LISTENING  ((u64)0)
+#define ANSWERED_ACCEPTING  ((u64)1)
+#define ANSWERED_CONNECTING ((u64)1200) // TEM QUE SER GRANDE SUFICIENTE PARA QUE ((path->answered - path->asked) > RTT_MAX)
+
+#define XTIME_MIN ((u64)(2048ULL))
+#define XTIME_MAX ((u64)(4ULL*12*31*24*3600*1000))
+
+#define TDIFF_MIN ((s64)(-4LL*12*31*24*3600*1000))
+#define TDIFF_MAX ((s64)( 4LL*12*31*24*3600*1000))
+
 #include "base.h"
 #include "types.h"
 #include "ports.h"

@@ -1,14 +1,4 @@
 
-#define ANSWERED_LISTENING  ((u64)0)
-#define ANSWERED_ACCEPTING  ((u64)1)
-#define ANSWERED_CONNECTING ((u64)1200) // TEM QUE SER GRANDE SUFICIENTE PARA QUE ((path->answered - path->asked) > RTT_MAX)
-
-#define XTIME_MIN ((u64)(2048ULL))
-#define XTIME_MAX ((u64)(4ULL*12*31*24*3600*1000))
-
-#define TDIFF_MIN ((s64)(-8LL*12*31*24*3600*1000))
-#define TDIFF_MAX ((s64)( 8LL*12*31*24*3600*1000))
-
 // IT MUST BE NOT INLINED, AS THE WHOLE INTENTION OF SEPARATING IT AS A FUNCTION IS TO MINIMIZE THE IN FUNCTION
 // WE DARE TO REDO SOME THINGS HERE, SO IF WE INLINE, THOSE WILL BE SURPLEFUOUS.
 static noinline uint in_ping (node_s* const node, const skb_s* const skb, pkt_s* const pkt) {
