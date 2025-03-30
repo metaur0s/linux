@@ -15,10 +15,10 @@ static noinline uint in_ping (node_s* const node, const skb_s* const skb, pkt_s*
 
     pkt_s* skel; pkt_s temp_skel;
 
-    const u64 now = get_current_ms();
+    const u64 _now = get_current_ms();
 
-    ASSERT(now >= XTIME_MIN);
-    ASSERT(now <= XTIME_MAX);
+    ASSERT(_now >= XTIME_MIN);
+    ASSERT(_now <= XTIME_MAX);
 
     const ping_s* const ping = PKT_DATA(pkt);
 
@@ -35,6 +35,8 @@ static noinline uint in_ping (node_s* const node, const skb_s* const skb, pkt_s*
     ASSERT(rtime <= XTIME_MAX);
 
     path_s* const path = &node->paths[pid];
+
+    const u64 now = path->mask + _now;
 
     s64 tdiff;
 
