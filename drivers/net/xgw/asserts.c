@@ -13,10 +13,9 @@ BUILD_ASSERT(CMD_SIZE(MAC)       == sizeof(((path_s*)NULL)->skel.encap_eth.eth.d
 BUILD_ASSERT(CMD_SIZE(MAC)       == sizeof(((path_s*)NULL)->skel.encap_eth.eth.smac));
 
 //
-BUILD_ASSERT((CMD_TYPE(TIMEOUT)) PATH_TIMEOUT_MAX == PATH_TIMEOUT_MAX);
-BUILD_ASSERT((CMD_TYPE(NODE_ID)) NID_MAX          == NID_MAX);
-BUILD_ASSERT((CMD_TYPE(PATH_ID)) PID_MAX          == PID_MAX);
-BUILD_ASSERT((CMD_TYPE(CODE))    CMDS_N           == CMDS_N);
+BUILD_ASSERT((CMD_TYPE(NODE_ID)) NID_MAX == NID_MAX);
+BUILD_ASSERT((CMD_TYPE(PATH_ID)) PID_MAX == PID_MAX);
+BUILD_ASSERT((CMD_TYPE(CODE))    CMDS_N  == CMDS_N);
 
 //
 BUILD_ASSERT(sizeof(hdr_eth_s)  == 14);
@@ -71,7 +70,6 @@ BUILD_ASSERT(sizeof(ip6_s) == (sizeof(hdr_ip6_s) + 2 * sizeof(u16)));
 
 // MIN < MAX
 BUILD_ASSERT(RTT_VAR_MIN < RTT_VAR_MAX);
-BUILD_ASSERT(PATH_TIMEOUT_MIN < PATH_TIMEOUT_MAX);
 BUILD_ASSERT(PATH_OADD_MIN < PATH_OADD_MAX);
 
 // TEM QUE TER UMA FOLGUINHA...
@@ -117,7 +115,8 @@ BUILD_ASSERT((typeof(((path_s*)NULL)->rtt_var_))    RTT_VAR_MAX      == RTT_VAR_
 BUILD_ASSERT((typeof(((path_s*)NULL)->rtt_var))     RTT_VAR_MAX_INIT == RTT_VAR_MAX_INIT);
 BUILD_ASSERT((typeof(((path_s*)NULL)->cdown))       RTT_VAR_STEPS    == RTT_VAR_STEPS);
 BUILD_ASSERT((typeof(((path_s*)NULL)->oadd))        PATH_OADD_MAX    == PATH_OADD_MAX);
-BUILD_ASSERT((typeof(((path_s*)NULL)->timeout))     PATH_TIMEOUT_MAX == PATH_TIMEOUT_MAX);
+BUILD_ASSERT((typeof(((path_s*)NULL)->acks))        ACKS_SERVER      == ACKS_SERVER);
+BUILD_ASSERT((typeof(((path_s*)NULL)->acks))        ACKS_CLIENT      == ACKS_CLIENT);
 BUILD_ASSERT((typeof(((path_s*)NULL)->since))       XTIME_MAX        == XTIME_MAX);
 BUILD_ASSERT((typeof(((path_s*)NULL)->asked))       XTIME_MAX        == XTIME_MAX);
 BUILD_ASSERT((typeof(((path_s*)NULL)->answered))    XTIME_MAX        == XTIME_MAX);
@@ -174,7 +173,6 @@ BUILD_ASSERT(P_INFO == (
     P_VPROTO              +
     P_VID                 +
     P_RTT_VAR             +
-    P_TIMEOUT             +
     P_NAME                +
     P_DHCP                +
     P_DHCP_MAC_DST_SERVER +

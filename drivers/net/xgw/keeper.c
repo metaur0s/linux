@@ -100,8 +100,6 @@ static void keeper (struct timer_list* const timer) {
             ASSERT(path->answered <= XTIME_MAX);
             ASSERT(path->oadd >= PATH_OADD_MIN);
             ASSERT(path->oadd <= PATH_OADD_MAX);
-            ASSERT(path->timeout >= PATH_TIMEOUT_MIN);
-            ASSERT(path->timeout <= PATH_TIMEOUT_MAX);
 
             if (path->info & K_START) { //231956
 
@@ -156,10 +154,12 @@ static void keeper (struct timer_list* const timer) {
                     // TODO: FAZER ISSO A TODOS OS NODES-PATHS AO SETAR O SELF
                     // TODO: TEM QUE REPENSAR O CRYPTO DERIVATE, POIS SENAO SE MUDAR O SELF, TERA DE SETAR NOVAMENTE O SECRET
                     path->skel.x.src   = BE16(nodeSelf);
+                    path->acks         = ACKS_CLIENT;
                     path->answered     = ANSWERED_CONNECTING;
                 } else {
                     printk("XGW: %s [%s]: LISTENING\n", node->name, path->name);
                     path->skel.type    = 0; //
+                    path->acks         = ACKS_SERVER;
                     path->answered     = ANSWERED_LISTENING;
                 }   path->asked        = 0; // AINDA NAO ENVIEI PING
                     path->pseen[0]     = 0;
@@ -261,13 +261,11 @@ static void keeper (struct timer_list* const timer) {
                         else
                             printk("XGW: %s [%s]: RTT %u +%u; %s; PONG LOST\n", node->name, path->name, (uint)path->rtt, (uint)path->rtt_var, str);
                     }
-                    
+
                 } elif (!acks) {
-                    if (((answered != ANSWERED_CONNECTING ? answered : path->since) + path->timeout) < now) {
-                        // TIMED OUT WAITING FOR PONGS
-                        printk("XGW: %s [%s]: TIMED OUT\n", node->name, path->name);
-                        goto _suspend;
-                    }
+                    // TIMED OUT WAITING FOR PONGS
+                    printk("XGW: %s [%s]: TIMED OUT\n", node->name, path->name);
+                    goto _suspend;
                 }
 
                 // DOS PIORES AOS MELHORES

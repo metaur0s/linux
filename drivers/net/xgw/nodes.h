@@ -31,12 +31,16 @@
 //
 #define PATH_PORTS_N 4
 
-// TODO: ASSERT( (typeof(path->weight))PATH_WEIGHT_MAX == PATH_WEIGHT_MAX )
 // TODO: ASSERT( (typeof(node->weights))(PATH_WEIGHT_MAX * PATHS_N) == (PATH_WEIGHT_MAX * PATHS_N) )
 #define PATH_WEIGHT_MAX 255
 
 // HOW MANY ACKS IN HISTORY (WORD WIDTH IN BITS)
 #define ACKS_N 64
+
+// NOTE: NAO ADIANTA SER MUITO LONGO POIS OS KEYS FICAM SENDO INUTILIZADOS
+// NOTE: NAO ADIANTA SER MUITO LONGO POIS FICA SEM SINCRONIA
+#define ACKS_SERVER (((u64)1) << 32)
+#define ACKS_CLIENT (((u64)1) << 63)
 
 // NODE INFO
 #define N_ON      (1U << 0)
@@ -62,21 +66,20 @@
 #define P_VPROTO              (1U << 12)
 #define P_VID                 (1U << 13)
 #define P_RTT_VAR             (1U << 14)
-#define P_TIMEOUT             (1U << 15)
-#define P_NAME                (1U << 16)
-#define P_DHCP                (1U << 17)
-#define P_DHCP_MAC_DST_SERVER (1U << 18)
-#define P_DHCP_MAC_DST_GW     (1U << 19)
-#define P_EXIST               (1U << 20)
+#define P_NAME                (1U << 15)
+#define P_DHCP                (1U << 16)
+#define P_DHCP_MAC_DST_SERVER (1U << 17)
+#define P_DHCP_MAC_DST_GW     (1U << 18)
+#define P_EXIST               (1U << 19)
 // TODO: P_INFO_WEIGHT_NODE
 // TODO: P_INFO_WEIGHT_ACKS
-#define P_INFO               ((1U << 21) - 1)
-#define K_START               (1U << 21)
-#define K_SUSPEND             (1U << 22)
-#define K_SUSPENDING          (1U << 23)
-#define K_LISTEN              (1U << 24) // TODO: RENAME TO K_DISCOVERING
-#define K_ESTABLISHED         (1U << 25) // TODO: RENAME TO K_PINGING
-#define P_ALL                ((1U << 26) - 1)
+#define P_INFO               ((1U << 20) - 1)
+#define K_START               (1U << 20)
+#define K_SUSPEND             (1U << 21)
+#define K_SUSPENDING          (1U << 22)
+#define K_LISTEN              (1U << 23) // TODO: RENAME TO K_DISCOVERING
+#define K_ESTABLISHED         (1U << 24) // TODO: RENAME TO K_PINGING
+#define P_ALL                ((1U << 25) - 1)
 
 // P_VPROTO -> NOTE: IT IS THE ETH->PROTO, NOT THE VLAN->PROTO
 
@@ -88,7 +91,7 @@
 
 //
 #define RTT_VAR_MIN    0
-#define RTT_VAR_MAX 4096
+#define RTT_VAR_MAX 2048
 
 // TEM QUE CONSIDERAR A DEMORA PARA IR ATUALIZANDO O RTT
 // 20 * 300 = 6000 (MAX SKEW FOR RTT)
@@ -98,12 +101,6 @@
 
 //
 #define RTT_VAR_MAX_INIT (RTT_VAR_MAX + RTT_VAR_STEPS * RTT_VAR_STEP)
-
-// NOTE: NAO ADIANTA SER MUITO LONGO POIS OS KEYS PODEM ACABAR SENDO INUTILIZADOS
-// NOTE: NAO ADIANTA SER LONGO POIS FICARA UM TEMPAO TRAVADO (SERVER)
-// NOTE: NAO ADIANTA SER LONGO POIS FICARA UM TEMPAO TRAVADO (CLIENT)
-#define PATH_TIMEOUT_MIN  10000
-#define PATH_TIMEOUT_MAX  65500
 
 //
 #define PATH_OADD_MIN   1
@@ -120,13 +117,13 @@
 struct path_s {
 // 64 -- KEEPER
     u32 info;        // KEEPER (RW)
+    u16 weight;      // KEEPER (RO)
+    u16 weight_acks; // KEEPER (RO)
     u16 rtt_max;     // KEEPER (RO) -- TODO: REIMPLEMENT THE COMMAND
     u16 rtt;         // KEEPER (RW) / IN (R)
     u16 rtt_var;     // KEEPER (RW) / IN (R) -- CURRENT ONE, BEING REDUCED UNTIL THE CONFIGURED BY USER
     u8 cdown;        // KEEPER (RW)
     u8 oadd;         // KEEPER (RO)
-    u16 weight;      // KEEPER (RO)
-    u16 weight_acks; // KEEPER (RO)
     u64 acks;        // KEEPER (RW) -- HISTORY
     u64 asked;       // KEEPER (RW) -- WHEN I ASKED - PARA MEDIR O RTT
     node_s* node;    // KEEPER_SEND_PINGS

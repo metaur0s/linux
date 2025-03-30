@@ -456,10 +456,11 @@ static ssize_t __cold_as_ice __optimize_size cmd (struct file *file, const char 
             uint pinfo = path->info;
 
             if (!(pinfo & P_ON)) {
+                // TODO: ALL THIS if(!(pinfo & FLAG)) CMD_ERR(PATH_NEED_FLAG)
+                //      CAN BECOME A SIMPLE MASK AND A if ((x = flags_needed & ~pinfo)) CMD_ERR(CMD_NEED_FLAG + CLZ(x))
 
                 // INFORMACOES QUE SAO NECESSARIAS TO START A PATH
                 if (!(pinfo & P_NAME))              CMD_ERR(PATH_NEED_NAME);
-                if (!(pinfo & P_TIMEOUT))           CMD_ERR(PATH_NEED_TIMEOUT);
                 if (!(pinfo & P_RTT_VAR))           CMD_ERR(PATH_NEED_RTT_VAR);
                 if (!(pinfo & (P_CLIENT|P_SERVER))) CMD_ERR(PATH_NEED_CLT_SRV);
 
@@ -629,7 +630,6 @@ static ssize_t __cold_as_ice __optimize_size cmd (struct file *file, const char 
             printk("XGW: %s [%s]: CDOWN %u\n",           node->name, path->name, (uint)path->cdown);
             printk("XGW: %s [%s]: OADD %u\n",            node->name, path->name, (uint)path->oadd);
             printk("XGW: %s [%s]: OLATENCY %u\n",        node->name, path->name, (uint)path->olatency);
-            printk("XGW: %s [%s]: TIMEOUT %us\n",        node->name, path->name, (uint)path->timeout);
             printk("XGW: %s [%s]: SINCE %llu\n",         node->name, path->name, (uintll)path->since);
             printk("XGW: %s [%s]: TDIFF %lld\n",         node->name, path->name, (intll)path->tdiff);
             printk("XGW: %s [%s]: PING SENT %llu\n",     node->name, path->name, (uintll)path->asked);
@@ -640,7 +640,7 @@ static ssize_t __cold_as_ice __optimize_size cmd (struct file *file, const char 
             printk("XGW: %s [%s]: SPORT #%u OF %u\n",    node->name, path->name, (uint)path->sPortIndex, (uint)path->sPortsN);
             printk("XGW: %s [%s]: DPORT #%u OF %u\n",    node->name, path->name, (uint)path->dPortIndex, (uint)path->dPortsN);
 
-            printk("XGW: %s [%s]: INFO: 0x%02X%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s\n", node->name, path->name,
+            printk("XGW: %s [%s]: INFO: 0x%02X%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s\n", node->name, path->name,
            (uint)path->info,
         (path->info & P_ON                  ) ? " ON"             : "",
         (path->info & P_CLIENT              ) ? " CLIENT"         : "",
@@ -657,7 +657,6 @@ static ssize_t __cold_as_ice __optimize_size cmd (struct file *file, const char 
         (path->info & P_TOS                 ) ? " TOS"            : "",
         (path->info & P_TTL                 ) ? " TTL"            : "",
         (path->info & P_RTT_VAR             ) ? " LATENCY-VAR"    : "",
-        (path->info & P_TIMEOUT             ) ? " TIMEOUT"        : "",
         (path->info & P_NAME                ) ? " NAME"           : "",
         (path->info & P_DHCP                ) ? " DHCP"           : "",
         (path->info & P_DHCP_MAC_DST_SERVER ) ? " MAC-DST-SERVER" : "",
@@ -1107,18 +1106,7 @@ static ssize_t __cold_as_ice __optimize_size cmd (struct file *file, const char 
         case CMD_PATH_SET_CLIENT: path->info = (path->info & ~P_SERVER) | P_CLIENT; break;
         case CMD_PATH_SET_SERVER: path->info = (path->info & ~P_CLIENT) | P_SERVER; break;
 
-        case CMD_PATH_SET_TIMEOUT: {
-
-            // TODO: COMMAND SHOULD PASS A U16
-            // TODO: COMMAND SHOULD PASS AS MS
-            const uint timeout = *CMD_VALUE(TIMEOUT) * 1000;
-
-            if (timeout < PATH_TIMEOUT_MIN
-             || timeout > PATH_TIMEOUT_MAX)
-                CMD_ERR(INVALID_TIMEOUT);
-
-            path->timeout = timeout;
-            path->info |= P_TIMEOUT;
+        case CMD_PATH_SET_TIMEOUT___: {
 
         } break;
 
