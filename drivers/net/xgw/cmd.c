@@ -111,8 +111,6 @@ static ssize_t __cold_as_ice __optimize_size cmd (struct file *file, const char 
 
     spin_lock_irqsave(&xlock, iflags);
 
-    const u64 now = get_current_ms();
-
     if (C_USE_NODE(C)) {
         // REFERS TO A NODE ENTRY
 
@@ -637,6 +635,7 @@ static ssize_t __cold_as_ice __optimize_size cmd (struct file *file, const char 
             printk("XGW: %s [%s]: PING SEEN %llu\n",     node->name, path->name, (uintll)path->pseen[0]);
             printk("XGW: %s [%s]: PONG SEEN %llu\n",     node->name, path->name, (uintll)path->pseen[1]);
             printk("XGW: %s [%s]: SYN %016llX\n",        node->name, path->name, (uintll)path->syn);
+            printk("XGW: %s [%s]: MASK %016llX\n",       node->name, path->name, (uintll)path->mask);
             printk("XGW: %s [%s]: SPORT #%u OF %u\n",    node->name, path->name, (uint)path->sPortIndex, (uint)path->sPortsN);
             printk("XGW: %s [%s]: DPORT #%u OF %u\n",    node->name, path->name, (uint)path->dPortIndex, (uint)path->dPortsN);
 
