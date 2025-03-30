@@ -170,7 +170,6 @@ static void keeper (struct timer_list* const timer) {
                     path->info        ^= K_START | K_LISTEN;
                     path->since        = 0;
                     path->tdiff        = 0;
-                    path->acks         = 0;
                  // path->olatency   == ?
 
                 // ENABLE IN
