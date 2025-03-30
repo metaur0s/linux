@@ -8,7 +8,7 @@
 
 //
 #define NODE_NAME_SIZE 32
-#define PATH_NAME_SIZE 24 // "super-ISP-1-ip6-udp-123\0"
+#define PATH_NAME_SIZE 16 // "broad-bandz-p4u\0"
 
 //
 #define NODES_N 65536
@@ -134,7 +134,8 @@ struct path_s {
     s64 tdiff;       // KEEPER (R) / IN (RW) / OUT (R)
 // RO (MOSTLY)
     u64 syn;         // KEEPER_SEND_PINGS / IN -- O PKT->TIME QUE O CLIENTE VAI USAR, ENQUANTO NAO DESCOBRE ELE
-    u64 since;       // KEEPER
+    u64 mask;        // KEEPER (RW)
+    u64 since;       // KEEPER (RW)
 // RO -- QUASE NAO USADO
     char name [PATH_NAME_SIZE]; // 24
     u16 sPorts [PATH_PORTS_N]; // 8 EM BIG ENDIAN
