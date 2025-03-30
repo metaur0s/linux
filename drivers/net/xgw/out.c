@@ -135,7 +135,10 @@ static netdev_tx_t out (skb_s* const skb, net_device_s* const dev) {
 
     u64* const conn = &node->conns[cid];
 
-    const u64 now = get_current_ms();
+    const u64 _now = get_current_ms();
+
+    ASSERT(_now >= XTIME_MIN);
+    ASSERT(_now <= XTIME_MAX);
 
     path_s* path; u64 burst, burst_new; uint pid;
 
@@ -147,7 +150,7 @@ static netdev_tx_t out (skb_s* const skb, net_device_s* const dev) {
         pid = ( // CHOOSE A PATH
             burst // STARTING FROM CURRENT,
             + // BUT CHANGE IF IDLE
-           (burst < (now * PATHS_N))
+           (burst < (_now * PATHS_N))
         ) % PATHS_N;
 
         // NOTE: NO CASO DE OPATHS SER 0, ESTE VALOR FINAL SERA UNSPECIFIED
@@ -159,7 +162,7 @@ static netdev_tx_t out (skb_s* const skb, net_device_s* const dev) {
         path = &node->paths[pid];
 
         // CONSIDERAR O TEMPO DE IDA + CPU BUSY TIME + IMPRECISOES
-        burst_new = ((now + atomic_get(&path->olatency)) * PATHS_N) + pid;
+        burst_new = ((_now + atomic_get(&path->olatency)) * PATHS_N) + pid;
 
         // STORE STREAM TIMEOUT + PID
         // IF THIS COMPARE EXCHANGE FAIL, IT'S BECAUSE SOME OTHER OUT RUNNED FOR THIS STREAM HASH, AND:
@@ -179,7 +182,7 @@ static netdev_tx_t out (skb_s* const skb, net_device_s* const dev) {
     if ((PTR(p) - (path->skel.hsize + PKT_ALIGN_SIZE)) < SKB_HEAD(skb))
         ret_path(PSTATS_O_DATA_NO_HEADROOM);
 
-    pkt_encapsulate(node, atomic_get(&node->oIndex), RTIME(now, atomic_get(&path->tdiff)), &path->skel, skb, p, size);
+    pkt_encapsulate(node, atomic_get(&node->oIndex), RTIME(path->mask + _now, atomic_get(&path->tdiff)), &path->skel, skb, p, size);
 
     // -- THE FUNCTION CAN BE CALLED FROM AN INTERRUPT
     // -- WHEN CALLING THIS METHOD, INTERRUPTS MUST BE ENABLED
