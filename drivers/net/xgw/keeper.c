@@ -9,7 +9,7 @@ static inline void keeper_send_pings (void) {
         while ((path = *ptr)) {
             if (path->info & K_ESTABLISHED) {
 
-                const u64 now = get_current_ms();
+                const u64 now = path->mask + get_current_ms();
 
                 __atomic_store_n(&path->asked, now, __ATOMIC_RELAXED);
 
@@ -46,7 +46,7 @@ static void keeper (struct timer_list* const timer) {
 
     spin_lock_irqsave(&xlock, iflags);
 
-    const u64 now = get_current_ms();
+    const u64 _now = get_current_ms();
 
     for (node_s* node = knodes; node; node = node->next) {
 
@@ -100,6 +100,8 @@ static void keeper (struct timer_list* const timer) {
             ASSERT(path->answered <= XTIME_MAX);
             ASSERT(path->oadd >= PATH_OADD_MIN);
             ASSERT(path->oadd <= PATH_OADD_MAX);
+            ASSERT(path->mask >= PMASK_MIN);
+            ASSERT(path->mask <= PMASK_MAX);
 
             if (path->info & K_START) { //231956
 
@@ -170,6 +172,7 @@ static void keeper (struct timer_list* const timer) {
                     path->info        ^= K_START | K_LISTEN;
                     path->since        = 0;
                     path->tdiff        = 0;
+                    path->mask         = PMASK_MIN + (random64(_now) % (PMASK_MAX - PMASK_MIN));
                  // path->olatency   == ?
 
                 // ENABLE IN
@@ -186,7 +189,7 @@ static void keeper (struct timer_list* const timer) {
 
              ASSERT(path->since    == 0);
                     path->info     ^= K_LISTEN | K_ESTABLISHED;
-                    path->since     = now;
+                    path->since     = _now;
                  // AT THIS POINT, THE PATH->SKEL WAS BUILT
                  //      a) FROM USER (CMD)
                  //      b) FROM IN (DISCOVER)
