@@ -7,8 +7,8 @@ static inline u64 unswap64 (const u64 x) { const uint q = popcount(x); return (x
 //#define ENC(x) (  swap64(  swap64(  swap64(  swap64(  swap64(  swap64(  swap64((x) + A) + B) + C) + D) + E) + F) + G) + H)
 //#define DEC(x) (unswap64(unswap64(unswap64(unswap64(unswap64(unswap64(unswap64((x) - H) - G) - F) - E) - D) - C) - B) - A)
 
-#define ENC(x) (((x) + A) ^ B) + C) ^ D) + E) ^ F) + G) ^ H)
-#define DEC(x) (((x) ^ H) - G) ^ F) - E) ^ D) - C) ^ B) - A)
+#define ENC(x) (((((((((x) + A) ^ B) + C) ^ D) + E) ^ F) + G) ^ H)
+#define DEC(x) (((((((((x) ^ H) - G) ^ F) - E) ^ D) - C) ^ B) - A)
 
 #define A 0x1111111111111111ULL
 #define B 0x2222222222222222ULL
