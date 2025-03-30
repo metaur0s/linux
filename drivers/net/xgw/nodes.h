@@ -87,8 +87,8 @@
 #define RTT_MAX 768
 
 //
-#define RTT_VAR_MIN   0
-#define RTT_VAR_MAX 800
+#define RTT_VAR_MIN    0
+#define RTT_VAR_MAX 4096
 
 // TEM QUE CONSIDERAR A DEMORA PARA IR ATUALIZANDO O RTT
 // 20 * 300 = 6000 (MAX SKEW FOR RTT)
@@ -106,8 +106,8 @@
 #define PATH_TIMEOUT_MAX  65500
 
 //
-#define PATH_OADD_MIN    1
-#define PATH_OADD_MAX 2048
+#define PATH_OADD_MIN   1
+#define PATH_OADD_MAX 255
 
 // TODO: REMOVER ISSO
 // TODO: N_OADD
@@ -120,15 +120,14 @@
 struct path_s {
 // 64 -- KEEPER
     u32 info;        // KEEPER (RW)
-    u32 acks;        // KEEPER (RW) -- HISTORY
-    u16 oadd;        // KEEPER (RO)
     u16 rtt_max;     // KEEPER (RO) -- TODO: REIMPLEMENT THE COMMAND
     u16 rtt;         // KEEPER (RW) / IN (R)
-    u16 rtt_var_;    // KEEPER (RO) -- CONFIGURED BY USER
     u16 rtt_var;     // KEEPER (RW) / IN (R) -- CURRENT ONE, BEING REDUCED UNTIL THE CONFIGURED BY USER
-    u16 cdown;       // KEEPER (RW)
+    u8 cdown;        // KEEPER (RW)
+    u8 oadd;         // KEEPER (RO)
     u16 weight;      // KEEPER (RO)
     u16 weight_acks; // KEEPER (RO)
+    u64 acks;        // KEEPER (RW) -- HISTORY
     u64 asked;       // KEEPER (RW) -- WHEN I ASKED - PARA MEDIR O RTT
     node_s* node;    // KEEPER_SEND_PINGS
     path_s* next;    // KEEPER_SEND_PINGS -- NA LISTA DE PINGS - ONLY VALID WHEN PATH STATUS >= K_UNSTABLE
@@ -147,7 +146,7 @@ struct path_s {
     u8  dPortIndex:4, dPortsN:4;
     u8  tos;         // KEEPER / IN_DISCOVER
     u8  ttl;         // KEEPER / IN_DISCOVER
-    u16 timeout;     // KEEPER -- EM SEGUNDOS
+    u16 rtt_var_;    // KEEPER (RO) -- CONFIGURED BY USER
     u16 olatency;    // KEEPER (WRITE) / OUT (READ) -- (RTT + RTT_VAR)/2 + CPU TIME + IMPRECISION
 // 112 -- IN READ, OUT READ, IN WRITE (ON RECEIVE PING, WHILE OUT IS DISABLED)
     pkt_s skel;
