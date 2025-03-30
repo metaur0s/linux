@@ -4,8 +4,33 @@
 static inline u64   swap64 (const u64 x) { const uint q = popcount(x); return (x >> q) | (x << (64 - q)); }
 static inline u64 unswap64 (const u64 x) { const uint q = popcount(x); return (x << q) | (x >> (64 - q)); }
 
-#define ENC(x) (  swap64(  swap64(  swap64(  swap64(  swap64(  swap64(  swap64((x) + A) + B) + C) + D) + E) + F) + G) + H)
-#define DEC(x) (unswap64(unswap64(unswap64(unswap64(unswap64(unswap64(unswap64((x) - H) - G) - F) - E) - D) - C) - B) - A)
+//#define ENC(x) (  swap64(  swap64(  swap64(  swap64(  swap64(  swap64(  swap64((x) + A) + B) + C) + D) + E) + F) + G) + H)
+//#define DEC(x) (unswap64(unswap64(unswap64(unswap64(unswap64(unswap64(unswap64((x) - H) - G) - F) - E) - D) - C) - B) - A)
+
+#define ENC(x) (((x) + A) ^ B) + C) ^ D) + E) ^ F) + G) ^ H)
+#define DEC(x) (((x) ^ H) + G) ^ F) + E) ^ D) + C) ^ B) + A)
+
+#define A 0x1111111111111111ULL
+#define B 0x2222222222222222ULL
+#define C 0x3333333333333333ULL
+#define D 0x4444444444444444ULL
+#define E 0x5555555555555555ULL
+#define F 0x6666666666666666ULL
+#define G 0x7777777777777777ULL
+#define H 0x8888888888888888ULL
+
+BUILD_ASSERT(DEC(ENC(0x0123456789ABCDEFULL)) == 0x0123456789ABCDEFULL);
+BUILD_ASSERT(DEC(ENC(0x1122334455667788ULL)) == 0x1122334455667788ULL);
+BUILD_ASSERT(DEC(ENC(0x1020304050607080ULL)) == 0x1020304050607080ULL);
+
+#undef A
+#undef B
+#undef C
+#undef D
+#undef E
+#undef F
+#undef G
+#undef H
 
 // TODO: CHOOSE THE RIGHT ONE HERE
 #define _prefetch_data   __prefetch_w_temporal_low // TODO: MAS ISSO NAO VAI AFETER O CACHING DO PKT_S/HEADER, CERTO?
@@ -28,18 +53,18 @@ __xgw_crypto_inline u64 encrypt (const u64 K[K_LEN], u64* restrict pos, u64* res
         _prefetch_data(pos);
 
         // AVALANCHE OF ORIGINAL THROUGH KEYS
-        x += (((A * x) + E) * D) + H;
-     // x += (((A + x) * E) + D) * H;
-
-        // MIX
-        A += (B += C * x) * D;
-        E += (F += G * x) * H;
-        D += (G += B * x) * A;
-        H += (C += F * x) * E;
+        A += (x += B) * C + D;
+        B += (x += C) * D + E;
+        C += (x += D) * E + F;
+        D += (x += E) * F + G;
+        E += (x += F) * G + H;
+        F += (x += G) * H + A;
+        G += (x += H) * A + B;
+        H += (x += A) * B + C;
 
         if (pos == end)
             // RETURN THE HASH
-            return ((H + D) ^ E) + A;
+            return x;
 
         // READ THE ORIGINAL VALUE
         x = BE64(*pos);
@@ -61,16 +86,18 @@ __xgw_crypto_inline u64 decrypt (const u64 K[K_LEN], u64* restrict pos, u64* res
 
         _prefetch_data(pos);
 
-        x += (((A * x) + E) * D) + H;
-
-        A += (B += C * x) * D;
-        E += (F += G * x) * H;
-        D += (G += B * x) * A;
-        H += (C += F * x) * E;
+        A += (x += B) * C + D;
+        B += (x += C) * D + E;
+        C += (x += D) * E + F;
+        D += (x += E) * F + G;
+        E += (x += F) * G + H;
+        F += (x += G) * H + A;
+        G += (x += H) * A + B;
+        H += (x += A) * B + C;
 
         if (pos == end)
             // RETURN THE HASH
-            return ((H + D) ^ E) + A;
+            return x;
 
         // READ THE ENCRYPTED VALUE AND DECRYPT IT
         x = DEC(BE64(*pos));
