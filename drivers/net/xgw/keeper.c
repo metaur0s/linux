@@ -210,7 +210,7 @@ static void keeper (struct timer_list* const timer) {
 
             if (path->info & K_ESTABLISHED) {
 
-                uint acks;
+                u64 acks;
 
                 const u64 answered = atomic_get(&path->answered);
 
@@ -237,7 +237,7 @@ static void keeper (struct timer_list* const timer) {
                     }   __atomic_store_n(&path->olatency, (u16)((rtt + path->rtt_var)/2 + path->oadd), __ATOMIC_RELAXED);
                         __atomic_store_n(&path->rtt, rtt, __ATOMIC_RELAXED);
                     // A SECOND ELAPSED
-                    acks = (path->acks >> 1) | ((uint)(took <= (rtt + path->rtt_var)) << (ACKS_N - 1));
+                    acks = (path->acks >> 1) | ((u64)(took <= (rtt + path->rtt_var)) << (ACKS_N - 1));
                 } else
                     acks = (path->acks >> 1);
 
@@ -248,11 +248,11 @@ static void keeper (struct timer_list* const timer) {
                     const char* str;
 
                     switch (acks) {
-                        case 0b00000000000000000000000000000000U: str = "LOST";       break;
-                        case 0b10000000000000000000000000000000U: str = "RECOVERING"; break;
-                        case 0b01111111111111111111111111111111U: str = "UNSTABLE";   break;
-                        case 0b11111111111111111111111111111111U: str = "STABLE";     break;
-                        default:                                  str = NULL;
+                        case 0b0000000000000000000000000000000000000000000000000000000000000000ULL: str = "LOST";       break;
+                        case 0b1000000000000000000000000000000000000000000000000000000000000000ULL: str = "RECOVERING"; break;
+                        case 0b0111111111111111111111111111111111111111111111111111111111111111ULL: str = "UNSTABLE";   break;
+                        case 0b1111111111111111111111111111111111111111111111111111111111111111ULL: str = "STABLE";     break;
+                        default:                                                                    str = NULL;
                     }
 
                     if (str) {
@@ -272,10 +272,10 @@ static void keeper (struct timer_list* const timer) {
 
                 // DOS PIORES AOS MELHORES
                 opaths |= ( // TEM QUE CONSIDERAR QUE ELE VAI ENTRAR NA FRENTE DOS OUTROS ENTAO PERDER 1 PONG E RECEBER UM VAI FORCAR A TROCA E FERRAR A ESTABILIDADE DAS STREAMS
-                    ((u64)(acks >= 0b00000001000000000000000000000000U) << (3*PATHS_N)) | // BASTA QUE ESTEJA FUNCIONANDO ENTAO
-                    ((u64)(acks >= 0b11111111000000000000000000000000U) << (2*PATHS_N)) |
-                    ((u64)(acks >= 0b11111111111111110000000000000000U) << (1*PATHS_N)) | // NOTE: THIS ONE SHOULD BE REPEATED
-                    ((u64)(acks >= 0b11111111111111110000000000000000U) << (0*PATHS_N)) // TODO: REMOVE THIS REPETITION LIMITATION
+                    ((u64)(acks >= 0b000000010000000000000000000000000000000000000000ULL) << (3*PATHS_N)) | // BASTA QUE ESTEJA FUNCIONANDO ENTAO
+                    ((u64)(acks >= 0b111111110000000000000000000000000000000000000000ULL) << (2*PATHS_N)) |
+                    ((u64)(acks >= 0b111111111111111100000000000000000000000000000000ULL) << (1*PATHS_N)) | // NOTE: THIS ONE SHOULD BE REPEATED
+                    ((u64)(acks >= 0b111111111111111100000000000000000000000000000000ULL) << (0*PATHS_N)) // TODO: REMOVE THIS REPETITION LIMITATION
                 ) << pid;
             }
 
