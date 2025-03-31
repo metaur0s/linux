@@ -77,10 +77,10 @@
 
 #define ANSWERED_LISTENING  ((u64)0)
 #define ANSWERED_ACCEPTING  ((u64)1)
-#define ANSWERED_CONNECTING ((u64)8191) // TEM QUE SER GRANDE SUFICIENTE PARA QUE ((path->answered - path->asked) > RTT_MAX)
+#define ANSWERED_CONNECTING ((u64)2048) // TEM QUE SER GRANDE SUFICIENTE PARA QUE ((path->answered - path->asked) > RTT_MAX)
 
 // REAL TIME (KTIME) (~2 YEARS IN MS)
-#define RTIME_MIN ((u64)0)
+#define RTIME_MIN ((u64)4096)
 #define RTIME_MAX ((u64)0x1800000000ULL)
 
 //
@@ -248,6 +248,7 @@ static int __init xgw_init (void) {
 #endif
 
     // LAUNCH KEEPER
+    // TODO: RTIME_MIN < (KEEPER_LAUNCH_DELAY_SECS * 1000)
     kTimer.expires = jiffies + KEEPER_LAUNCH_DELAY_SECS * HZ;
     add_timer(&kTimer);
 
