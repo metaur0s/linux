@@ -49,8 +49,9 @@ static noinline uint in_ping (node_s* const node, const skb_s* const skb, pkt_s*
 
         u64 seen = atomic_get(ptr);
 
-        ASSERT(seen >= PTIME_MIN || seen == 0);
-        ASSERT(seen <= PTIME_MAX);
+        ASSERT((seen >= PTIME_MIN &&
+                seen <= PTIME_MAX) ||
+                seen == 0);
 
         // CONSIDERA QUE PODE TER PERDIDO ALGUNS PINGS
         if (seen && (rtime - seen) > 49152)
