@@ -24,8 +24,9 @@ static inline void keeper_send_pings (void) {
                 const u64 rtime = (o == O_KEY_SYN) ?
                     path->syn : RTIME(now, atomic_get(&path->tdiff));
 
-                ASSERT(rtime >= PTIME_MIN || rtime == path->syn);
-                ASSERT(rtime <= PTIME_MAX || rtime == path->syn);
+                ASSERT((rtime >= PTIME_MIN &&
+                        rtime <= PTIME_MAX) ||
+                        rtime == path->syn);
 
                 // NOTE: RESERVA HEAD AND TAIL ROOM POIS PODE TER MAIS ENCAPSULAMENTOS NO PHYS
                 ping_send(path->node, path, &path->skel, now, rtime, o);
