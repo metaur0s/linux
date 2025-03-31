@@ -139,8 +139,10 @@ static inline u64 get_current_ms (void) {
 #else // jiffies64_to_msecs()
 #error
 #endif
+    j += RTIME_MIN;
+    ASSERT(j >= RTIME_MIN);
     ASSERT(j <= RTIME_MAX);
-    return RTIME_MIN + j;
+    return j;
 }
 
 #include "alloc.c"
