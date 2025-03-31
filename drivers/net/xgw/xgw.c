@@ -80,7 +80,7 @@
 #define ANSWERED_CONNECTING ((u64)2048) // TEM QUE SER GRANDE SUFICIENTE PARA QUE ((path->answered - path->asked) > RTT_MAX)
 
 // REAL TIME (KTIME) (~2 YEARS IN MS)
-#define RTIME_MIN ((u64)4096)
+#define RTIME_MIN ((u64)8192)
 #define RTIME_MAX ((u64)0x1800000000ULL)
 
 //
