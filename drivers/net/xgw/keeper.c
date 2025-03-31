@@ -9,6 +9,15 @@ static inline void keeper_send_pings (void) {
         while ((path = *ptr)) {
             if (path->info & K_ESTABLISHED) {
 
+		ASSERT(path->asked    >= PTIME_MIN);
+		ASSERT(path->asked    <= PTIME_MAX);
+		ASSERT(path->answered >= PTIME_MIN);
+		ASSERT(path->answered <= PTIME_MAX);
+		ASSERT(path->mask     >= PMASK_MIN);
+		ASSERT(path->mask     <= PMASK_MAX);
+		ASSERT(path->tdiff    >= TDIFF_MIN);
+		ASSERT(path->tdiff    <= TDIFF_MAX);
+
                 const u64 now = path->mask + get_current_ms();
 
                 ASSERT(now >= PTIME_MIN);
@@ -21,13 +30,8 @@ static inline void keeper_send_pings (void) {
                         O_KEY_SYN :
                         O_KEY_PING;
 
-                const s64 tdiff = atomic_get(&path->tdiff);
-
-                ASSERT(tdiff >= TDIFF_MIN);
-                ASSERT(tdiff <= TDIFF_MAX);
-                
                 const u64 rtime = (o == O_KEY_SYN) ?
-                    path->syn : RTIME(now, tdiff);
+                    path->syn : RTIME(now, atomic_get(&path->tdiff));
 
                 ASSERT((rtime >= PTIME_MIN &&
                         rtime <= PTIME_MAX) ||
