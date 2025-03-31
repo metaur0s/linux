@@ -21,8 +21,13 @@ static inline void keeper_send_pings (void) {
                         O_KEY_SYN :
                         O_KEY_PING;
 
+                const s64 tdiff = atomic_get(&path->tdiff);
+
+                ASSERT(tdiff >= TDIFF_MIN);
+                ASSERT(tdiff <= TDIFF_MAX);
+                
                 const u64 rtime = (o == O_KEY_SYN) ?
-                    path->syn : RTIME(now, atomic_get(&path->tdiff));
+                    path->syn : RTIME(now, tdiff);
 
                 ASSERT((rtime >= PTIME_MIN &&
                         rtime <= PTIME_MAX) ||
