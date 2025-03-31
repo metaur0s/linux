@@ -132,14 +132,12 @@ struct path_s {
     u64 asked;       // KEEPER (RW) -- WHEN I ASKED - PARA MEDIR O RTT
     node_s* node;    // KEEPER_SEND_PINGS
     path_s* next;    // KEEPER_SEND_PINGS -- NA LISTA DE PINGS - ONLY VALID WHEN PATH STATUS >= K_UNSTABLE
-// KEEPER / IN
     u64 answered;    // KEEPER (R) / IN_PING (W) -- WHEN I RECEIVED ANSWER - PARA PARA MEDIR O RTT E SABER QUE A CONEXÃO ESTÁ VIVA
     u64 pseen[2];    // IN_PING -- LAST PING/PONG->TIME RECEIVED (HIS RAW TIME) - SO WE DON'T ACCEPT REPEATED/GOINGBACKS
-    s64 tdiff;       // KEEPER (R) / IN (RW) / OUT (R)
-// RO (MOSTLY)
-    u64 syn;         // KEEPER_SEND_PINGS (R) / IN (R) -- O PKT->TIME QUE O CLIENTE VAI USAR, ENQUANTO NAO DESCOBRE ELE
-    u64 mask;        // KEEPER (RW) / IN (R) / OUT (R)
-    u64 since;       // KEEPER (RW)
+    s64 tdiff;       // KEEPER (R) / IN [IF SYN/PING/PONG] (RW) / OUT (R)
+    u64 mask;        // KEEPER (R) / KEEPER [ON START] (W) / IN (R) / OUT (R)
+    u64 syn;         // KEEPER_SEND_PINGS [IF SYN] (R) / IN [IF SYN] (R) -- O PKT->TIME QUE O CLIENTE VAI USAR, ENQUANTO NAO DESCOBRE ELE
+    u64 since;       // KEEPER [ON START] (RW)
 // RO -- QUASE NAO USADO
     char name [PATH_NAME_SIZE]; // 24
     u16 sPorts [PATH_PORTS_N]; // 8 EM BIG ENDIAN
