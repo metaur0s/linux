@@ -958,6 +958,7 @@ static ssize_t __cold_as_ice __optimize_size cmd (struct file *file, const char 
             path->node    = node;
             path->rtt_max = RTT_MAX;
             path->oadd    = PATH_OADD_DEFAULT;
+            path->mask    = PMASK_MIN;
 
         } break;
 
