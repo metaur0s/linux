@@ -89,8 +89,15 @@
 
 // MAX DIFFERENCE FROM LOCAL PTIME TO PEER PTIME
 // TODO: PTIME_MAX - PTIME_MIN
-#define TDIFF_MIN (-(s64)0x8200001800000000LL)
-#define TDIFF_MAX ( (s64)0x8200001800000000LL)
+#define TDIFF_MIN (-(s64)0x8000001800000000LL)
+#define TDIFF_MAX ( (s64)0x8000001800000000LL)
+
+BUILD_ASSERT(RTIME_MIN < RTIME_MAX);
+BUILD_ASSERT(PTIME_MIN < PTIME_MAX);
+BUILD_ASSERT(TDIFF_MIN < TDIFF_MAX);
+
+BUILD_ASSERT(TDIFF_MIN < 0);
+BUILD_ASSERT(TDIFF_MAX > 0);
 
 #include "base.h"
 #include "types.h"
@@ -136,16 +143,19 @@ static path_s* pings [PING_QUEUES_N];
 static inline u64 get_current_ms (void) {
 #ifdef CONFIG_HIGH_RES_TIMERS
     // ktime_get_boottime()
-    return ktime_get_boottime_ns() / NSEC_PER_MSEC;
+    const u64 j = ktime_get_boottime_ns() / NSEC_PER_MSEC;
 #else
     // jiffies64_to_msecs()
-    const u64 j = get_jiffies_64();
+    u64 j = get_jiffies_64();
 #if HZ <= MSEC_PER_SEC && !(MSEC_PER_SEC % HZ)
-	return (MSEC_PER_SEC / HZ) * j;
+	j *= MSEC_PER_SEC / HZ;
 #else
-	return div_u64(j * HZ_TO_MSEC_NUM, HZ_TO_MSEC_DEN);
+	j = div_u64(j * HZ_TO_MSEC_NUM, HZ_TO_MSEC_DEN);
 #endif
 #endif
+    ASSERT(j >= RTIME_MIN);
+    ASSERT(j <= RTIME_MAX);
+    return j;
 }
 
 #include "alloc.c"
