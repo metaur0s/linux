@@ -9,15 +9,16 @@ static inline void keeper_send_pings (void) {
         while ((path = *ptr)) {
             if (path->info & K_ESTABLISHED) {
 
-		ASSERT(path->asked    >= PTIME_MIN);
-		ASSERT(path->asked    <= PTIME_MAX);
-		ASSERT(path->answered >= PTIME_MIN
-		    || path->answered == ANSWERED_CONNECTING);
-		ASSERT(path->answered <= PTIME_MAX);
-		ASSERT(path->mask     >= PMASK_MIN);
-		ASSERT(path->mask     <= PMASK_MAX);
-		ASSERT(path->tdiff    >= TDIFF_MIN);
-		ASSERT(path->tdiff    <= TDIFF_MAX);
+                ASSERT((path->asked    >= PTIME_MIN &&
+                        path->asked    <= PTIME_MAX) ||
+                        path->asked    == 0);
+                ASSERT((path->answered >= PTIME_MIN && 
+                        path->answered <= PTIME_MAX) ||
+                        path->answered == ANSWERED_CONNECTING);
+                ASSERT(path->mask     >= PMASK_MIN);
+                ASSERT(path->mask     <= PMASK_MAX);
+                ASSERT(path->tdiff    >= TDIFF_MIN);
+                ASSERT(path->tdiff    <= TDIFF_MAX);
 
                 const u64 now = path->mask + get_current_ms();
 
@@ -111,17 +112,18 @@ static void keeper (struct timer_list* const timer) {
             ASSERT(path->cdown <= RTT_VAR_STEPS);
             ASSERT(path->tdiff >= TDIFF_MIN);
             ASSERT(path->tdiff <= TDIFF_MAX);
-            ASSERT(path->asked >= PTIME_MIN || path->asked == 0);
-            ASSERT(path->asked <= PTIME_MAX);
-            ASSERT(path->answered >= PTIME_MIN
-                || path->answered == ANSWERED_LISTENING
-                || path->answered == ANSWERED_ACCEPTING
-                || path->answered == ANSWERED_CONNECTING);
-            ASSERT(path->answered <= PTIME_MAX);
-            ASSERT(path->oadd >= PATH_OADD_MIN);
-            ASSERT(path->oadd <= PATH_OADD_MAX);
+            ASSERT((path->asked    >= PTIME_MIN &&
+                    path->asked    <= PTIME_MAX) ||
+                    path->asked    == 0);
+            ASSERT((path->answered >= PTIME_MIN && 
+                    path->answered <= PTIME_MAX) ||
+                    path->answered == ANSWERED_LISTENING || 
+                    path->answered == ANSWERED_ACCEPTING || 
+                    path->answered == ANSWERED_CONNECTING);
             ASSERT(path->mask >= PMASK_MIN);
             ASSERT(path->mask <= PMASK_MAX);
+            ASSERT(path->oadd >= PATH_OADD_MIN);
+            ASSERT(path->oadd <= PATH_OADD_MAX);
 
             if (path->info & K_START) { //231956
 
