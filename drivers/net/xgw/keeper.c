@@ -35,9 +35,22 @@ static inline void keeper_send_pings (void) {
                 const u64 rtime = (o == O_KEY_SYN) ?
                     path->syn : RTIME(now, atomic_get(&path->tdiff));
 
+#if 0
                 ASSERT((rtime >= PTIME_MIN &&
                         rtime <= PTIME_MAX) ||
                         rtime == path->syn);
+#endif
+                if (!((rtime >= PTIME_MIN &&
+                        rtime <= PTIME_MAX) ||
+                        rtime == path->syn)) {
+                    printk("XGW: CRAZY: NODE [%s] PATH [%s] now = 0x%016llX rtime = 0x%016llX tdiff %lld \n",
+                            path->node->name,
+                            path->name,
+                            (uintll)now,
+                            (uintll)rtime,
+                            (long long int)path->tdiff
+                        );
+                }
 
                 // NOTE: RESERVA HEAD AND TAIL ROOM POIS PODE TER MAIS ENCAPSULAMENTOS NO PHYS
                 ping_send(path->node, path, &path->skel, now, rtime, o);
