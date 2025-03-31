@@ -77,7 +77,7 @@
 
 #define ANSWERED_LISTENING  ((u64)0)
 #define ANSWERED_ACCEPTING  ((u64)1)
-#define ANSWERED_CONNECTING ((u64)1200) // TEM QUE SER GRANDE SUFICIENTE PARA QUE ((path->answered - path->asked) > RTT_MAX)
+#define ANSWERED_CONNECTING ((u64)5000) // TEM QUE SER GRANDE SUFICIENTE PARA QUE ((path->answered - path->asked) > RTT_MAX)
 
 // REAL TIME (KTIME) (~2 YEARS IN MS)
 #define RTIME_MIN ((u64)0)
