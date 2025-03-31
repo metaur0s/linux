@@ -238,9 +238,9 @@ static void keeper (struct timer_list* const timer) {
 
                 const u64 answered = atomic_get(&path->answered);
 
-                ASSERT(answered == ANSWERED_CONNECTING
-                    || answered >= PTIME_MIN);
-                ASSERT(answered <= PTIME_MAX);
+                ASSERT((answered >= PTIME_MIN && 
+                        answered <= PTIME_MAX) ||
+                        answered == ANSWERED_CONNECTING);
 
                 // SE NAO RECEBEU UM PONG, ESTE RTT SERÁ UM OVERFLOW
                 // É POR ISSO QUE ANSWERED_CONNECTING TEM QUE SER MAIOR DO QUE O RTT_MAX,
