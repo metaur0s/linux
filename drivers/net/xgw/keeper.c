@@ -11,8 +11,10 @@ static inline void keeper_send_pings (void) {
 
 		ASSERT(path->asked    >= PTIME_MIN);
 		ASSERT(path->asked    <= PTIME_MAX);
-		ASSERT(path->answered >= PTIME_MIN);
-		ASSERT(path->answered <= PTIME_MAX);
+		ASSERT(path->answered >= PTIME_MIN
+		    || path->answered == ANSWERED_CONNECTING);
+		ASSERT(path->answered <= PTIME_MAX
+		    || path->answered == ANSWERED_CONNECTING);
 		ASSERT(path->mask     >= PMASK_MIN);
 		ASSERT(path->mask     <= PMASK_MAX);
 		ASSERT(path->tdiff    >= TDIFF_MIN);
