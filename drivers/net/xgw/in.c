@@ -65,6 +65,9 @@ static noinline uint in_ping (node_s* const node, const skb_s* const skb, pkt_s*
         // TODO: USAR UM VALOR QUE NAO SEJA 0 PARA TDIFFS NAO INICIALIZADOS
         tdiff = __atomic_load_n(&path->tdiff, __ATOMIC_RELAXED);
 
+        ASSERT(tdiff >= TDIFF_MIN);
+        ASSERT(tdiff <= TDIFF_MAX);
+
         tdiff = (
             // CONSIDERA O MEU
             tdiff * (tdiff != 0) +
