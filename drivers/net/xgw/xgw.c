@@ -134,12 +134,10 @@ static path_s* pings [PING_QUEUES_N];
 
 static inline u64 get_current_ms (void) {
 #ifdef CONFIG_HIGH_RES_TIMERS
-    // ktime_get_boottime()
-    const u64 j = ktime_get_boottime_ns() / NSEC_PER_MSEC;
+    const u64 j = RTIME_MIN + (ktime_get_boottime_ns() / NSEC_PER_MSEC);
 #else // jiffies64_to_msecs()
 #error
 #endif
-    j += RTIME_MIN;
     ASSERT(j >= RTIME_MIN);
     ASSERT(j <= RTIME_MAX);
     return j;
