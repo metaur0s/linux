@@ -88,8 +88,8 @@
 #define PTIME_MAX (PMASK_MAX + RTIME_MAX)
 
 // MAX DIFFERENCE FROM LOCAL PTIME TO PEER PTIME
-#define TDIFF_MIN ((s64)PTIME_MAX - (s64)PTIME_MIN)
-#define TDIFF_MAX ((s64)PTIME_MIN - (s64)PTIME_MAX)
+#define TDIFF_MIN ((s64)PTIME_MIN - (s64)PTIME_MAX)
+#define TDIFF_MAX ((s64)PTIME_MAX - (s64)PTIME_MIN)
 
 #include "base.h"
 #include "types.h"
