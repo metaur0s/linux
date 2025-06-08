@@ -739,7 +739,6 @@ static int tipc_udp_enable(struct net *net, struct tipc_bearer *b,
 			udp_conf.local_ip.s_addr = htonl(INADDR_ANY);
 		else
 			udp_conf.local_ip.s_addr = local.ipv4.s_addr;
-		udp_conf.use_udp_checksums = false;
 		ub->ifindex = dev->ifindex;
 		b->encap_hlen = sizeof(struct iphdr) + sizeof(struct udphdr);
 		b->mtu = b->media->mtu;

@@ -162,7 +162,6 @@ static int l2tp_nl_cmd_tunnel_create_get_addr(struct nlattr **attrs, struct l2tp
 		cfg->local_udp_port = nla_get_u16(attrs[L2TP_ATTR_UDP_SPORT]);
 	if (attrs[L2TP_ATTR_UDP_DPORT])
 		cfg->peer_udp_port = nla_get_u16(attrs[L2TP_ATTR_UDP_DPORT]);
-	cfg->use_udp_checksums = nla_get_flag(attrs[L2TP_ATTR_UDP_CSUM]);
 
 	/* Must have either AF_INET or AF_INET6 address for source and destination */
 #if IS_ENABLED(CONFIG_IPV6)
@@ -350,7 +349,7 @@ static int l2tp_nl_tunnel_send_addr4(struct sk_buff *skb, struct sock *sk,
 
 	switch (encap) {
 	case L2TP_ENCAPTYPE_UDP:
-		if (nla_put_u8(skb, L2TP_ATTR_UDP_CSUM, !sk->sk_no_check_tx) ||
+		if (nla_put_u8(skb, L2TP_ATTR_UDP_CSUM, !1) ||
 		    nla_put_u16(skb, L2TP_ATTR_UDP_SPORT, ntohs(inet->inet_sport)) ||
 		    nla_put_u16(skb, L2TP_ATTR_UDP_DPORT, ntohs(inet->inet_dport)))
 			return -1;
