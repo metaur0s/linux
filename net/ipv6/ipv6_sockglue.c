@@ -45,7 +45,6 @@
 #include <net/inet_common.h>
 #include <net/tcp.h>
 #include <net/udp.h>
-#include <net/udplite.h>
 #include <net/xfrm.h>
 #include <net/compat.h>
 #include <net/seg6.h>
@@ -581,8 +580,7 @@ int do_ipv6_setsockopt(struct sock *sk, int level, int optname,
 			if (sk->sk_type == SOCK_RAW)
 				break;
 
-			if (sk->sk_protocol == IPPROTO_UDP ||
-			    sk->sk_protocol == IPPROTO_UDPLITE) {
+			if (sk->sk_protocol == IPPROTO_UDP) {
 				struct udp_sock *up = udp_sk(sk);
 				if (up->pending == AF_INET6) {
 					retv = -EBUSY;
@@ -627,8 +625,6 @@ int do_ipv6_setsockopt(struct sock *sk, int level, int optname,
 			} else {
 				struct proto *prot = &udp_prot;
 
-				if (sk->sk_protocol == IPPROTO_UDPLITE)
-					prot = &udplite_prot;
 
 				sock_prot_inuse_add(net, sk->sk_prot, -1);
 				sock_prot_inuse_add(net, prot, 1);
@@ -1118,7 +1114,6 @@ int do_ipv6_getsockopt(struct sock *sk, int level, int optname,
 	switch (optname) {
 	case IPV6_ADDRFORM:
 		if (sk->sk_protocol != IPPROTO_UDP &&
-		    sk->sk_protocol != IPPROTO_UDPLITE &&
 		    sk->sk_protocol != IPPROTO_TCP)
 			return -ENOPROTOOPT;
 		if (sk->sk_state != TCP_ESTABLISHED)

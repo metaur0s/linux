@@ -180,17 +180,8 @@ endif
 if MIPS
 source "arch/mips/lib/crypto/Kconfig"
 endif
-if PPC
-source "arch/powerpc/lib/crypto/Kconfig"
-endif
 if RISCV
 source "arch/riscv/lib/crypto/Kconfig"
-endif
-if S390
-source "arch/s390/lib/crypto/Kconfig"
-endif
-if SPARC
-source "arch/sparc/lib/crypto/Kconfig"
 endif
 if X86
 source "arch/x86/lib/crypto/Kconfig"

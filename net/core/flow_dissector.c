@@ -1941,7 +1941,6 @@ u32 __skb_get_poff(const struct sk_buff *skb, const void *data,
 		break;
 	}
 	case IPPROTO_UDP:
-	case IPPROTO_UDPLITE:
 		poff += sizeof(struct udphdr);
 		break;
 	/* For the rest, we do not really care about header

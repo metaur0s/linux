@@ -1385,10 +1385,6 @@ set_sndbuf:
 		sock_valbool_flag(sk, SOCK_URGINLINE, valbool);
 		break;
 
-	case SO_NO_CHECK:
-		sk->sk_no_check_tx = valbool;
-		break;
-
 	case SO_LINGER:
 		if (optlen < sizeof(ling)) {
 			ret = -EINVAL;	/* 1003.1g */
@@ -1804,10 +1800,6 @@ int sk_getsockopt(struct sock *sk, int level, int optname,
 
 	case SO_OOBINLINE:
 		v.val = sock_flag(sk, SOCK_URGINLINE);
-		break;
-
-	case SO_NO_CHECK:
-		v.val = sk->sk_no_check_tx;
 		break;
 
 	case SO_PRIORITY:
