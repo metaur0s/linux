@@ -8,7 +8,6 @@ raid6_pq-$(CONFIG_X86) += recov_ssse3.o recov_avx2.o mmx.o sse1.o sse2.o avx2.o 
 raid6_pq-$(CONFIG_ALTIVEC) += altivec1.o altivec2.o altivec4.o altivec8.o \
                               vpermxor1.o vpermxor2.o vpermxor4.o vpermxor8.o
 raid6_pq-$(CONFIG_KERNEL_MODE_NEON) += neon.o neon1.o neon2.o neon4.o neon8.o recov_neon.o recov_neon_inner.o
-raid6_pq-$(CONFIG_S390) += s390vx8.o recov_s390xc.o
 raid6_pq-$(CONFIG_LOONGARCH) += loongarch_simd.o recov_loongarch_simd.o
 raid6_pq-$(CONFIG_RISCV_ISA_V) += rvv.o recov_rvv.o
 
@@ -69,10 +68,6 @@ CFLAGS_REMOVE_neon8.o += $(CC_FLAGS_NO_FPU)
 CFLAGS_REMOVE_recov_neon_inner.o += $(CC_FLAGS_NO_FPU)
 targets += neon1.c neon2.c neon4.c neon8.c
 $(obj)/neon%.c: $(src)/neon.uc $(src)/unroll.awk FORCE
-	$(call if_changed,unroll)
-
-targets += s390vx8.c
-$(obj)/s390vx%.c: $(src)/s390vx.uc $(src)/unroll.awk FORCE
 	$(call if_changed,unroll)
 
 quiet_cmd_mktable = TABLE   $@

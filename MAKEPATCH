@@ -1,0 +1,48 @@
+#!/bin/bash
+
+set -u
+
+LINUX_OLD=${1}
+LINUX_NEW=${2}
+
+[ -d ${LINUX_OLD} ] || exit 1
+[ -f ${LINUX_OLD}/Makefile ] || exit 1
+
+[ -d ${LINUX_NEW} ] || exit 1
+[ -f ${LINUX_NEW}/Makefile ] || exit 1
+
+REMOVED_DIRS=(
+    $(
+        (
+            (cd ${LINUX_OLD} && find . -type d)
+            (cd ${LINUX_NEW} && find . -type d)
+        ) | sort --reverse | uniq -u
+    )
+)
+
+( cd ${LINUX_OLD} && rm -fR -- ${REMOVED_DIRS[*]})
+
+REMOVED_FILES=(
+    $(
+        (
+            (cd ${LINUX_OLD} && find . ! -type d)
+            (cd ${LINUX_NEW} && find . ! -type d)
+        ) | sort | uniq -u
+    )
+)
+
+( cd ${LINUX_OLD} && rm -fR -- ${REMOVED_FILES[*]})
+
+echo '#!/bin/sh'
+echo 'set -u'
+echo 'set -e'
+echo 'rm -fR --' ${REMOVED_DIRS[*]}
+echo 'rm -f  --' ${REMOVED_FILES[*]}
+echo 'patch -p1 < "${0}"'
+echo 'rm -f -- $(find . -type f -iname "*.orig")'
+echo '### PATCH REJECTS'
+echo 'find . -type f -iname "*.rej"'
+echo '###'
+echo 'exit'
+
+diff -Naur ${LINUX_OLD} ${LINUX_NEW}

@@ -1182,7 +1182,6 @@ static bool cake_tcph_may_drop(const struct tcphdr *tcph,
 		case TCPOPT_MSS:  /* these should only be set on SYN */
 		case TCPOPT_WINDOW:
 		case TCPOPT_SACK_PERM:
-		case TCPOPT_FASTOPEN:
 		case TCPOPT_EXP:
 		default: /* don't drop if any unknown options are present */
 			return false;
