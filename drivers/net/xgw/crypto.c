@@ -25,14 +25,8 @@ static inline u64 encrypt (const u64 K[K_LEN], u64* restrict pos, u64* restrict 
     loop {
 
         // AVALANCHE OF ORIGINAL THROUGH KEYS
-        A += (x += B) * C + D;
-        B += (x += C) * D + E;
-        C += (x += D) * E + F;
-        D += (x += E) * F + G;
-        E += (x += F) * G + H;
-        F += (x += G) * H + A;
-        G += (x += H) * A + B;
-        H += (x += A) * B + C;
+        A += C += E += G += x += B += D += F += H +=
+            (((x + G) ^ E) + C) ^ A;
 
         if (pos == end)
             // RETURN THE HASH
@@ -56,14 +50,9 @@ static inline u64 decrypt (const u64 K[K_LEN], u64* restrict pos, u64* restrict 
 
     loop {
 
-        A += (x += B) * C + D;
-        B += (x += C) * D + E;
-        C += (x += D) * E + F;
-        D += (x += E) * F + G;
-        E += (x += F) * G + H;
-        F += (x += G) * H + A;
-        G += (x += H) * A + B;
-        H += (x += A) * B + C;
+        // AVALANCHE OF ORIGINAL THROUGH KEYS
+        A += C += E += G += x += B += D += F += H +=
+            (((x + G) ^ E) + C) ^ A;
 
         if (pos == end)
             // RETURN THE HASH
