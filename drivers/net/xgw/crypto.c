@@ -4,11 +4,14 @@
 static inline u64   swap64 (const u64 x) { const uint q = popcount(x); return (x >> q) | (x << (64 - q)); }
 static inline u64 unswap64 (const u64 x) { const uint q = popcount(x); return (x << q) | (x >> (64 - q)); }
 
-//#define ENC(x) (  swap64(  swap64(  swap64(  swap64(  swap64(  swap64(  swap64((x) + A) + B) + C) + D) + E) + F) + G) + H)
-//#define DEC(x) (unswap64(unswap64(unswap64(unswap64(unswap64(unswap64(unswap64((x) - H) - G) - F) - E) - D) - C) - B) - A)
+static inline u64 brotate64_r (const u64 x, const uint q) { return (x >> q) | (x << (64 - q)); }
+static inline u64 brotate64_l (const u64 x, const uint q) { return (x << q) | (x >> (64 - q)); }
 
-#define ENC(x) (((((((((x) + A) ^ B) + C) ^ D) + E) ^ F) + G) ^ H)
-#define DEC(x) (((((((((x) ^ H) - G) ^ F) - E) ^ D) - C) ^ B) - A)
+#define _ENC(x, s, m) (brotate64_r((x), popcount64(m)) + (s))
+#define _DEC(x, s, m) (brotate64_l((x) - s, popcount64(m)))
+
+#define ENC(x) _ENC(_ENC(_ENC(_ENC((x), A, B), C, D), E, F), G, H)
+#define DEC(x) _DEC(_DEC(_DEC(_DEC((x), G, H), E, F), C, D), A, B)
 
 // TODO: CHOOSE THE RIGHT ONE HERE
 #define _prefetch_secret __prefetch_r_temporal_low
