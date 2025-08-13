@@ -34,8 +34,8 @@ static inline u64 encrypt (const u64 K[K_LEN], u64* restrict pos, u64* restrict 
         *pos = BE64(ENC(x));
 
         // AVALANCHE OF ORIGINAL THROUGH KEYS
-        A += C += E += G += x += B += D += F += H +=
-            (((x + G) ^ E) + C) ^ A;
+        A += C += x += E += G += x;
+        B += D += x += F += H += x;
 
     } while (++pos != end);
 
@@ -61,8 +61,8 @@ static inline u64 decrypt (const u64 K[K_LEN], u64* restrict pos, u64* restrict 
         *pos = BE64(x);
 
         // AVALANCHE OF ORIGINAL THROUGH KEYS
-        A += C += E += G += x += B += D += F += H +=
-            (((x + G) ^ E) + C) ^ A;
+        A += C += x += E += G += x;
+        B += D += x += F += H += x;
 
     } while (++pos != end);
 
