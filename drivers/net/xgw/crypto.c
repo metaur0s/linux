@@ -1,14 +1,14 @@
 
 // !!!!!! TODO: XGW TO XGW REDIRECT WITHOUT GOING THROUGH IP STACK
 
-static inline u64   swap64 (const u64 x) { const uint q = popcount(x); return (x >> q) | (x << (64 - q)); }
-static inline u64 unswap64 (const u64 x) { const uint q = popcount(x); return (x << q) | (x >> (64 - q)); }
+static inline u64 bit_rotate_l64 (const u64 x, const uint q) { return (x << q) | (x >> (64 - q)); }
+static inline u64 bit_rotate_r64 (const u64 x, const uint q) { return (x >> q) | (x << (64 - q)); }
 
-static inline u64 brotate64_r (const u64 x, const uint q) { return (x >> q) | (x << (64 - q)); }
-static inline u64 brotate64_l (const u64 x, const uint q) { return (x << q) | (x >> (64 - q)); }
+static inline u64   swap64 (const u64 x) { return bit_rotate_l64(x, popcount64(x)); }
+static inline u64 unswap64 (const u64 x) { return bit_rotate_r64(x, popcount64(x)); }
 
-#define _ENC(x, s, m) (brotate64_r((x), popcount64(m)) + (s))
-#define _DEC(x, s, m) (brotate64_l((x) - s, popcount64(m)))
+#define _ENC(x, s, m) (bit_rotate_l64((x), popcount64(m)) + (s))
+#define _DEC(x, s, m) (bit_rotate_r64((x) - s, popcount64(m)))
 
 #define ENC(x) _ENC(_ENC(_ENC(_ENC((x), A, B), C, D), E, F), G, H)
 #define DEC(x) _DEC(_DEC(_DEC(_DEC((x), G, H), E, F), C, D), A, B)
