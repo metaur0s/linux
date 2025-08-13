@@ -7,11 +7,11 @@ static inline u64 bit_rotate_r64 (const u64 x, const uint q) { return (x >> q) |
 static inline u64   swap64 (const u64 x) { return bit_rotate_l64(x, popcount64(x)); }
 static inline u64 unswap64 (const u64 x) { return bit_rotate_r64(x, popcount64(x)); }
 
-#define _ENC(x, s, m) (bit_rotate_l64((x), popcount64(m)) + (s))
-#define _DEC(x, s, m) (bit_rotate_r64((x) - s, popcount64(m)))
+#define ENCX(x, s, m) (bit_rotate_l64((x), popcount64(m)) + (s))
+#define DECX(x, s, m) (bit_rotate_r64((x) - s, popcount64(m)))
 
-#define ENC(x) _ENC(_ENC(_ENC(_ENC((x), A, B), C, D), E, F), G, H)
-#define DEC(x) _DEC(_DEC(_DEC(_DEC((x), G, H), E, F), C, D), A, B)
+#define ENC(x) ENCX(ENCX(ENCX(ENCX((x), A, B), C, D), E, F), G, H)
+#define DEC(x) DECX(DECX(DECX(DECX((x), G, H), E, F), C, D), A, B)
 
 // TODO: CHOOSE THE RIGHT ONE HERE
 #define _prefetch_secret __prefetch_r_temporal_low
