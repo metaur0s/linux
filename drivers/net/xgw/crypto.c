@@ -25,22 +25,22 @@ static inline u64 encrypt (const u64 K[K_LEN], u64* restrict pos, u64* restrict 
     u64 A = K[0], B = K[1], C = K[2], D = K[3],
         E = K[4], F = K[5], G = K[6], H = K[7];
 
-    loop {
-
-        // AVALANCHE OF ORIGINAL THROUGH KEYS
-        A += C += E += G += x += B += D += F += H +=
-            (((x + G) ^ E) + C) ^ A;
-
-        if (pos == end)
-            // RETURN THE HASH
-            return x;
+    do { //__prefetch_w_temporal_high(pos + 2);
 
         // READ THE ORIGINAL VALUE
         x = BE64(*pos);
 
         // WRITE THE ENCRYPTED VALUE
-        *pos++ = BE64(ENC(x));
-    }
+        *pos = BE64(ENC(x));
+
+        // AVALANCHE OF ORIGINAL THROUGH KEYS
+        A += C += E += G += x += B += D += F += H +=
+            (((x + G) ^ E) + C) ^ A;
+
+    } while (++pos != end);
+
+    // RETURN THE HASH
+    return x;
 }
 
 static inline u64 decrypt (const u64 K[K_LEN], u64* restrict pos, u64* restrict const end, u64 x) {
@@ -48,25 +48,26 @@ static inline u64 decrypt (const u64 K[K_LEN], u64* restrict pos, u64* restrict 
     ASSERT((end - pos) >= PKT_ALIGN_WORDS);
     ASSERT((end - pos) <= XGW_PAYLOAD_MAX/sizeof(u64));
 
+    // INITIAL KEYS, PER INTERVAL
     u64 A = K[0], B = K[1], C = K[2], D = K[3],
         E = K[4], F = K[5], G = K[6], H = K[7];
 
-    loop {
-
-        // AVALANCHE OF ORIGINAL THROUGH KEYS
-        A += C += E += G += x += B += D += F += H +=
-            (((x + G) ^ E) + C) ^ A;
-
-        if (pos == end)
-            // RETURN THE HASH
-            return x;
+    do { //__prefetch_w_temporal_high(pos + 2);
 
         // READ THE ENCRYPTED VALUE AND DECRYPT IT
         x = DEC(BE64(*pos));
 
         // WRITE THE ORIGINAL VALUE
-        *pos++ = BE64(x);
-    }
+        *pos = BE64(x);
+
+        // AVALANCHE OF ORIGINAL THROUGH KEYS
+        A += C += E += G += x += B += D += F += H +=
+            (((x + G) ^ E) + C) ^ A;
+
+    } while (++pos != end);
+
+    // RETURN THE HASH
+    return x;
 }
 
 // USING SECRET S, APPLY RANDOM R, AND DERIVE KEY K
