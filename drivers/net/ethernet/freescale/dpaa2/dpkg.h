@@ -157,10 +157,6 @@ struct dpkg_mask {
 #define NH_FLD_UDP_CKSUM			BIT(3)
 #define NH_FLD_UDP_ALL_FIELDS			(BIT(4) - 1)
 
-/* UDP-lite fields */
-#define NH_FLD_UDP_LITE_PORT_SRC		BIT(0)
-#define NH_FLD_UDP_LITE_PORT_DST		BIT(1)
-#define NH_FLD_UDP_LITE_ALL_FIELDS		(BIT(2) - 1)
 
 /* UDP-encap-ESP fields */
 #define NH_FLD_UDP_ENC_ESP_PORT_SRC		BIT(0)
@@ -363,7 +359,7 @@ enum net_prot {
 	NET_PROT_IP,
 	NET_PROT_TCP,
 	NET_PROT_UDP,
-	NET_PROT_UDP_LITE,
+	NET_PROT_UDP_ZZZZ,
 	NET_PROT_IPHC,
 	NET_PROT_SCTP,
 	NET_PROT_SCTP_CHUNK_DATA,
