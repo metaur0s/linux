@@ -3,7 +3,6 @@
 #define _UDP6_IMPL_H
 #include <net/aligned_data.h>
 #include <net/udp.h>
-#include <net/udplite.h>
 #include <net/protocol.h>
 #include <net/addrconf.h>
 #include <net/inet_common.h>
