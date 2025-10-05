@@ -162,8 +162,11 @@ static netdev_tx_t out (skb_s* const skb, net_device_s* const dev) {
         path = &node->paths[pid];
 
         // CONSIDERAR O TEMPO DE IDA + CPU BUSY TIME + IMPRECISOES
+#if 0
         burst_new = ((_now + atomic_get(&path->olatency)) * PATHS_N) + pid;
-
+#else
+        burst_new = ((_now + (HZ * 50) / 100) * PATHS_N) + pid;
+#endif
         // STORE STREAM TIMEOUT + PID
         // IF THIS COMPARE EXCHANGE FAIL, IT'S BECAUSE SOME OTHER OUT RUNNED FOR THIS STREAM HASH, AND:
         //      a) THE PATH IS NOT ON OPATHS ANYMORE, AND CHANGED TO OTHER ONE
