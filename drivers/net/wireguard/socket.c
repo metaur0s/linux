@@ -97,7 +97,7 @@ out:
 static int send6(struct wg_device *wg, struct sk_buff *skb,
 		 struct endpoint *endpoint, u8 ds, struct dst_cache *cache)
 {
-#if IS_ENABLED(CONFIG_IPV6)
+#ifdef CONFIG_WIREGUARD_IP6
 	struct flowi6 fl = {
 		.saddr = endpoint->src6,
 		.daddr = endpoint->addr6.sin6_addr,
@@ -242,13 +242,15 @@ int wg_socket_endpoint_from_skb(struct endpoint *endpoint,
 		endpoint->addr4.sin_addr.s_addr = ip_hdr(skb)->saddr;
 		endpoint->src4.s_addr = ip_hdr(skb)->daddr;
 		endpoint->src_if4 = skb->skb_iif;
-	} else if (IS_ENABLED(CONFIG_IPV6) && skb->protocol == htons(ETH_P_IPV6)) {
+#ifdef CONFIG_WIREGUARD_IP6
+	} else if (skb->protocol == htons(ETH_P_IPV6)) {
 		endpoint->addr6.sin6_family = AF_INET6;
 		endpoint->addr6.sin6_port = udp_hdr(skb)->source;
 		endpoint->addr6.sin6_addr = ipv6_hdr(skb)->saddr;
 		endpoint->addr6.sin6_scope_id = ipv6_iface_scope_id(
 			&ipv6_hdr(skb)->saddr, skb->skb_iif);
 		endpoint->src6 = ipv6_hdr(skb)->daddr;
+#endif
 	} else {
 		return -EINVAL;
 	}
@@ -285,9 +287,11 @@ void wg_socket_set_peer_endpoint(struct wg_peer *peer,
 		peer->endpoint.addr4 = endpoint->addr4;
 		peer->endpoint.src4 = endpoint->src4;
 		peer->endpoint.src_if4 = endpoint->src_if4;
-	} else if (IS_ENABLED(CONFIG_IPV6) && endpoint->addr.sa_family == AF_INET6) {
+#ifdef CONFIG_WIREGUARD_IP6
+	} else if (endpoint->addr.sa_family == AF_INET6) {
 		peer->endpoint.addr6 = endpoint->addr6;
 		peer->endpoint.src6 = endpoint->src6;
+#endif
 	} else {
 		goto out;
 	}
@@ -309,6 +313,23 @@ void wg_socket_clear_peer_endpoint_src(struct wg_peer *peer)
 {
 	write_lock_bh(&peer->endpoint_lock);
 	memset(&peer->endpoint.src6, 0, sizeof(peer->endpoint.src6));
+#ifdef CONFIG_WIREGUARD_MARKS
+	// 162.159.192.0/24 - ITS WARP
+	// (ntohl(peer->endpoint.addr4.sin_addr.s_addr) & 0xFFFFFF00U) == 0xA29FC000U
+	// TODO: SOMENTE SE FOR CLIENTE - MAS ISSO ALTERA TODA A INTERFACE @_@
+	unsigned int mark = peer->device->fwmark;
+	if (mark >= CONFIG_WIREGUARD_MARK_0
+	 && mark < (CONFIG_WIREGUARD_MARK_0 + CONFIG_WIREGUARD_MARKS_N*CONFIG_WIREGUARD_MARK_MULT)) {
+		// JA SERA O PROXIMO POIS TERMINA EM _MULT
+		// [ (511 + ((1 + (x - 511) // 11) % 3) * 11) for x in (511, 522, 533)]
+		mark = CONFIG_WIREGUARD_MARK_0 + ((1 + (mark - CONFIG_WIREGUARD_MARK_0) / CONFIG_WIREGUARD_MARK_MULT) % CONFIG_WIREGUARD_MARKS_N) * CONFIG_WIREGUARD_MARK_MULT;
+		printk("WARP: %s: CHANGED TO MARK %u\n", peer->device->dev->name, mark);
+		peer->device->fwmark = mark;
+	}
+#elif 1
+	if (peer->device->fwmark)
+		printk("WARP: %s: CLEARED ENDPOINT\n", peer->device->dev->name);
+#endif
 	dst_cache_reset_now(&peer->endpoint_cache);
 	write_unlock_bh(&peer->endpoint_lock);
 }
@@ -360,15 +381,14 @@ int wg_socket_init(struct wg_device *wg, u16 port)
 		.family = AF_INET,
 		.local_ip.s_addr = htonl(INADDR_ANY),
 		.local_udp_port = htons(port),
-		.use_udp_checksums = true
 	};
-#if IS_ENABLED(CONFIG_IPV6)
+#ifdef CONFIG_WIREGUARD_IP6
 	int retries = 0;
 	struct udp_port_cfg port6 = {
 		.family = AF_INET6,
 		.local_ip6 = IN6ADDR_ANY_INIT,
-		.use_udp6_tx_checksums = true,
-		.use_udp6_rx_checksums = true,
+		.use_udp6_tx_checksums = false,
+		.use_udp6_rx_checksums = false,
 		.ipv6_v6only = true
 	};
 #endif
@@ -380,7 +400,7 @@ int wg_socket_init(struct wg_device *wg, u16 port)
 	if (unlikely(!net))
 		return -ENONET;
 
-#if IS_ENABLED(CONFIG_IPV6)
+#ifdef CONFIG_WIREGUARD_IP6
 retry:
 #endif
 
@@ -392,7 +412,7 @@ retry:
 	set_sock_opts(new4);
 	setup_udp_tunnel_sock(net, new4, &cfg);
 
-#if IS_ENABLED(CONFIG_IPV6)
+#ifdef CONFIG_WIREGUARD_IP6
 	if (ipv6_mod_enabled()) {
 		port6.local_udp_port = inet_sk(new4->sk)->inet_sport;
 		ret = udp_sock_create(net, &port6, &new6);

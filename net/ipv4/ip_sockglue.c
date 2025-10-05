@@ -923,7 +923,6 @@ int do_ip_setsockopt(struct sock *sk, int level, int optname,
 	case IP_CHECKSUM:
 	case IP_RECVFRAGSIZE:
 	case IP_RECVERR_RFC4884:
-	case IP_LOCAL_PORT_RANGE:
 		if (optlen >= sizeof(int)) {
 			if (copy_from_sockptr(&val, optval, sizeof(val)))
 				return -EFAULT;
@@ -1057,19 +1056,6 @@ int do_ip_setsockopt(struct sock *sk, int level, int optname,
 	case IP_TOS:	/* This sets both TOS and Precedence */
 		ip_sock_set_tos(sk, val);
 		return 0;
-	case IP_LOCAL_PORT_RANGE:
-	{
-		u16 lo = val;
-		u16 hi = val >> 16;
-
-		if (optlen != sizeof(u32))
-			return -EINVAL;
-		if (lo != 0 && hi != 0 && lo > hi)
-			return -EINVAL;
-
-		WRITE_ONCE(inet->local_port_range, val);
-		return 0;
-	}
 	}
 
 	err = 0;
@@ -1585,7 +1571,7 @@ int do_ip_getsockopt(struct sock *sk, int level, int optname,
 	case IP_TTL:
 		val = READ_ONCE(inet->uc_ttl);
 		if (val < 0)
-			val = READ_ONCE(sock_net(sk)->ipv4.sysctl_ip_default_ttl);
+			val = CONFIG_SYSCTL_IP_DEFAULT_TTL;
 		goto copyval;
 	case IP_MINTTL:
 		val = READ_ONCE(inet->min_ttl);
@@ -1693,9 +1679,6 @@ int do_ip_getsockopt(struct sock *sk, int level, int optname,
 			return -EFAULT;
 		return 0;
 	}
-	case IP_LOCAL_PORT_RANGE:
-		val = READ_ONCE(inet->local_port_range);
-		goto copyval;
 	}
 
 	if (needs_rtnl)

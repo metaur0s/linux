@@ -117,6 +117,59 @@ config OVPN
 	  This module enhances the performance of the OpenVPN userspace software
 	  by offloading the data channel processing to kernelspace.
 
+if WIREGUARD
+
+config        WIREGUARD_IP6
+	bool "WIREGUARD_IP6"
+	default y
+	depends on IPV6
+
+config        WIREGUARD_MARKS
+	bool "WIREGUARD_MARKS"
+	default n
+
+if WIREGUARD_MARKS
+
+config       WIREGUARD_MARKS_N
+	int "WIREGUARD_MARKS_N"
+	default 3
+
+config       WIREGUARD_MARK_0
+	int "WIREGUARD_MARK_0"
+	default 511
+
+config       WIREGUARD_MARK_MULT
+	int "WIREGUARD_MARK_MULT"
+	default 11
+
+endif
+
+config       WIREGUARD_KEEPALIVE_TIMEOUT
+	int "WIREGUARD_KEEPALIVE_TIMEOUT"
+	default 10
+
+config 	     WIREGUARD_REKEY_TIMEOUT
+	int "WIREGUARD_REKEY_TIMEOUT"
+	default 5
+
+config 	     WIREGUARD_REJECT_AFTER_TIME
+	int "WIREGUARD_REJECT_AFTER_TIME"
+	default 180
+
+config 	     WIREGUARD_REKEY_AFTER_TIME
+	int "WIREGUARD_REKEY_AFTER_TIME"
+	default 120
+
+config 	     WIREGUARD_MAX_TIMER_HANDSHAKES
+	int "WIREGUARD_MAX_TIMER_HANDSHAKES"
+	default 90
+
+config 	     WIREGUARD_MAX_PEERS_PER_DEVICE_SHIFT
+	int "WIREGUARD_MAX_PEERS_PER_DEVICE_SHIFT"
+	default 20
+
+endif
+
 config EQUALIZER
 	tristate "EQL (serial line load balancing) support"
 	help
@@ -537,8 +590,6 @@ source "drivers/net/plip/Kconfig"
 source "drivers/net/ppp/Kconfig"
 
 source "drivers/net/slip/Kconfig"
-
-source "drivers/s390/net/Kconfig"
 
 source "drivers/net/usb/Kconfig"
 

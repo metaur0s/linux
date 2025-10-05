@@ -71,7 +71,7 @@ struct sk_buff *nf_reject_skb_v4_tcp_reset(struct net *net,
 
 	skb_reserve(nskb, LL_MAX_HEADER);
 	niph = nf_reject_iphdr_put(nskb, oldskb, IPPROTO_TCP,
-				   READ_ONCE(net->ipv4.sysctl_ip_default_ttl));
+				   CONFIG_SYSCTL_IP_DEFAULT_TTL);
 	nf_reject_ip_tcphdr_put(nskb, oldskb, oth);
 	niph->tot_len = htons(nskb->len);
 	ip_send_check(niph);
@@ -151,7 +151,7 @@ struct sk_buff *nf_reject_skb_v4_unreach(struct net *net,
 
 	skb_reserve(nskb, LL_MAX_HEADER);
 	niph = nf_reject_iphdr_put(nskb, oldskb, IPPROTO_ICMP,
-				   READ_ONCE(net->ipv4.sysctl_ip_default_ttl));
+				   CONFIG_SYSCTL_IP_DEFAULT_TTL);
 
 	skb_reset_transport_header(nskb);
 	icmph = skb_put_zero(nskb, sizeof(struct icmphdr));

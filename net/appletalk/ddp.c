@@ -1665,10 +1665,7 @@ static int atalk_sendmsg(struct socket *sock, struct msghdr *msg, size_t len)
 		goto out;
 	}
 
-	if (sk->sk_no_check_tx)
-		ddp->deh_sum = 0;
-	else
-		ddp->deh_sum = atalk_checksum(skb, len + sizeof(*ddp));
+	ddp->deh_sum = 0;
 
 	/*
 	 * Loopback broadcast packets to non gateway targets (ie routes

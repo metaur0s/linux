@@ -43,13 +43,9 @@ config FS_MBCACHE
 	default y if EXT4_FS=y
 	default m if EXT2_FS_XATTR || EXT4_FS
 
-source "fs/jfs/Kconfig"
 
 source "fs/xfs/Kconfig"
-source "fs/gfs2/Kconfig"
-source "fs/ocfs2/Kconfig"
 source "fs/btrfs/Kconfig"
-source "fs/nilfs2/Kconfig"
 source "fs/f2fs/Kconfig"
 source "fs/zonefs/Kconfig"
 
@@ -310,8 +306,6 @@ source "fs/orangefs/Kconfig"
 source "fs/adfs/Kconfig"
 source "fs/affs/Kconfig"
 source "fs/ecryptfs/Kconfig"
-source "fs/hfs/Kconfig"
-source "fs/hfsplus/Kconfig"
 source "fs/befs/Kconfig"
 source "fs/bfs/Kconfig"
 source "fs/efs/Kconfig"

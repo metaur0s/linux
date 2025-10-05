@@ -1700,6 +1700,14 @@ static struct socket *__sys_socket_create(int family, int type, int protocol)
 	retval = sock_create(family, type, protocol, &sock);
 	if (retval < 0)
 		return ERR_PTR(retval);
+#ifdef CONFIG_NET_SOCKMARKS
+        static unsigned int marks[2] = { 0 };
+        sock->sk->sk_mark = CONFIG_NET_SOCKMARKS_0 + (marks[type == SOCK_STREAM]++ % CONFIG_NET_SOCKMARKS_N);
+#endif
+#if 0	// SO_KEEPALIVE
+	if ((family == AF_INET || family == AF_INET6) && (protocol == IPPROTO_TCP || (protocol == 0 && type == SOCK_STREAM)))
+		sock_set_flag(sock->sk, SOCK_KEEPOPEN);
+#endif
 
 	return sock;
 }

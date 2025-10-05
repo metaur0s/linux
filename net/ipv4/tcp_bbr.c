@@ -295,7 +295,7 @@ static void bbr_set_pacing_rate(struct sock *sk, u32 bw, int gain)
 		WRITE_ONCE(sk->sk_pacing_rate, rate);
 }
 
-/* override sysctl_tcp_min_tso_segs */
+/* override CONFIG_SYSCTL_TCP_MIN_TSO_SEGS */
 __bpf_kfunc static u32 bbr_min_tso_segs(struct sock *sk)
 {
 	return READ_ONCE(sk->sk_pacing_rate) < (bbr_min_tso_rate >> 3) ? 1 : 2;

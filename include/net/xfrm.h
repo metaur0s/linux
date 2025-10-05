@@ -975,7 +975,6 @@ __be16 xfrm_flowi_sport(const struct flowi *fl, const union flowi_uli *uli)
 	switch(fl->flowi_proto) {
 	case IPPROTO_TCP:
 	case IPPROTO_UDP:
-	case IPPROTO_UDPLITE:
 	case IPPROTO_SCTP:
 		port = uli->ports.sport;
 		break;
@@ -1002,7 +1001,6 @@ __be16 xfrm_flowi_dport(const struct flowi *fl, const union flowi_uli *uli)
 	switch(fl->flowi_proto) {
 	case IPPROTO_TCP:
 	case IPPROTO_UDP:
-	case IPPROTO_UDPLITE:
 	case IPPROTO_SCTP:
 		port = uli->ports.dport;
 		break;

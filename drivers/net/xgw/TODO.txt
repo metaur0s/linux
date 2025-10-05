@@ -1,0 +1,131 @@
+INICIALIZAR TODAS AS IKEYS / OKEYS com o secret
+    ou melhor, com um iKeysInitial
+
+AO APRENDER KEYS USAR AS JA CONHECIDAS
+    ou seja, o mesmo que o out faz para criptografar
+     e o in ao receber
+
+#
+
+WARN/DESISTIR AO TENTAR SE CONECTAR USANDO UMA PORTA QUE NAO ESTA ATIVADA
+
+###
+
+TEM QUE SER CAPAZ DE SETAR O IP SRC/DST SE ESTIVER ON
+    E STATUS <= CONNECTING
+
+###
+
+traffic shaping burst rate
+
+paths bandwidth weighting
+
+
+###
+
+status path
+
+    if (& ETH_DST)
+        print(eth dst)
+    if ()
+        print(vlan dst)
+
+###
+
+path -> bitarray de devs dos quais pode aprender
+
+
+###
+
+status node
+    checksum do secret
+
+###
+
+informar o ttl sendo usado ao enviar pings
+informar o ttl que ficou ao receber o ping
+
+######
+
+mostrar alteracoes de pings
+se mudar, seta no ping
+
+mostra no keeper
+
+
+###########
+
+informa MTU no ping
+
+informa MRU no ping
+
+ao mudar, seta todos os pings
+
+########################3
+
+P_NAME, path name
+
+#####################
+
+inicia todos os headers ao criar o path
+
+########
+
+ao deletar o path apenas limpa o statos e o cpaths
+
+#########
+
+[87766.352417] XGW: BR [1]: CONNECTING
+[87767.179084] XGW: BR [1]: ACCEPTED ON DEV switch
+[87773.741160] XFS (nvme0n1p4): Unmounting Filesystem 351cf54b-7b3f-4473-9e50-dada810ff179
+[87778.069837] XGW: DOWN
+[87779.579082] XGW: US [1]: UNSTABLE
+[87779.579084] XGW: US [2]: UNSTABLE
+[87779.579084] XGW: SPEEDYB0Y [0]: UNSTABLE
+[87792.805746] XGW: SPEEDYB0Y [0]: SUSPEND
+[87793.632413] XGW: SPEEDYB0Y [0]: SUSPENDING
+[87793.632414] XGW: SPEEDYB0Y [0]: WILL STOP
+[87794.459079] XGW: SPEEDYB0Y [0]: STOPPED
+[87794.459080] XGW: SPEEDYB0Y: STOPED
+[87795.285746] XGW: US [1]: SUSPEND
+[87795.285746] XGW: US [2]: SUSPEND
+[87796.112412] XGW: US [1]: SUSPENDING
+[87796.112413] XGW: US [1]: WILL STOP
+[87796.112413] XGW: US [2]: SUSPENDING
+[87796.112414] XGW: US [2]: WILL STOP
+[87796.939078] XGW: BR [1]: SUSPEND
+[87796.939079] XGW: BR [2]: SUSPEND
+[87796.939080] XGW: US [1]: STOPPED
+[87796.939080] XGW: US [2]: STOPPED
+[87796.939080] XGW: US: STOPED
+[87797.765745] XGW: BR [1]: SUSPENDING
+[87797.765746] XGW: BR [1]: WILL STOP
+[87797.765746] XGW: BR [2]: SUSPENDING
+[87797.765746] XGW: BR [2]: WILL STOP
+[87798.592411] XGW: BR [1]: STOPPED
+[87798.592412] XGW: BR [2]: STOPPED
+[87798.592412] XGW: BR: STOPED
+[88225.374140] XGW: drivers/net/xgw/xgw.c:1792: ASSERT FAILED: node->kpaths & KPATH(pid)
+[88225.374144] XGW: drivers/net/xgw/xgw.c:1793: ASSERT FAILED: node == nodes[nid]
+[88225.374169] XGW: drivers/net/xgw/xgw.c:1792: ASSERT FAILED: node->kpaths & KPATH(pid)
+[88225.374170] XGW: drivers/net/xgw/xgw.c:1793: ASSERT FAILED: node == nodes[nid]
+
+
+
+
+PING
+
+*ping->p ---> SEQ
+signed with auth
+
+
+PONG
+ack
+
+//
+encrypted with the learned o
+signed with 0
+*ping->p ---> ACK
+
+
+data

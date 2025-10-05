@@ -113,18 +113,14 @@ enum {
 #define TCP_REPAIR_QUEUE	20
 #define TCP_QUEUE_SEQ		21
 #define TCP_REPAIR_OPTIONS	22
-#define TCP_FASTOPEN		23	/* Enable FastOpen on listeners */
 #define TCP_TIMESTAMP		24
 #define TCP_NOTSENT_LOWAT	25	/* limit number of unsent bytes in write queue */
 #define TCP_CC_INFO		26	/* Get Congestion Control (optional) info */
 #define TCP_SAVE_SYN		27	/* Record SYN headers for new connections */
 #define TCP_SAVED_SYN		28	/* Get SYN headers recorded for connection */
 #define TCP_REPAIR_WINDOW	29	/* Get/set window parameters */
-#define TCP_FASTOPEN_CONNECT	30	/* Attempt FastOpen with connect */
 #define TCP_ULP			31	/* Attach a ULP to a TCP connection */
 #define TCP_MD5SIG_EXT		32	/* TCP MD5 Signature with extensions */
-#define TCP_FASTOPEN_KEY	33	/* Set the key for Fast Open (cookie) */
-#define TCP_FASTOPEN_NO_COOKIE	34	/* Enable TFO without a TFO cookie */
 #define TCP_ZEROCOPY_RECEIVE	35
 #define TCP_INQ			36	/* Notify bytes available to read as a cmsg on read */
 
@@ -138,7 +134,6 @@ enum {
 #define TCP_AO_GET_KEYS		41	/* List MKT(s) */
 #define TCP_AO_REPAIR		42	/* Get/Set SNEs and ISNs */
 
-#define TCP_IS_MPTCP		43	/* Is MPTCP being used? */
 #define TCP_RTO_MAX_MS		44	/* max rto time in ms */
 #define TCP_RTO_MIN_US		45	/* min rto time in us */
 #define TCP_DELACK_MAX_US	46	/* max delayed ack time in us */
@@ -168,21 +163,12 @@ enum {
 	TCP_QUEUES_NR,
 };
 
-/* why fastopen failed from client perspective */
-enum tcp_fastopen_client_fail {
-	TFO_STATUS_UNSPEC, /* catch-all */
-	TFO_COOKIE_UNAVAILABLE, /* if not in TFO_CLIENT_NO_COOKIE mode */
-	TFO_DATA_NOT_ACKED, /* SYN-ACK did not ack SYN data */
-	TFO_SYN_RETRANSMITTED, /* SYN-ACK did not ack SYN data after timeout */
-};
-
 /* for TCP_INFO socket option */
 #define TCPI_OPT_TIMESTAMPS	1
 #define TCPI_OPT_SACK		2
 #define TCPI_OPT_WSCALE		4
 #define TCPI_OPT_ECN		8 /* ECN was negociated at TCP session init */
 #define TCPI_OPT_ECN_SEEN	16 /* we received at least one packet with ECT */
-#define TCPI_OPT_SYN_DATA	32 /* SYN-ACK acked data in SYN sent or rcvd */
 #define TCPI_OPT_USEC_TS	64 /* usec timestamps */
 #define TCPI_OPT_TFO_CHILD	128 /* child from a Fast Open option on SYN */
 
@@ -234,7 +220,7 @@ struct tcp_info {
 	__u8	tcpi_backoff;
 	__u8	tcpi_options;
 	__u8	tcpi_snd_wscale : 4, tcpi_rcv_wscale : 4;
-	__u8	tcpi_delivery_rate_app_limited:1, tcpi_fastopen_client_fail:2;
+	__u8	tcpi_delivery_rate_app_limited:1, XXXXXXXXXXXXXXX:2;
 
 	__u32	tcpi_rto;
 	__u32	tcpi_ato;

@@ -387,12 +387,8 @@ static inline int ip4_dst_hoplimit(const struct dst_entry *dst)
 	int hoplimit = dst_metric_raw(dst, RTAX_HOPLIMIT);
 
 	if (hoplimit == 0) {
-		const struct net *net;
+		hoplimit = CONFIG_SYSCTL_IP_DEFAULT_TTL;
 
-		rcu_read_lock();
-		net = dst_dev_net_rcu(dst);
-		hoplimit = READ_ONCE(net->ipv4.sysctl_ip_default_ttl);
-		rcu_read_unlock();
 	}
 	return hoplimit;
 }

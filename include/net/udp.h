@@ -31,11 +31,10 @@
 #include <linux/indirect_call_wrapper.h>
 
 /**
- *	struct udp_skb_cb  -  UDP(-Lite) private variables
+ *	struct udp_skb_cb  -  UDP private variables
  *
  *	@header:      private variables used by IPv4/IPv6
- *	@cscov:       checksum coverage length (UDP-Lite only)
- *	@partial_cov: if set indicates partial csum coverage
+ *	@cscov:       checksum coverage length (UDP only)
  */
 struct udp_skb_cb {
 	union {
@@ -45,7 +44,6 @@ struct udp_skb_cb {
 #endif
 	} header;
 	__u16		cscov;
-	__u8		partial_cov;
 };
 #define UDP_SKB_CB(__skb)	((struct udp_skb_cb *)((__skb)->cb))
 
@@ -215,7 +213,7 @@ extern int sysctl_udp_wmem_min;
 struct sk_buff;
 
 /*
- *	Generic checksumming routines for UDP(-Lite) v4 and v6
+ *	Generic checksumming routines for UDP v4 and v6
  */
 static inline __sum16 __udp_lib_checksum_complete(struct sk_buff *skb)
 {
@@ -308,7 +306,7 @@ static inline void udp_drops_inc(struct sock *sk)
 	numa_drop_add(&udp_sk(sk)->drop_counters, 1);
 }
 
-/* hash routines shared between UDPv4/6 and UDP-Litev4/6 */
+/* hash routines shared between UDPv4/6 */
 static inline int udp_lib_hash(struct sock *sk)
 {
 	BUG();
@@ -524,36 +522,26 @@ static inline int copy_linear_skb(struct sk_buff *skb, int len, int off,
 }
 
 /*
- * 	SNMP statistics for UDP and UDP-Lite
+ * 	SNMP statistics for UDP
  */
-#define UDP_INC_STATS(net, field, is_udplite)		      do { \
-	if (is_udplite) SNMP_INC_STATS((net)->mib.udplite_statistics, field);       \
-	else		SNMP_INC_STATS((net)->mib.udp_statistics, field);  }  while(0)
-#define __UDP_INC_STATS(net, field, is_udplite) 	      do { \
-	if (is_udplite) __SNMP_INC_STATS((net)->mib.udplite_statistics, field);         \
-	else		__SNMP_INC_STATS((net)->mib.udp_statistics, field);    }  while(0)
+#define UDP_INC_STATS(net, field)		      SNMP_INC_STATS((net)->mib.udp_statistics, field)
+#define __UDP_INC_STATS(net, field) 	      __SNMP_INC_STATS((net)->mib.udp_statistics, field)
 
-#define __UDP6_INC_STATS(net, field, is_udplite)	    do { \
-	if (is_udplite) __SNMP_INC_STATS((net)->mib.udplite_stats_in6, field);\
-	else		__SNMP_INC_STATS((net)->mib.udp_stats_in6, field);  \
-} while(0)
-#define UDP6_INC_STATS(net, field, __lite)		    do { \
-	if (__lite) SNMP_INC_STATS((net)->mib.udplite_stats_in6, field);  \
-	else	    SNMP_INC_STATS((net)->mib.udp_stats_in6, field);      \
-} while(0)
+#define __UDP6_INC_STATS(net, field)	    __SNMP_INC_STATS((net)->mib.udp_stats_in6, field)
+#define UDP6_INC_STATS(net, field)		    SNMP_INC_STATS((net)->mib.udp_stats_in6, field)
 
 #if IS_ENABLED(CONFIG_IPV6)
 #define __UDPX_MIB(sk, ipv4)						\
 ({									\
-	ipv4 ? (IS_UDPLITE(sk) ? sock_net(sk)->mib.udplite_statistics :	\
+	ipv4 ? (	\
 				 sock_net(sk)->mib.udp_statistics) :	\
-		(IS_UDPLITE(sk) ? sock_net(sk)->mib.udplite_stats_in6 :	\
+		(	\
 				 sock_net(sk)->mib.udp_stats_in6);	\
 })
 #else
 #define __UDPX_MIB(sk, ipv4)						\
 ({									\
-	IS_UDPLITE(sk) ? sock_net(sk)->mib.udplite_statistics :		\
+			\
 			 sock_net(sk)->mib.udp_statistics;		\
 })
 #endif
@@ -649,8 +637,6 @@ drop:
 
 static inline void udp_post_segment_fix_csum(struct sk_buff *skb)
 {
-	/* UDP-lite can't land here - no GRO */
-	WARN_ON_ONCE(UDP_SKB_CB(skb)->partial_cov);
 
 	/* UDP packets generated with UDP_SEGMENT and traversing:
 	 *
