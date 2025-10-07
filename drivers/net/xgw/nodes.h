@@ -147,7 +147,7 @@ struct path_s {
     u8  tos;         // KEEPER / IN_DISCOVER
     u8  ttl;         // KEEPER / IN_DISCOVER
     u16 rtt_var_;    // KEEPER (RO) -- CONFIGURED BY USER
-    u16 olatency;    // KEEPER (WRITE) / OUT (READ) -- (RTT + RTT_VAR)/2 + CPU TIME + IMPRECISION
+    u16 olatency;    // KEEPER (WRITE) / OUT (READ) -- TODO: RETIRAR ISSO
 // 112 -- IN READ, OUT READ, IN WRITE (ON RECEIVE PING, WHILE OUT IS DISABLED)
     pkt_s skel;
 // 512
