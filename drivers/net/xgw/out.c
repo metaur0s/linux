@@ -140,30 +140,28 @@ static netdev_tx_t out (skb_s* const skb, net_device_s* const dev) {
     ASSERT(_now >= RTIME_MIN);
     ASSERT(_now <= RTIME_MAX);
 
-    path_s* path; uint pid;
-
     // LOAD STREAM TIMEOUT + PID
     const u64 burst = atomic_get(conn);
 
     //do { // NEED THIS ATOMICITY LOOP IN CASE SOMEONE ELSE USE THE CURRENT (OR OTHER ONE) AND OVERWRITE WHAT WE JUST SET
 
-        // CHOOSE A PATH
-        // STARTING FROM CURRENT, BUT CHANGE IF IDLE
-        pid = (burst + ((burst >> 5) < _now)) % PATHS_N;
+    // CHOOSE A PATH
+    // STARTING FROM CURRENT, BUT CHANGE IF IDLE
+    const uint pid0 = (burst + ((burst >> 5) < _now)) % PATHS_N;
 
-        // NOTE: NO CASO DE OPATHS SER 0, ESTE VALOR FINAL SERIA UNSPECIFIED
-        // NOTE: O ULTIMO GRUPO TEM QUE SER REPETIDO
-        pid = __ctz((opaths >> pid) << pid) % PATHS_N;
+    // NOTE: NO CASO DE OPATHS SER 0, ESTE VALOR FINAL SERIA UNSPECIFIED
+    // NOTE: O ULTIMO GRUPO TEM QUE SER REPETIDO
+    const uint pid = __ctz((opaths >> pid0) << pid0) % PATHS_N;
 
-        ASSERT(opaths & OPATH(pid));
+    ASSERT(opaths & OPATH(pid));
 
-        path = &node->paths[pid];
+    path_s* const path = &node->paths[pid];
 
-        // CONSIDERAR O TEMPO DE IDA + CPU BUSY TIME + IMPRECISOES
+    // CONSIDERAR O TEMPO DE IDA + CPU BUSY TIME + IMPRECISOES
 #if 0
-        burst_new = ((_now + atomic_get(&path->olatency)) * PATHS_N) + pid;
+    burst_new = ((_now + atomic_get(&path->olatency)) * PATHS_N) + pid;
 #else
-        atomic_set(conn, ((_now + (HZ * 9) / 10) << 5) | pid);
+    atomic_set(conn, ((_now + (HZ * 9) / 10) << 5) | pid);
 #endif
         // STORE STREAM TIMEOUT + PID
         // IF THIS COMPARE EXCHANGE FAIL, IT'S BECAUSE SOME OTHER OUT RUNNED FOR THIS STREAM HASH, AND:
