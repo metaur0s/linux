@@ -140,20 +140,18 @@ static netdev_tx_t out (skb_s* const skb, net_device_s* const dev) {
     ASSERT(_now >= RTIME_MIN);
     ASSERT(_now <= RTIME_MAX);
 
-    path_s* path; u64 burst, burst_new; uint pid;
+    path_s* path; uint pid;
 
     // LOAD STREAM TIMEOUT + PID
-    burst = atomic_get(conn);
+    const u64 burst = atomic_get(conn);
 
-    do { // NEED THIS ATOMICITY LOOP IN CASE SOMEONE ELSE USE THE CURRENT (OR OTHER ONE) AND OVERWRITE WHAT WE JUST SET
+    //do { // NEED THIS ATOMICITY LOOP IN CASE SOMEONE ELSE USE THE CURRENT (OR OTHER ONE) AND OVERWRITE WHAT WE JUST SET
 
-        pid = ( // CHOOSE A PATH
-            burst // STARTING FROM CURRENT,
-            + // BUT CHANGE IF IDLE
-           (burst < (_now * PATHS_N))
-        ) % PATHS_N;
+        // CHOOSE A PATH
+        // STARTING FROM CURRENT, BUT CHANGE IF IDLE
+        pid = (burst + ((burst >> 5) < _now)) % PATHS_N;
 
-        // NOTE: NO CASO DE OPATHS SER 0, ESTE VALOR FINAL SERA UNSPECIFIED
+        // NOTE: NO CASO DE OPATHS SER 0, ESTE VALOR FINAL SERIA UNSPECIFIED
         // NOTE: O ULTIMO GRUPO TEM QUE SER REPETIDO
         pid = __ctz((opaths >> pid) << pid) % PATHS_N;
 
@@ -165,7 +163,7 @@ static netdev_tx_t out (skb_s* const skb, net_device_s* const dev) {
 #if 0
         burst_new = ((_now + atomic_get(&path->olatency)) * PATHS_N) + pid;
 #else
-        burst_new = ((_now + (HZ * 50) / 100) * PATHS_N) + pid;
+        atomic_set(conn, ((_now + (HZ * 9) / 10) << 5) | pid);
 #endif
         // STORE STREAM TIMEOUT + PID
         // IF THIS COMPARE EXCHANGE FAIL, IT'S BECAUSE SOME OTHER OUT RUNNED FOR THIS STREAM HASH, AND:
@@ -173,7 +171,7 @@ static netdev_tx_t out (skb_s* const skb, net_device_s* const dev) {
         //      b) THE SAME PATH WAS JUST USED ON THIS STREAM,
         //         AND WE WILL RE-READ AND END USING IT ANYWAY, MAY BE OVERWRITING THE TIME BY OUR LOWER VALUE.
         //         IT'S NO PROBLEM, AS IT'S A MINIMUM TIME DIFFERENCE (AND NO TIMEOUT AND CHANGE MAY OCCUR BECAUSE OF THIS)
-    } while (!__atomic_compare_exchange_n(conn, &burst, burst_new, 0, __ATOMIC_RELAXED, __ATOMIC_RELAXED));
+    //} while (!__atomic_compare_exchange_n(conn, &burst, burst_new, 0, __ATOMIC_RELAXED, __ATOMIC_RELAXED));
 
 #if 1
     if (skb->ip_summed == CHECKSUM_PARTIAL)
