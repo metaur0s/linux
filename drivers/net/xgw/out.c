@@ -154,8 +154,8 @@ static netdev_tx_t out (skb_s* const skb, net_device_s* const dev) {
 
     // STORE STREAM TIMEOUT + PID
     // CONSIDERAR O TEMPO DE IDA + CPU BUSY TIME + IMPRECISOES
-    atomic_set(conn, ((_now + (HZ * 9) / 10) << 5) | pid); // atomic_get(&path->olatency)
-    
+    atomic_set(conn, ((_now + (atomic_get(&path->olatency) * 3) / 2) << 5) | pid);
+
     path_s* const path = &node->paths[pid];
 
 #if 1
