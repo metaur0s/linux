@@ -271,7 +271,7 @@ static void keeper (struct timer_list* const timer) {
                     if (path->cdown) {
                         path->cdown--;
                         __atomic_store_n(&path->rtt_var, path->rtt_var - RTT_VAR_STEP, __ATOMIC_RELAXED);
-                    }   __atomic_store_n(&path->olatency, (rtt + path->rtt_var)/2 + path->oadd, __ATOMIC_RELAXED);
+                    }  // __atomic_store_n(&path->olatency, (rtt + path->rtt_var)/2 + path->oadd, __ATOMIC_RELAXED);
                         __atomic_store_n(&path->rtt, rtt, __ATOMIC_RELAXED);
                     // A SECOND ELAPSED
                     acks = (path->acks >> 1) | ((u64)(took <= (rtt + path->rtt_var)) << (ACKS_N - 1));
