@@ -152,11 +152,11 @@ static netdev_tx_t out (skb_s* const skb, net_device_s* const dev) {
 
     ASSERT(opaths & OPATH(pid));
 
+    path_s* const path = &node->paths[pid];
+
     // STORE STREAM TIMEOUT + PID
     // CONSIDERAR O TEMPO DE IDA + CPU BUSY TIME + IMPRECISOES
     atomic_set(conn, ((_now + (atomic_get(&path->olatency) * 3) / 2) << 5) | pid);
-
-    path_s* const path = &node->paths[pid];
 
 #if 1
     if (skb->ip_summed == CHECKSUM_PARTIAL)
