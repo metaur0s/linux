@@ -143,33 +143,20 @@ static netdev_tx_t out (skb_s* const skb, net_device_s* const dev) {
     // LOAD STREAM TIMEOUT + PID
     const u64 burst = atomic_get(conn);
 
-    //do { // NEED THIS ATOMICITY LOOP IN CASE SOMEONE ELSE USE THE CURRENT (OR OTHER ONE) AND OVERWRITE WHAT WE JUST SET
-
     // CHOOSE A PATH
     // STARTING FROM CURRENT, BUT CHANGE IF IDLE
     const uint pid0 = (burst + ((burst >> 5) < _now)) % PATHS_N;
-
     // NOTE: NO CASO DE OPATHS SER 0, ESTE VALOR FINAL SERIA UNSPECIFIED
     // NOTE: O ULTIMO GRUPO TEM QUE SER REPETIDO
     const uint pid = __ctz((opaths >> pid0) << pid0) % PATHS_N;
 
     ASSERT(opaths & OPATH(pid));
 
-    path_s* const path = &node->paths[pid];
-
+    // STORE STREAM TIMEOUT + PID
     // CONSIDERAR O TEMPO DE IDA + CPU BUSY TIME + IMPRECISOES
-#if 0
-    burst_new = ((_now + atomic_get(&path->olatency)) * PATHS_N) + pid;
-#else
-    atomic_set(conn, ((_now + (HZ * 9) / 10) << 5) | pid);
-#endif
-        // STORE STREAM TIMEOUT + PID
-        // IF THIS COMPARE EXCHANGE FAIL, IT'S BECAUSE SOME OTHER OUT RUNNED FOR THIS STREAM HASH, AND:
-        //      a) THE PATH IS NOT ON OPATHS ANYMORE, AND CHANGED TO OTHER ONE
-        //      b) THE SAME PATH WAS JUST USED ON THIS STREAM,
-        //         AND WE WILL RE-READ AND END USING IT ANYWAY, MAY BE OVERWRITING THE TIME BY OUR LOWER VALUE.
-        //         IT'S NO PROBLEM, AS IT'S A MINIMUM TIME DIFFERENCE (AND NO TIMEOUT AND CHANGE MAY OCCUR BECAUSE OF THIS)
-    //} while (!__atomic_compare_exchange_n(conn, &burst, burst_new, 0, __ATOMIC_RELAXED, __ATOMIC_RELAXED));
+    atomic_set(conn, ((_now + (HZ * 9) / 10) << 5) | pid); // atomic_get(&path->olatency)
+    
+    path_s* const path = &node->paths[pid];
 
 #if 1
     if (skb->ip_summed == CHECKSUM_PARTIAL)
