@@ -148,7 +148,7 @@ static struct request_sock *cookie_tcp_check(struct net *net, struct sock *sk,
 
 	/* check for timestamp cookie support */
 	memset(&tcp_opt, 0, sizeof(tcp_opt));
-	tcp_parse_options(net, skb, &tcp_opt, 0, NULL);
+	tcp_parse_options(net, skb, &tcp_opt, 0);
 
 	if (tcp_opt.saw_tstamp && tcp_opt.rcv_tsecr) {
 		tsoff = secure_tcpv6_ts_off(net,
@@ -180,7 +180,7 @@ struct sock *cookie_v6_check(struct sock *sk, struct sk_buff *skb)
 	int full_space;
 	SKB_DR(reason);
 
-	if (!READ_ONCE(net->ipv4.sysctl_tcp_syncookies) ||
+	if (!CONFIG_SYSCTL_TCP_SYNCOOKIES ||
 	    !th->ack || th->rst)
 		goto out;
 

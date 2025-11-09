@@ -55,8 +55,6 @@ source "drivers/target/Kconfig"
 
 source "drivers/message/fusion/Kconfig"
 
-source "drivers/firewire/Kconfig"
-
 source "drivers/macintosh/Kconfig"
 
 source "drivers/net/Kconfig"
@@ -128,8 +126,6 @@ source "drivers/memstick/Kconfig"
 source "drivers/leds/Kconfig"
 
 source "drivers/accessibility/Kconfig"
-
-source "drivers/infiniband/Kconfig"
 
 source "drivers/edac/Kconfig"
 

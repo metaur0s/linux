@@ -1,0 +1,46 @@
+#!/bin/bash
+exit
+
+# GERA AS DIFERENCAS QUE NOS FIZEMOS
+rm -r -f -- linux/.git
+tar -z -x -f ${MYORIGIN} -C /tmp/
+diff -Naur /tmp/linux-${HASH} linux > ${MYPATCH}
+rm -r -f -- /tmp/linux-${HASH}
+
+# CLONA ESTE NOSSO REPOSITORIO, QUE É O ORIGINAL ATUAL
+git clone --depth 1 https://github.com/speedyb0y/linux.git ${LINUX_NEW}
+
+# AGORA COLOCA MINHAS MUDANCAS NO SITE
+cd ${LINUX_NEW}
+git config credential.helper store
+git add --all
+git commit -m "INITIAL ${MYVERSION}"
+git push
+
+# meld
+# dirdiff.py
+#  def shallow_equal ():
+#    return self.size == other.size
+
+wget -q -O - https://github.com/torvalds/linux/compare/master...speedyb0y:master.diff | grep XCONF_
+
+# REJEITADOS
+echo $(find . -type f -iname '*.rej')
+echo $(find . -type f -iname '*.orig')
+
+#
+geany $(for f in $(find . -type f -iname '*.rej' | sort) ; do echo ${f} ${f/.rej/} ; done)
+
+# ANALISE
+find . | grep -i -E '(mptcp)'
+
+grep -R -i 'mptcp'
+
+# UPLOAD
+(
+    git config http.postBuffer 524288000
+    git config credential.helper store
+    git add --all
+    git commit -m "$(date   +%s)"
+    git push
+)

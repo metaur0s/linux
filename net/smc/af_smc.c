@@ -2790,18 +2790,7 @@ int smc_sendmsg(struct socket *sock, struct msghdr *msg, size_t len)
 	smc = smc_sk(sk);
 	lock_sock(sk);
 
-	/* SMC does not support connect with fastopen */
-	if (msg->msg_flags & MSG_FASTOPEN) {
-		/* not connected yet, fallback */
-		if (sk->sk_state == SMC_INIT && !smc->connect_nonblock) {
-			rc = smc_switch_to_fallback(smc, SMC_CLC_DECL_OPTUNSUPP);
-			if (rc)
-				goto out;
-		} else {
-			rc = -EINVAL;
-			goto out;
-		}
-	} else if ((sk->sk_state != SMC_ACTIVE) &&
+	if ((sk->sk_state != SMC_ACTIVE) &&
 		   (sk->sk_state != SMC_APPCLOSEWAIT1) &&
 		   (sk->sk_state != SMC_INIT)) {
 		rc = -EPIPE;
@@ -3111,17 +3100,6 @@ int smc_setsockopt(struct socket *sock, int level, int optname,
 	if (rc || smc->use_fallback)
 		goto out;
 	switch (optname) {
-	case TCP_FASTOPEN:
-	case TCP_FASTOPEN_CONNECT:
-	case TCP_FASTOPEN_KEY:
-	case TCP_FASTOPEN_NO_COOKIE:
-		/* option not supported by SMC */
-		if (sk->sk_state == SMC_INIT && !smc->connect_nonblock) {
-			rc = smc_switch_to_fallback(smc, SMC_CLC_DECL_OPTUNSUPP);
-		} else {
-			rc = -EINVAL;
-		}
-		break;
 	case TCP_NODELAY:
 		if (sk->sk_state != SMC_INIT &&
 		    sk->sk_state != SMC_LISTEN &&

@@ -715,9 +715,6 @@ static int nft_payload_l4csum_offset(const struct nft_pktinfo *pkt,
 		if (!nft_payload_udp_checksum(skb, nft_thoff(pkt)))
 			return -1;
 		fallthrough;
-	case IPPROTO_UDPLITE:
-		*l4csum_offset = offsetof(struct udphdr, check);
-		break;
 	case IPPROTO_ICMPV6:
 		*l4csum_offset = offsetof(struct icmp6hdr, icmp6_cksum);
 		break;
