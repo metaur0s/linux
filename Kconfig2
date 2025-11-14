@@ -53,6 +53,10 @@ config    RECEIVE_SKB_FILTER_ARP
     bool "RECEIVE_SKB_FILTER_ARP"
     default y
 
+config    RECEIVE_SKB_FILTER_IP4
+    bool "RECEIVE_SKB_FILTER_IP4"
+    default y
+
 config    RECEIVE_SKB_FILTER_IP4_TCP
     bool "RECEIVE_SKB_FILTER_IP4_TCP"
     default y
@@ -67,6 +71,10 @@ config    RECEIVE_SKB_FILTER_IP4_UDP
 
 config    RECEIVE_SKB_FILTER_IP4_ICMP
     bool "RECEIVE_SKB_FILTER_IP4_ICMP"
+    default y
+
+config    RECEIVE_SKB_FILTER_IP6
+    bool "RECEIVE_SKB_FILTER_IP6"
     default y
 
 config    RECEIVE_SKB_FILTER_IP6_TCP
