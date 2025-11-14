@@ -45,10 +45,6 @@ menuconfig RECEIVE_SKB_FILTER
 
 if RECEIVE_SKB_FILTER
 
-config    RECEIVE_SKB_FILTER
-    bool "RECEIVE_SKB_FILTER"
-    default y
-
 config    RECEIVE_SKB_FILTER_ARP
     bool "RECEIVE_SKB_FILTER_ARP"
     default y
