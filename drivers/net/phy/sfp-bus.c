@@ -124,10 +124,6 @@ static void sfp_module_parse_support(struct sfp_bus *bus,
 {
 	unsigned long *interfaces = bus->caps.interfaces;
 	unsigned long *modes = bus->caps.link_modes;
-#if 1
-	phylink_set(modes, 2500baseX_Full);
-	__set_bit(PHY_INTERFACE_MODE_2500BASEX, interfaces);
-#else
 	unsigned int br_min, br_nom, br_max;
 	/* Decode the bitrate information to MBd */
 	br_min = br_nom = br_max = 0;
@@ -312,7 +308,7 @@ static void sfp_module_parse_support(struct sfp_bus *bus,
 			__set_bit(PHY_INTERFACE_MODE_2500BASEX, interfaces);
 		}
 	}
-#endif
+
 	phylink_set(modes, Autoneg);
 	phylink_set(modes, Pause);
 	phylink_set(modes, Asym_Pause);
@@ -343,10 +339,6 @@ static void sfp_init_module(struct sfp_bus *bus,
 phy_interface_t sfp_select_interface(struct sfp_bus *bus,
 				     const unsigned long *link_modes)
 {
-#if 1
-	printk("!!! PHY_INTERFACE_MODE_2500BASEX\n");
-	return PHY_INTERFACE_MODE_2500BASEX;
-#else
 	if (phylink_test(link_modes, 25000baseCR_Full) ||
 	    phylink_test(link_modes, 25000baseKR_Full) ||
 	    phylink_test(link_modes, 25000baseSR_Full))
@@ -380,7 +372,6 @@ phy_interface_t sfp_select_interface(struct sfp_bus *bus,
 	dev_warn(bus->sfp_dev, "Unable to ascertain link mode\n");
 
 	return PHY_INTERFACE_MODE_NA;
-#endif
 }
 EXPORT_SYMBOL_GPL(sfp_select_interface);
 
