@@ -1772,8 +1772,7 @@ int ixgbe_identify_sfp_module_generic(struct ixgbe_hw *hw)
 	        printk(" -- custom driver patch applied.\n");
 	        hw->phy.type = ixgbe_phy_sfp_intel;
 	        hw->phy.sfp_type = ixgbe_sfp_type_1g_lx_core0;
-	        status = IXGBE_SUCCESS;
-	        goto out;
+	        return 0;
 	}
 
 	/* Anything else 82598-based is supported */
