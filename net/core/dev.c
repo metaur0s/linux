@@ -5890,7 +5890,7 @@ static int __netif_receive_skb_core(struct sk_buff **pskb, bool pfmemalloc,
 		if (xgw_dev_in(skb))
 			goto drop;
 #endif
-#if 1 //def CONFIG_NETIN
+#ifdef CONFIG_RECEIVE_SKB_FILTER
     // TODO: TODAS MENOS O XGW
     if (!(skb->dev->flags & IFF_POINTOPOINT)) {
         const u8* const nheader = skb_network_header(skb);
@@ -5899,28 +5899,40 @@ static int __netif_receive_skb_core(struct sk_buff **pskb, bool pfmemalloc,
                 if (nheader[0] != 0x45)
                         goto drop; // NOT IPV4 WITHOUT OPTIONS
                 switch (nheader[9]) {
+#ifdef CONFIG_RECEIVE_SKB_FILTER_TCP
                     case IPPROTO_TCP:
+#ifdef CONFIG_RECEIVE_SKB_FILTER_TCP_SYN_DROP
                         if ((nheader[20 + 13] & 0b10010) == 0b00010)
                             goto drop; // SYN WITHOUT ACK
+#endif
                         goto _pass;
+#endif
                     case IPPROTO_UDP:
                         goto _pass;
+#ifdef CONFIG_RECEIVE_SKB_FILTER_ICMP
                     case IPPROTO_ICMP:
                         goto _pass;
+#endif
                 } // NOT ALLOWED
                         goto drop;
             case htons(ETH_P_IPV6): // TODO:
                 if ((nheader[0] & 0xF0) != 0x60)
                         goto drop; // NOT IPV6
                 switch (nheader[6]) {
+#ifdef CONFIG_RECEIVE_SKB_FILTER_TCP
                     case IPPROTO_TCP:
+#ifdef CONFIG_RECEIVE_SKB_FILTER_TCP_SYN_DROP
                         if ((nheader[40 + 13] & 0b10010) == 0b00010)
                             goto drop; // SYN WITHOUT ACK
+#endif
                         goto _pass;
+#endif
                     case IPPROTO_UDP:
                         goto _pass;
+#ifdef CONFIG_RECEIVE_SKB_FILTER_ICMP
                     case IPPROTO_ICMPV6:
                         goto _pass;
+#endif
                 } // NOT ALLOWED
                         goto drop;
             case htons(ETH_P_ARP):
