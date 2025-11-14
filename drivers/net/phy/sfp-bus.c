@@ -300,10 +300,14 @@ static void sfp_module_parse_support(struct sfp_bus *bus,
 	 * 2500BASE-X, so we allow some slack here.
 	 */
 	if (linkmode_empty(modes) && br_nom) {
+#if 1
+		printk("HERE I AM, BEAUTIFUL WORLD!!!\n");
+#else
 		if (br_min <= 1300 && br_max >= 1200) {
 			phylink_set(modes, 1000baseX_Full);
 			__set_bit(PHY_INTERFACE_MODE_1000BASEX, interfaces);
 		}
+#endif
 		if (br_min <= 3200 && br_max >= 2500) {
 			phylink_set(modes, 2500baseX_Full);
 			__set_bit(PHY_INTERFACE_MODE_2500BASEX, interfaces);
