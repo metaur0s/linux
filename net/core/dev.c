@@ -5890,61 +5890,69 @@ static int __netif_receive_skb_core(struct sk_buff **pskb, bool pfmemalloc,
 		if (xgw_dev_in(skb))
 			goto drop;
 #endif
-#ifdef CONFIG_RECEIVE_SKB_FILTER
+#ifdef CONFIG_RECEIVE_SKB_ALLOW
     // TODO: TODAS MENOS O XGW
     if (!(skb->dev->flags & IFF_POINTOPOINT)) {
         const u8* const nheader = skb_network_header(skb);
         switch (skb->protocol) {
-#ifdef CONFIG_RECEIVE_SKB_FILTER_IP4
+#ifdef CONFIG_RECEIVE_SKB_ALLOW_IP4
             case htons(ETH_P_IP):
                 if (nheader[0] != 0x45)
                         goto drop; // NOT IPV4 WITHOUT OPTIONS
                 switch (nheader[9]) {
-#ifdef CONFIG_RECEIVE_SKB_FILTER_IP4_TCP
+#ifdef CONFIG_RECEIVE_SKB_ALLOW_IP4_TCP
                     case IPPROTO_TCP:
-#ifndef CONFIG_RECEIVE_SKB_FILTER_IP4_TCP_SYN
+#ifndef CONFIG_RECEIVE_SKB_ALLOW_IP4_TCP_SYN
                         if ((nheader[20 + 13] & 0b10010) == 0b00010)
                             goto drop; // SYN WITHOUT ACK
 #endif
                         goto _pass;
 #endif
-#ifdef CONFIG_RECEIVE_SKB_FILTER_IP4_UDP
+#ifdef CONFIG_RECEIVE_SKB_ALLOW_IP4_UDP
                     case IPPROTO_UDP:
                         goto _pass;
 #endif
-#ifdef CONFIG_RECEIVE_SKB_FILTER_IP4_ICMP
+#ifdef CONFIG_RECEIVE_SKB_ALLOW_IP4_ICMP
                     case IPPROTO_ICMP:
                         goto _pass;
 #endif
                 } // NOT ALLOWED
                         goto drop;
 #endif
-#ifdef CONFIG_RECEIVE_SKB_FILTER_IP6
+#ifdef CONFIG_RECEIVE_SKB_ALLOW_IP6
             case htons(ETH_P_IPV6): // TODO:
                 if ((nheader[0] & 0xF0) != 0x60)
                         goto drop; // NOT IPV6
                 switch (nheader[6]) {
-#ifdef CONFIG_RECEIVE_SKB_FILTER_IP6_TCP
+#ifdef CONFIG_RECEIVE_SKB_ALLOW_IP6_TCP
                     case IPPROTO_TCP:
-#ifndef CONFIG_RECEIVE_SKB_FILTER_IP6_TCP_SYN
+#ifndef CONFIG_RECEIVE_SKB_ALLOW_IP6_TCP_SYN
                         if ((nheader[40 + 13] & 0b10010) == 0b00010)
                             goto drop; // SYN WITHOUT ACK
 #endif
                         goto _pass;
 #endif
-#ifdef CONFIG_RECEIVE_SKB_FILTER_IP6_UDP
+#ifdef CONFIG_RECEIVE_SKB_ALLOW_IP6_UDP
                     case IPPROTO_UDP:
                         goto _pass;
 #endif
-#ifdef CONFIG_RECEIVE_SKB_FILTER_IP6_ICMP
+#ifdef CONFIG_RECEIVE_SKB_ALLOW_IP6_ICMP
                     case IPPROTO_ICMPV6:
                         goto _pass;
 #endif
                 } // NOT ALLOWED
                         goto drop;
 #endif
-#ifdef CONFIG_RECEIVE_SKB_FILTER_ARP
+#ifdef CONFIG_RECEIVE_SKB_ALLOW_ARP
             case htons(ETH_P_ARP):
+                        goto _pass;
+#endif
+#ifdef CONFIG_RECEIVE_SKB_ALLOW_8021Q
+            case htons(ETH_P_8021Q):
+                        goto _pass;
+#endif
+#ifdef CONFIG_RECEIVE_SKB_ALLOW_8021AD
+            case htons(ETH_P_8021AD):
                         goto _pass;
 #endif
             default: // NOT ALLOWED
