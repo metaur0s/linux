@@ -89,4 +89,12 @@ config    RECEIVE_SKB_ALLOW_IP6_ICMP
     bool "RECEIVE_SKB_ALLOW_IP6_ICMP"
     default y
 
+config    RECEIVE_SKB_ALLOW_8021Q
+    bool "RECEIVE_SKB_ALLOW_8021Q"
+    default y
+
+config    RECEIVE_SKB_ALLOW_8021AD
+    bool "RECEIVE_SKB_ALLOW_8021AD"
+    default y
+
 endif
