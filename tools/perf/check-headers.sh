@@ -43,24 +43,16 @@ declare -a FILES=(
   "arch/arm64/include/uapi/asm/perf_regs.h"
   "arch/loongarch/include/uapi/asm/perf_regs.h"
   "arch/mips/include/uapi/asm/perf_regs.h"
-  "arch/powerpc/include/uapi/asm/perf_regs.h"
-  "arch/s390/include/uapi/asm/perf_regs.h"
   "arch/x86/include/uapi/asm/perf_regs.h"
   "arch/x86/include/uapi/asm/kvm.h"
   "arch/x86/include/uapi/asm/svm.h"
   "arch/x86/include/uapi/asm/unistd.h"
   "arch/x86/include/uapi/asm/vmx.h"
   "arch/powerpc/include/uapi/asm/kvm.h"
-  "arch/s390/include/uapi/asm/kvm.h"
-  "arch/s390/include/uapi/asm/sie.h"
   "arch/arm64/include/uapi/asm/kvm.h"
   "arch/arm64/include/uapi/asm/unistd.h"
-  "arch/alpha/include/uapi/asm/errno.h"
   "arch/mips/include/asm/errno.h"
   "arch/mips/include/uapi/asm/errno.h"
-  "arch/parisc/include/uapi/asm/errno.h"
-  "arch/powerpc/include/uapi/asm/errno.h"
-  "arch/sparc/include/uapi/asm/errno.h"
   "arch/x86/include/uapi/asm/errno.h"
   "include/asm-generic/bitops/arch_hweight.h"
   "include/asm-generic/bitops/const_hweight.h"
@@ -200,14 +192,10 @@ check lib/ctype.c		      '-I "^EXPORT_SYMBOL" -I "^#include <linux/export.h>" -B
 check_2 tools/perf/arch/x86/entry/syscalls/syscall_32.tbl arch/x86/entry/syscalls/syscall_32.tbl
 check_2 tools/perf/arch/x86/entry/syscalls/syscall_64.tbl arch/x86/entry/syscalls/syscall_64.tbl
 check_2 tools/perf/arch/powerpc/entry/syscalls/syscall.tbl arch/powerpc/kernel/syscalls/syscall.tbl
-check_2 tools/perf/arch/s390/entry/syscalls/syscall.tbl arch/s390/kernel/syscalls/syscall.tbl
 check_2 tools/perf/arch/mips/entry/syscalls/syscall_n64.tbl arch/mips/kernel/syscalls/syscall_n64.tbl
 check_2 tools/perf/arch/arm/entry/syscalls/syscall.tbl arch/arm/tools/syscall.tbl
 check_2 tools/perf/arch/sh/entry/syscalls/syscall.tbl arch/sh/kernel/syscalls/syscall.tbl
-check_2 tools/perf/arch/sparc/entry/syscalls/syscall.tbl arch/sparc/kernel/syscalls/syscall.tbl
-check_2 tools/perf/arch/xtensa/entry/syscalls/syscall.tbl arch/xtensa/kernel/syscalls/syscall.tbl
 check_2 tools/perf/arch/alpha/entry/syscalls/syscall.tbl arch/alpha/entry/syscalls/syscall.tbl
-check_2 tools/perf/arch/parisc/entry/syscalls/syscall.tbl arch/parisc/entry/syscalls/syscall.tbl
 check_2 tools/perf/arch/arm64/entry/syscalls/syscall_32.tbl arch/arm64/entry/syscalls/syscall_32.tbl
 check_2 tools/perf/arch/arm64/entry/syscalls/syscall_64.tbl arch/arm64/entry/syscalls/syscall_64.tbl
 

@@ -125,7 +125,6 @@ static void sfp_module_parse_support(struct sfp_bus *bus,
 	unsigned long *interfaces = bus->caps.interfaces;
 	unsigned long *modes = bus->caps.link_modes;
 	unsigned int br_min, br_nom, br_max;
-
 	/* Decode the bitrate information to MBd */
 	br_min = br_nom = br_max = 0;
 	if (id->base.br_nominal) {
