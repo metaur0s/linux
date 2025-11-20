@@ -61,19 +61,23 @@ EXPORT_SYMBOL(get_jiffies_64);
 
 EXPORT_SYMBOL(jiffies);
 
+#ifdef CONFIG_SPEEDYB0Y_CLOCKSOURCE_JIFFIES
 static int __init init_jiffies_clocksource(void)
 {
 	return __clocksource_register(&clocksource_jiffies);
 }
 
 core_initcall(init_jiffies_clocksource);
+#endif
 
+#ifdef CONFIG_SPEEDYB0Y_CLOCKSOURCE_JIFFIES_DEFAULT
 struct clocksource * __init __weak clocksource_default_clock(void)
 {
 	return &clocksource_jiffies;
 }
+#endif
 
-#ifdef CONFIG_SPEEDYB0Y_REFINED_JIFFIES
+#ifdef CONFIG_SPEEDYB0Y_CLOCKSOURCE_REFINED_JIFFIES
 static struct clocksource refined_jiffies;
 
 void __init register_refined_jiffies(long cycles_per_second)
