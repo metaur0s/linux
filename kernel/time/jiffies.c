@@ -73,6 +73,7 @@ struct clocksource * __init __weak clocksource_default_clock(void)
 	return &clocksource_jiffies;
 }
 
+#ifdef CONFIG_SPEEDYB0Y_REFINED_JIFFIES
 static struct clocksource refined_jiffies;
 
 void __init register_refined_jiffies(long cycles_per_second)
@@ -99,3 +100,4 @@ void __init register_refined_jiffies(long cycles_per_second)
 
 	__clocksource_register(&refined_jiffies);
 }
+#endif
