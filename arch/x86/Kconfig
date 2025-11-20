@@ -923,7 +923,6 @@ source "arch/x86/Kconfig.cpu"
 
 config HPET_TIMER
 	bool "HPET_TIMER"
-	prompt "HPET Timer Support" if X86_32
 	help
 	  Use the IA-PC HPET (High Precision Event Timer) to manage
 	  time in preference to the PIT and RTC, if a HPET is
