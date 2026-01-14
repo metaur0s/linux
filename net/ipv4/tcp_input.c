@@ -82,7 +82,6 @@
 #include <trace/events/tcp.h>
 #include <linux/jump_label_ratelimit.h>
 #include <net/busy_poll.h>
-#include <net/mptcp.h>
 
 int sysctl_tcp_max_orphans __read_mostly = NR_FILE;
 
@@ -902,7 +901,7 @@ void tcp_rcvbuf_grow(struct sock *sk, u32 newval)
 	oldval = tp->rcvq_space.space;
 	tp->rcvq_space.space = newval;
 
-	if (!READ_ONCE(net->ipv4.sysctl_tcp_moderate_rcvbuf) ||
+	if (!CONFIG_SYSCTL_TCP_MODERATE_RCVBUF ||
 	    (sk->sk_userlocks & SOCK_RCVBUF_LOCK))
 		return;
 
@@ -1277,7 +1276,7 @@ static void tcp_check_sack_reordering(struct sock *sk, const u32 low_seq,
 			 tp->undo_marker ? tp->undo_retrans : 0);
 #endif
 		tp->reordering = min_t(u32, (metric + mss - 1) / mss,
-				       READ_ONCE(sock_net(sk)->ipv4.sysctl_tcp_max_reordering));
+				       CONFIG_SYSCTL_TCP_MAX_REORDERING);
 	}
 
 	/* This exciting event is worth to be remembered. 8) */
@@ -2237,7 +2236,7 @@ static void tcp_check_reno_reordering(struct sock *sk, const int addend)
 		return;
 
 	tp->reordering = min_t(u32, tp->packets_out + addend,
-			       READ_ONCE(sock_net(sk)->ipv4.sysctl_tcp_max_reordering));
+			       CONFIG_SYSCTL_TCP_MAX_REORDERING);
 	tp->reord_seen++;
 	NET_INC_STATS(sock_net(sk), LINUX_MIB_TCPRENOREORDER);
 }
@@ -2373,7 +2372,7 @@ void tcp_enter_loss(struct sock *sk)
 	/* Timeout in disordered state after receiving substantial DUPACKs
 	 * suggests that the degree of reordering is over-estimated.
 	 */
-	reordering = READ_ONCE(net->ipv4.sysctl_tcp_reordering);
+	reordering = CONFIG_SYSCTL_TCP_REORDERING;
 	if (icsk->icsk_ca_state <= TCP_CA_Disorder &&
 	    tp->sacked_out >= reordering)
 		tp->reordering = min_t(unsigned int, tp->reordering,
@@ -2388,7 +2387,7 @@ void tcp_enter_loss(struct sock *sk)
 	 * loss recovery is underway except recurring timeout(s) on
 	 * the same SND.UNA (sec 3.2). Disable F-RTO on path MTU probing
 	 */
-	tp->frto = READ_ONCE(net->ipv4.sysctl_tcp_frto) &&
+	tp->frto = CONFIG_SYSCTL_TCP_FRTO &&
 		   (new_recovery || icsk->icsk_retransmits) &&
 		   !inet_csk(sk)->icsk_mtup.probe_size;
 }
@@ -2933,19 +2932,6 @@ void tcp_simple_retransmit(struct sock *sk)
 	struct sk_buff *skb;
 	int mss;
 
-	/* A fastopen SYN request is stored as two separate packets within
-	 * the retransmit queue, this is done by tcp_send_syn_data().
-	 * As a result simply checking the MSS of the frames in the queue
-	 * will not work for the SYN packet.
-	 *
-	 * Us being here is an indication of a path MTU issue so we can
-	 * assume that the fastopen SYN was lost and just mark all the
-	 * frames in the retransmit queue as lost. We will use an MSS of
-	 * -1 to mark all frames as lost, otherwise compute the current MSS.
-	 */
-	if (tp->syn_data && sk->sk_state == TCP_SYN_SENT)
-		mss = -1;
-	else
 		mss = tcp_current_mss(sk);
 
 	skb_rbtree_walk(skb, &sk->tcp_rtx_queue) {
@@ -3013,7 +2999,7 @@ static void tcp_process_loss(struct sock *sk, int flag, int num_dupack,
 	struct tcp_sock *tp = tcp_sk(sk);
 	bool recovered = !before(tp->snd_una, tp->high_seq);
 
-	if ((flag & FLAG_SND_UNA_ADVANCED || rcu_access_pointer(tp->fastopen_rsk)) &&
+	if ((flag & FLAG_SND_UNA_ADVANCED || 0) &&
 	    tcp_try_undo_loss(sk, false))
 		return;
 
@@ -3147,7 +3133,7 @@ static void tcp_fastretrans_alert(struct sock *sk, const u32 prior_snd_una,
 	/* D. Check state exit conditions. State can be terminated
 	 *    when high_seq is ACKed. */
 	if (icsk->icsk_ca_state == TCP_CA_Open) {
-		WARN_ON(tp->retrans_out != 0 && !tp->syn_data);
+		WARN_ON(tp->retrans_out != 0 && !0);
 		tp->retrans_stamp = 0;
 	} else if (!before(tp->snd_una, tp->high_seq)) {
 		switch (icsk->icsk_ca_state) {
@@ -3321,12 +3307,6 @@ void tcp_rearm_rto(struct sock *sk)
 {
 	const struct inet_connection_sock *icsk = inet_csk(sk);
 	struct tcp_sock *tp = tcp_sk(sk);
-
-	/* If the retrans timer is currently being used by Fast Open
-	 * for SYN-ACK retrans purpose, stay put.
-	 */
-	if (rcu_access_pointer(tp->fastopen_rsk))
-		return;
 
 	if (!tp->packets_out) {
 		inet_csk_clear_xmit_timer(sk, ICSK_TIME_RETRANS);
@@ -3640,7 +3620,7 @@ static inline bool tcp_may_raise_cwnd(const struct sock *sk, const int flag)
 	 * cwnd in tcp_fastretrans_alert() based on more states.
 	 */
 	if (tcp_sk(sk)->reordering >
-	    READ_ONCE(sock_net(sk)->ipv4.sysctl_tcp_reordering))
+	    CONFIG_SYSCTL_TCP_REORDERING)
 		return flag & FLAG_FORWARD_PROGRESS;
 
 	return flag & FLAG_DATA_ACKED;
@@ -4199,23 +4179,6 @@ old_ack:
 	return 0;
 }
 
-static void tcp_parse_fastopen_option(int len, const unsigned char *cookie,
-				      bool syn, struct tcp_fastopen_cookie *foc,
-				      bool exp_opt)
-{
-	/* Valid only in SYN or SYN-ACK with an even length.  */
-	if (!foc || !syn || len < 0 || (len & 1))
-		return;
-
-	if (len >= TCP_FASTOPEN_COOKIE_MIN &&
-	    len <= TCP_FASTOPEN_COOKIE_MAX)
-		memcpy(foc->val, cookie, len);
-	else if (len != 0)
-		len = -1;
-	foc->len = len;
-	foc->exp = exp_opt;
-}
-
 static bool smc_parse_options(const struct tcphdr *th,
 			      struct tcp_options_received *opt_rx,
 			      const unsigned char *ptr,
@@ -4283,8 +4246,7 @@ u16 tcp_parse_mss_option(const struct tcphdr *th, u16 user_mss)
  */
 void tcp_parse_options(const struct net *net,
 		       const struct sk_buff *skb,
-		       struct tcp_options_received *opt_rx, int estab,
-		       struct tcp_fastopen_cookie *foc)
+		       struct tcp_options_received *opt_rx, int estab)
 {
 	const unsigned char *ptr;
 	const struct tcphdr *th = tcp_hdr(skb);
@@ -4343,7 +4305,7 @@ void tcp_parse_options(const struct net *net,
 			case TCPOPT_TIMESTAMP:
 				if ((opsize == TCPOLEN_TIMESTAMP) &&
 				    ((estab && opt_rx->tstamp_ok) ||
-				     (!estab && READ_ONCE(net->ipv4.sysctl_tcp_timestamps)))) {
+				     (!estab && CONFIG_SYSCTL_TCP_TIMESTAMPS))) {
 					opt_rx->saw_tstamp = 1;
 					opt_rx->rcv_tsval = get_unaligned_be32(ptr);
 					opt_rx->rcv_tsecr = get_unaligned_be32(ptr + 4);
@@ -4378,11 +4340,6 @@ void tcp_parse_options(const struct net *net,
 				 */
 				break;
 #endif
-			case TCPOPT_FASTOPEN:
-				tcp_parse_fastopen_option(
-					opsize - TCPOLEN_FASTOPEN_BASE,
-					ptr, th->syn, foc, false);
-				break;
 
 			case TCPOPT_ACCECN0:
 			case TCPOPT_ACCECN1:
@@ -4391,15 +4348,10 @@ void tcp_parse_options(const struct net *net,
 				break;
 
 			case TCPOPT_EXP:
-				/* Fast Open option shares code 254 using a
-				 * 16 bits magic number.
-				 */
-				if (opsize >= TCPOLEN_EXP_FASTOPEN_BASE &&
+				if (opsize >= 4 &&
 				    get_unaligned_be16(ptr) ==
-				    TCPOPT_FASTOPEN_MAGIC) {
-					tcp_parse_fastopen_option(opsize -
-						TCPOLEN_EXP_FASTOPEN_BASE,
-						ptr + 2, th->syn, foc, true);
+				    0xF989) {
+                    // TODO:
 					break;
 				}
 
@@ -4460,7 +4412,7 @@ static bool tcp_fast_parse_options(const struct net *net,
 		}
 	}
 
-	tcp_parse_options(net, skb, &tp->rx_opt, 1, NULL);
+	tcp_parse_options(net, skb, &tp->rx_opt, 1);
 	if (tp->rx_opt.saw_tstamp && tp->rx_opt.rcv_tsecr)
 		tp->rx_opt.rcv_tsecr -= tp->tsoffset;
 
@@ -4651,12 +4603,6 @@ void tcp_reset(struct sock *sk, struct sk_buff *skb)
 	int err;
 
 	trace_tcp_receive_reset(sk);
-
-	/* mptcp can't tell us to ignore reset pkts,
-	 * so just ignore the return value of mptcp_incoming_options().
-	 */
-	if (sk_is_mptcp(sk))
-		mptcp_incoming_options(sk, skb);
 
 	/* We want the right error as BSD sees it (and indeed as we do). */
 	switch (sk->sk_state) {
@@ -5381,10 +5327,6 @@ static void tcp_data_queue(struct sock *sk, struct sk_buff *skb)
 	/* If a subflow has been reset, the packet should not continue
 	 * to be processed, drop the packet.
 	 */
-	if (sk_is_mptcp(sk) && !mptcp_incoming_options(sk, skb)) {
-		__kfree_skb(skb);
-		return;
-	}
 
 	if (TCP_SKB_CB(skb)->seq == TCP_SKB_CB(skb)->end_seq) {
 		__kfree_skb(skb);
@@ -5626,7 +5568,6 @@ skip_this:
 		else
 			__skb_queue_tail(&tmp, nskb); /* defer rbtree insertion */
 		skb_set_owner_r(nskb, sk);
-		mptcp_skb_ext_move(nskb, skb);
 
 		/* Copy data, releasing collapsed skbs. */
 		while (copy > 0) {
@@ -6001,7 +5942,7 @@ static void tcp_check_urg(struct sock *sk, const struct tcphdr *th)
 	struct tcp_sock *tp = tcp_sk(sk);
 	u32 ptr = ntohs(th->urg_ptr);
 
-	if (ptr && !READ_ONCE(sock_net(sk)->ipv4.sysctl_tcp_stdurg))
+	if (ptr && !CONFIG_SYSCTL_TCP_STDURG)
 		ptr--;
 	ptr += ntohl(th->seq);
 
@@ -6202,13 +6143,6 @@ step1:
 				goto reset;
 		}
 
-		/* Disable TFO if RST is out-of-order
-		 * and no data has been received
-		 * for current active TFO socket
-		 */
-		if (tp->syn_fastopen && !tp->data_segs_in &&
-		    sk->sk_state == TCP_ESTABLISHED)
-			tcp_fastopen_active_disable(sk);
 		tcp_send_challenge_ack(sk, false);
 		SKB_DR_SET(reason, TCP_RESET);
 		goto discard;
@@ -6547,69 +6481,6 @@ void tcp_finish_connect(struct sock *sk, struct sk_buff *skb)
 		tp->pred_flags = 0;
 }
 
-static bool tcp_rcv_fastopen_synack(struct sock *sk, struct sk_buff *synack,
-				    struct tcp_fastopen_cookie *cookie)
-{
-	struct tcp_sock *tp = tcp_sk(sk);
-	struct sk_buff *data = tp->syn_data ? tcp_rtx_queue_head(sk) : NULL;
-	u16 mss = tp->rx_opt.mss_clamp, try_exp = 0;
-	bool syn_drop = false;
-
-	if (mss == READ_ONCE(tp->rx_opt.user_mss)) {
-		struct tcp_options_received opt;
-
-		/* Get original SYNACK MSS value if user MSS sets mss_clamp */
-		tcp_clear_options(&opt);
-		opt.user_mss = opt.mss_clamp = 0;
-		tcp_parse_options(sock_net(sk), synack, &opt, 0, NULL);
-		mss = opt.mss_clamp;
-	}
-
-	if (!tp->syn_fastopen) {
-		/* Ignore an unsolicited cookie */
-		cookie->len = -1;
-	} else if (tp->total_retrans) {
-		/* SYN timed out and the SYN-ACK neither has a cookie nor
-		 * acknowledges data. Presumably the remote received only
-		 * the retransmitted (regular) SYNs: either the original
-		 * SYN-data or the corresponding SYN-ACK was dropped.
-		 */
-		syn_drop = (cookie->len < 0 && data);
-	} else if (cookie->len < 0 && !tp->syn_data) {
-		/* We requested a cookie but didn't get it. If we did not use
-		 * the (old) exp opt format then try so next time (try_exp=1).
-		 * Otherwise we go back to use the RFC7413 opt (try_exp=2).
-		 */
-		try_exp = tp->syn_fastopen_exp ? 2 : 1;
-	}
-
-	tcp_fastopen_cache_set(sk, mss, cookie, syn_drop, try_exp);
-
-	if (data) { /* Retransmit unacked data in SYN */
-		if (tp->total_retrans)
-			tp->fastopen_client_fail = TFO_SYN_RETRANSMITTED;
-		else
-			tp->fastopen_client_fail = TFO_DATA_NOT_ACKED;
-		skb_rbtree_walk_from(data)
-			 tcp_mark_skb_lost(sk, data);
-		tcp_non_congestion_loss_retransmit(sk);
-		NET_INC_STATS(sock_net(sk),
-				LINUX_MIB_TCPFASTOPENACTIVEFAIL);
-		return true;
-	}
-	tp->syn_data_acked = tp->syn_data;
-	if (tp->syn_data_acked) {
-		NET_INC_STATS(sock_net(sk), LINUX_MIB_TCPFASTOPENACTIVE);
-		/* SYN-data is counted as two separate packets in tcp_ack() */
-		if (tp->delivered > 1)
-			--tp->delivered;
-	}
-
-	tcp_fastopen_add_skb(sk, synack);
-
-	return false;
-}
-
 static void smc_check_reset_syn(struct tcp_sock *tp)
 {
 #if IS_ENABLED(CONFIG_SMC)
@@ -6640,12 +6511,10 @@ static int tcp_rcv_synsent_state_process(struct sock *sk, struct sk_buff *skb,
 {
 	struct inet_connection_sock *icsk = inet_csk(sk);
 	struct tcp_sock *tp = tcp_sk(sk);
-	struct tcp_fastopen_cookie foc = { .len = -1 };
 	int saved_clamp = tp->rx_opt.mss_clamp;
-	bool fastopen_fail;
 	SKB_DR(reason);
 
-	tcp_parse_options(sock_net(sk), skb, &tp->rx_opt, 0, &foc);
+	tcp_parse_options(sock_net(sk), skb, &tp->rx_opt, 0);
 	if (tp->rx_opt.saw_tstamp && tp->rx_opt.rcv_tsecr)
 		tp->rx_opt.rcv_tsecr -= tp->tsoffset;
 
@@ -6759,15 +6628,10 @@ consume:
 
 		tcp_finish_connect(sk, skb);
 
-		fastopen_fail = (tp->syn_fastopen || tp->syn_data) &&
-				tcp_rcv_fastopen_synack(sk, skb, &foc);
-
 		if (!sock_flag(sk, SOCK_DEAD)) {
 			sk->sk_state_change(sk);
 			sk_wake_async(sk, SOCK_WAKE_IO, POLL_OUT);
 		}
-		if (fastopen_fail)
-			return -1;
 		if (sk->sk_write_pending ||
 		    READ_ONCE(icsk->icsk_accept_queue.rskq_defer_accept) ||
 		    inet_csk_in_pingpong_mode(sk)) {
@@ -6884,47 +6748,6 @@ reset_and_undo:
 	return reason;
 }
 
-static void tcp_rcv_synrecv_state_fastopen(struct sock *sk)
-{
-	struct tcp_sock *tp = tcp_sk(sk);
-	struct request_sock *req;
-
-	/* If we are still handling the SYNACK RTO, see if timestamp ECR allows
-	 * undo. If peer SACKs triggered fast recovery, we can't undo here.
-	 */
-	if (inet_csk(sk)->icsk_ca_state == TCP_CA_Loss && !tp->packets_out)
-		tcp_try_undo_recovery(sk);
-
-	tcp_update_rto_time(tp);
-	WRITE_ONCE(inet_csk(sk)->icsk_retransmits, 0);
-	/* In tcp_fastopen_synack_timer() on the first SYNACK RTO we set
-	 * retrans_stamp but don't enter CA_Loss, so in case that happened we
-	 * need to zero retrans_stamp here to prevent spurious
-	 * retransmits_timed_out(). However, if the ACK of our SYNACK caused us
-	 * to enter CA_Recovery then we need to leave retrans_stamp as it was
-	 * set entering CA_Recovery, for correct retransmits_timed_out() and
-	 * undo behavior.
-	 */
-	tcp_retrans_stamp_cleanup(sk);
-
-	/* Once we leave TCP_SYN_RECV or TCP_FIN_WAIT_1,
-	 * we no longer need req so release it.
-	 */
-	req = rcu_dereference_protected(tp->fastopen_rsk,
-					lockdep_sock_is_held(sk));
-	reqsk_fastopen_remove(sk, req, false);
-
-	/* Re-arm the timer because data may have been sent out.
-	 * This is similar to the regular data transmission case
-	 * when new data has just been ack'ed.
-	 *
-	 * (TFO) - we could try to be more aggressive and
-	 * retransmitting any data sooner based on when they
-	 * are sent out.
-	 */
-	tcp_rearm_rto(sk);
-}
-
 /*
  *	This function implements the receiving procedure of RFC 793 for
  *	all states except ESTABLISHED and TIME_WAIT.
@@ -6938,7 +6761,6 @@ tcp_rcv_state_process(struct sock *sk, struct sk_buff *skb)
 	struct tcp_sock *tp = tcp_sk(sk);
 	struct inet_connection_sock *icsk = inet_csk(sk);
 	const struct tcphdr *th = tcp_hdr(skb);
-	struct request_sock *req;
 	int queued = 0;
 	SKB_DR(reason);
 
@@ -6991,18 +6813,6 @@ tcp_rcv_state_process(struct sock *sk, struct sk_buff *skb)
 
 	tcp_mstamp_refresh(tp);
 	tp->rx_opt.saw_tstamp = 0;
-	req = rcu_dereference_protected(tp->fastopen_rsk,
-					lockdep_sock_is_held(sk));
-	if (req) {
-		bool req_stolen;
-
-		WARN_ON_ONCE(sk->sk_state != TCP_SYN_RECV &&
-		    sk->sk_state != TCP_FIN_WAIT1);
-
-		SKB_DR_SET(reason, TCP_FASTOPEN);
-		if (!tcp_check_req(sk, skb, req, true, &req_stolen, &reason))
-			goto discard;
-	}
 
 	if (!th->ack && !th->rst && !th->syn) {
 		SKB_DR_SET(reason, TCP_FLAGS);
@@ -7035,14 +6845,12 @@ tcp_rcv_state_process(struct sock *sk, struct sk_buff *skb)
 	case TCP_SYN_RECV:
 		tp->delivered++; /* SYN-ACK delivery isn't tracked in tcp_ack */
 		if (!tp->srtt_us)
-			tcp_synack_rtt_meas(sk, req);
+			tcp_synack_rtt_meas(sk, NULL);
 
 		if (tp->rx_opt.tstamp_ok)
 			tp->advmss -= TCPOLEN_TSTAMP_ALIGNED;
 
-		if (req) {
-			tcp_rcv_synrecv_state_fastopen(sk);
-		} else {
+		{
 			tcp_try_undo_spurious_syn(sk);
 			tp->retrans_stamp = 0;
 			tcp_init_transfer(sk, BPF_SOCK_OPS_PASSIVE_ESTABLISHED_CB,
@@ -7083,9 +6891,6 @@ tcp_rcv_state_process(struct sock *sk, struct sk_buff *skb)
 	case TCP_FIN_WAIT1: {
 		int tmo;
 
-		if (req)
-			tcp_rcv_synrecv_state_fastopen(sk);
-
 		if (tp->snd_una != tp->write_seq)
 			break;
 
@@ -7108,8 +6913,6 @@ tcp_rcv_state_process(struct sock *sk, struct sk_buff *skb)
 		if (TCP_SKB_CB(skb)->end_seq != TCP_SKB_CB(skb)->seq &&
 		    after(TCP_SKB_CB(skb)->end_seq - th->fin, tp->rcv_nxt)) {
 			/* Receive out of order FIN after close() */
-			if (tp->syn_fastopen && th->fin)
-				tcp_fastopen_active_disable(sk);
 			tcp_done(sk);
 			NET_INC_STATS(sock_net(sk), LINUX_MIB_TCPABORTONDATA);
 			return SKB_DROP_REASON_TCP_ABORT_ON_DATA;
@@ -7161,8 +6964,6 @@ tcp_rcv_state_process(struct sock *sk, struct sk_buff *skb)
 			/* If a subflow has been reset, the packet should not
 			 * continue to be processed, drop the packet.
 			 */
-			if (sk_is_mptcp(sk) && !mptcp_incoming_options(sk, skb))
-				goto discard;
 			break;
 		}
 		fallthrough;
@@ -7315,7 +7116,7 @@ static bool tcp_syn_flood_action(struct sock *sk, const char *proto)
 	bool want_cookie = false;
 	u8 syncookies;
 
-	syncookies = READ_ONCE(net->ipv4.sysctl_tcp_syncookies);
+	syncookies = CONFIG_SYSCTL_TCP_SYNCOOKIES;
 
 #ifdef CONFIG_SYN_COOKIES
 	if (syncookies) {
@@ -7383,7 +7184,7 @@ u16 tcp_get_syncookie_mss(struct request_sock_ops *rsk_ops,
 	struct tcp_sock *tp = tcp_sk(sk);
 	u16 mss;
 
-	if (READ_ONCE(sock_net(sk)->ipv4.sysctl_tcp_syncookies) != 2 &&
+	if (CONFIG_SYSCTL_TCP_SYNCOOKIES != 2 &&
 	    !inet_csk_reqsk_queue_is_full(sk))
 		return 0;
 
@@ -7407,11 +7208,9 @@ int tcp_conn_request(struct request_sock_ops *rsk_ops,
 		     const struct tcp_request_sock_ops *af_ops,
 		     struct sock *sk, struct sk_buff *skb)
 {
-	struct tcp_fastopen_cookie foc = { .len = -1 };
 	struct tcp_options_received tmp_opt;
 	const struct tcp_sock *tp = tcp_sk(sk);
 	struct net *net = sock_net(sk);
-	struct sock *fastopen_sk = NULL;
 	struct request_sock *req;
 	bool want_cookie = false;
 	struct dst_entry *dst;
@@ -7431,7 +7230,7 @@ int tcp_conn_request(struct request_sock_ops *rsk_ops,
 		 */
 		__this_cpu_write(tcp_tw_isn, 0);
 	} else {
-		syncookies = READ_ONCE(net->ipv4.sysctl_tcp_syncookies);
+		syncookies = CONFIG_SYSCTL_TCP_SYNCOOKIES;
 
 		if (syncookies == 2 || inet_csk_reqsk_queue_is_full(sk)) {
 			want_cookie = tcp_syn_flood_action(sk,
@@ -7454,15 +7253,11 @@ int tcp_conn_request(struct request_sock_ops *rsk_ops,
 	tcp_rsk(req)->af_specific = af_ops;
 	tcp_rsk(req)->ts_off = 0;
 	tcp_rsk(req)->req_usec_ts = false;
-#if IS_ENABLED(CONFIG_MPTCP)
-	tcp_rsk(req)->is_mptcp = 0;
-#endif
 
 	tcp_clear_options(&tmp_opt);
 	tmp_opt.mss_clamp = af_ops->mss_clamp;
 	tmp_opt.user_mss  = READ_ONCE(tp->rx_opt.user_mss);
-	tcp_parse_options(sock_net(sk), skb, &tmp_opt, 0,
-			  want_cookie ? NULL : &foc);
+	tcp_parse_options(sock_net(sk), skb, &tmp_opt, 0);
 
 	if (want_cookie && !tmp_opt.saw_tstamp)
 		tcp_clear_options(&tmp_opt);
@@ -7486,7 +7281,7 @@ int tcp_conn_request(struct request_sock_ops *rsk_ops,
 		tcp_rsk(req)->ts_off = af_ops->init_ts_off(net, skb);
 	}
 	if (!want_cookie && !isn) {
-		int max_syn_backlog = READ_ONCE(net->ipv4.sysctl_max_syn_backlog);
+		int max_syn_backlog = CONFIG_SYSCTL_MAX_SYN_BACKLOG;
 
 		/* Kill the following clause, if you dislike this way. */
 		if (!syncookies &&
@@ -7535,29 +7330,17 @@ int tcp_conn_request(struct request_sock_ops *rsk_ops,
 	sk_rx_queue_set(req_to_sk(req), skb);
 	if (!want_cookie) {
 		tcp_reqsk_record_syn(sk, req, skb);
-		fastopen_sk = tcp_try_fastopen(sk, skb, req, &foc, dst);
 	}
-	if (fastopen_sk) {
-		af_ops->send_synack(fastopen_sk, dst, &fl, req,
-				    &foc, TCP_SYNACK_FASTOPEN, skb);
-		/* Add the child socket directly into the accept queue */
-		if (!inet_csk_reqsk_queue_add(sk, req, fastopen_sk)) {
-			bh_unlock_sock(fastopen_sk);
-			sock_put(fastopen_sk);
-			goto drop_and_free;
-		}
-		sk->sk_data_ready(sk);
-		bh_unlock_sock(fastopen_sk);
-		sock_put(fastopen_sk);
+	if (0) {
+
 	} else {
-		tcp_rsk(req)->tfo_listener = false;
 		if (!want_cookie &&
 		    unlikely(!inet_csk_reqsk_queue_hash_add(sk, req))) {
 			reqsk_free(req);
 			dst_release(dst);
 			return 0;
 		}
-		af_ops->send_synack(sk, dst, &fl, req, &foc,
+		af_ops->send_synack(sk, dst, &fl, req,
 				    !want_cookie ? TCP_SYNACK_NORMAL :
 						   TCP_SYNACK_COOKIE,
 				    skb);

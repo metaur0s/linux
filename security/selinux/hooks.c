@@ -51,7 +51,7 @@
 #include <linux/netfilter_ipv6.h>
 #include <linux/tty.h>
 #include <net/icmp.h>
-#include <net/ip.h>		/* for local_port_range[] */
+#include <net/ip.h>
 #include <net/tcp.h>		/* struct or_callable used in sock_rcv_skb */
 #include <net/inet_connection_sock.h>
 #include <net/net_namespace.h>
@@ -1161,8 +1161,7 @@ static inline u16 inode_mode_to_security_class(umode_t mode)
 
 static inline int default_protocol_stream(int protocol)
 {
-	return (protocol == IPPROTO_IP || protocol == IPPROTO_TCP ||
-		protocol == IPPROTO_MPTCP);
+	return (protocol == IPPROTO_IP || protocol == IPPROTO_TCP);
 }
 
 static inline int default_protocol_dgram(int protocol)
@@ -5687,21 +5686,6 @@ static void selinux_sctp_sk_clone(struct sctp_association *asoc, struct sock *sk
 	selinux_netlbl_sctp_sk_clone(sk, newsk);
 }
 
-static int selinux_mptcp_add_subflow(struct sock *sk, struct sock *ssk)
-{
-	struct sk_security_struct *ssksec = selinux_sock(ssk);
-	struct sk_security_struct *sksec = selinux_sock(sk);
-
-	ssksec->sclass = sksec->sclass;
-	ssksec->sid = sksec->sid;
-
-	/* replace the existing subflow label deleting the existing one
-	 * and re-recreating a new label using the updated context
-	 */
-	selinux_netlbl_sk_security_free(ssksec);
-	return selinux_netlbl_socket_post_create(ssk, ssk->sk_family);
-}
-
 static int selinux_inet_conn_request(const struct sock *sk, struct sk_buff *skb,
 				     struct request_sock *req)
 {
@@ -7484,7 +7468,6 @@ static struct security_hook_list selinux_hooks[] __ro_after_init = {
 	LSM_HOOK_INIT(sctp_sk_clone, selinux_sctp_sk_clone),
 	LSM_HOOK_INIT(sctp_bind_connect, selinux_sctp_bind_connect),
 	LSM_HOOK_INIT(sctp_assoc_established, selinux_sctp_assoc_established),
-	LSM_HOOK_INIT(mptcp_add_subflow, selinux_mptcp_add_subflow),
 	LSM_HOOK_INIT(inet_conn_request, selinux_inet_conn_request),
 	LSM_HOOK_INIT(inet_csk_clone, selinux_inet_csk_clone),
 	LSM_HOOK_INIT(inet_conn_established, selinux_inet_conn_established),

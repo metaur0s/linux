@@ -1,0 +1,117 @@
+
+config    NO_SNMP
+    bool "NO_SNMP"
+    default y
+
+config    VLAN
+    bool "VLAN"
+    default y
+
+config    VLAN_PASS
+    bool "VLAN_PASS"
+    default n
+
+config    VLAN_DROP
+    bool "VLAN_DROP"
+    default n
+
+config    VLAN_CORE
+    bool "VLAN_CORE"
+    default y
+
+config    VLAN_IXGBE
+    bool "VLAN_IXGBE"
+    default y
+
+menuconfig NET_SOCKMARKS
+    bool  "NET_SOCKMARKS"
+    default n
+
+if NET_SOCKMARKS
+
+config   NET_SOCKMARKS_0
+    int "NET_SOCKMARKS_0"
+    default 10
+
+config   NET_SOCKMARKS_N
+    int "NET_SOCKMARKS_N"
+    default 3
+
+endif
+
+menuconfig RECEIVE_SKB_ALLOW
+    bool  "RECEIVE_SKB_ALLOW"
+    default n
+
+if RECEIVE_SKB_ALLOW
+
+config    RECEIVE_SKB_ALLOW_ARP
+    bool "RECEIVE_SKB_ALLOW_ARP"
+    default y
+
+config    RECEIVE_SKB_ALLOW_IP4
+    bool "RECEIVE_SKB_ALLOW_IP4"
+    default y
+
+config    RECEIVE_SKB_ALLOW_IP4_TCP
+    bool "RECEIVE_SKB_ALLOW_IP4_TCP"
+    default y
+
+config    RECEIVE_SKB_ALLOW_IP4_TCP_SYN
+    bool "RECEIVE_SKB_ALLOW_IP4_TCP_SYN"
+    default y
+
+config    RECEIVE_SKB_ALLOW_IP4_UDP
+    bool "RECEIVE_SKB_ALLOW_IP4_UDP"
+    default y
+
+config    RECEIVE_SKB_ALLOW_IP4_ICMP
+    bool "RECEIVE_SKB_ALLOW_IP4_ICMP"
+    default y
+
+config    RECEIVE_SKB_ALLOW_IP6
+    bool "RECEIVE_SKB_ALLOW_IP6"
+    default y
+
+config    RECEIVE_SKB_ALLOW_IP6_TCP
+    bool "RECEIVE_SKB_ALLOW_IP6_TCP"
+    default y
+
+config    RECEIVE_SKB_ALLOW_IP6_TCP_SYN
+    bool "RECEIVE_SKB_ALLOW_IP6_TCP_SYN"
+    default y
+
+config    RECEIVE_SKB_ALLOW_IP6_UDP
+    bool "RECEIVE_SKB_ALLOW_IP6_UDP"
+    default y
+
+config    RECEIVE_SKB_ALLOW_IP6_ICMP
+    bool "RECEIVE_SKB_ALLOW_IP6_ICMP"
+    default y
+
+config    RECEIVE_SKB_ALLOW_8021Q
+    bool "RECEIVE_SKB_ALLOW_8021Q"
+    default y
+
+config    RECEIVE_SKB_ALLOW_8021AD
+    bool "RECEIVE_SKB_ALLOW_8021AD"
+    default y
+
+endif
+
+config    CLOCKSOURCE_JIFFIES
+    bool "CLOCKSOURCE_JIFFIES"
+    default y
+
+config    CLOCKSOURCE_JIFFIES_DEFAULT
+    bool "CLOCKSOURCE_JIFFIES_DEFAULT"
+    depends on CLOCKSOURCE_JIFFIES
+    default y
+
+config    CLOCKSOURCE_REFINED_JIFFIES
+    bool "CLOCKSOURCE_REFINED_JIFFIES"
+    default y
+
+config    CLOCKSOURCE_KVM_DEFAULT
+    bool "CLOCKSOURCE_KVM_DEFAULT"
+    default y

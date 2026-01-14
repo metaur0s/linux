@@ -40,8 +40,8 @@ enum {
 	UDP_FLAGS_ACCEPT_FRAGLIST,
 	UDP_FLAGS_ACCEPT_L4,
 	UDP_FLAGS_ENCAP_ENABLED, /* This socket enabled encap */
-	UDP_FLAGS_UDPLITE_SEND_CC, /* set via udplite setsockopt */
-	UDP_FLAGS_UDPLITE_RECV_CC, /* set via udplite setsockopt */
+	UDP_FLAGS_XXXX,
+	UDP_FLAGS_ZZZZ,
 };
 
 /* per NUMA structure for lockless producer usage. */
@@ -75,10 +75,10 @@ struct udp_sock {
 	__u16		 len;		/* total length of pending frames */
 	__u16		 gso_size;
 	/*
-	 * Fields specific to UDP-Lite.
+	 * Fields specific to XXXZZZ.
 	 */
-	__u16		 pcslen;
-	__u16		 pcrlen;
+	__u16		 XXXXXX;
+	__u16		 ZZZZZZ;
 	/*
 	 * For encapsulation sockets.
 	 */
@@ -236,7 +236,6 @@ static inline void udp_allow_gso(struct sock *sk)
 	hlist_nulls_for_each_entry_rcu(__up, node, list, udp_lrpa_node)
 #endif
 
-#define IS_UDPLITE(__sk) (__sk->sk_protocol == IPPROTO_UDPLITE)
 
 static inline struct sock *udp_tunnel_sk(const struct net *net, bool is_ipv6)
 {

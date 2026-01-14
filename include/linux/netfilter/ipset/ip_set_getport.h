@@ -26,7 +26,6 @@ static inline bool ip_set_proto_with_ports(u8 proto)
 	case IPPROTO_TCP:
 	case IPPROTO_SCTP:
 	case IPPROTO_UDP:
-	case IPPROTO_UDPLITE:
 		return true;
 	}
 	return false;

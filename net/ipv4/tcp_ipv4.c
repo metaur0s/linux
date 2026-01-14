@@ -339,8 +339,6 @@ int tcp_v4_connect(struct sock *sk, struct sockaddr_unsized *uaddr, int addr_len
 
 	atomic_set(&inet->inet_id, get_random_u16());
 
-	if (tcp_fastopen_defer_connect(sk, &err))
-		return err;
 	if (err)
 		goto failure;
 
@@ -502,7 +500,6 @@ int tcp_v4_err(struct sk_buff *skb, u32 info)
 	struct net *net = dev_net_rcu(skb->dev);
 	const int type = icmp_hdr(skb)->type;
 	const int code = icmp_hdr(skb)->code;
-	struct request_sock *fastopen;
 	struct tcp_sock *tp;
 	u32 seq, snd_una;
 	struct sock *sk;
@@ -557,9 +554,7 @@ int tcp_v4_err(struct sk_buff *skb, u32 info)
 	}
 
 	tp = tcp_sk(sk);
-	/* XXX (TFO) - tp->snd_una should be ISN (tcp_create_openreq_child() */
-	fastopen = rcu_dereference(tp->fastopen_rsk);
-	snd_una = fastopen ? tcp_rsk(fastopen)->snt_isn : tp->snd_una;
+	snd_una = tp->snd_una;
 	if (sk->sk_state != TCP_LISTEN &&
 	    !between(seq, snd_una, tp->snd_nxt)) {
 		__NET_INC_STATS(net, LINUX_MIB_OUTOFWINDOWICMPS);
@@ -603,7 +598,7 @@ int tcp_v4_err(struct sk_buff *skb, u32 info)
 		/* check if this ICMP message allows revert of backoff.
 		 * (see RFC 6069)
 		 */
-		if (!fastopen &&
+		if (!0 &&
 		    (code == ICMP_NET_UNREACH || code == ICMP_HOST_UNREACH))
 			tcp_ld_RTO_revert(sk, seq);
 		break;
@@ -617,11 +612,6 @@ int tcp_v4_err(struct sk_buff *skb, u32 info)
 	switch (sk->sk_state) {
 	case TCP_SYN_SENT:
 	case TCP_SYN_RECV:
-		/* Only in fast or simultaneous open. If a fast open socket is
-		 * already accepted it is treated as a connected one below.
-		 */
-		if (fastopen && !fastopen->sk)
-			break;
 
 		ip_icmp_error(sk, skb, err, th->dest, info, (u8 *)th);
 
@@ -860,7 +850,7 @@ static void tcp_v4_send_reset(const struct sock *sk, struct sk_buff *skb,
 #endif
 	/* Can't co-exist with TCPMD5, hence check rep.opt[0] */
 	if (rep.opt[0] == 0) {
-		__be32 mrst = mptcp_reset_option(skb);
+		__be32 mrst = htonl(0u);
 
 		if (mrst) {
 			rep.opt[0] = mrst;
@@ -1184,7 +1174,6 @@ static void tcp_v4_reqsk_send_ack(const struct sock *sk, struct sk_buff *skb,
 static int tcp_v4_send_synack(const struct sock *sk, struct dst_entry *dst,
 			      struct flowi *fl,
 			      struct request_sock *req,
-			      struct tcp_fastopen_cookie *foc,
 			      enum tcp_synack_type synack_type,
 			      struct sk_buff *syn_skb)
 {
@@ -1198,7 +1187,7 @@ static int tcp_v4_send_synack(const struct sock *sk, struct dst_entry *dst,
 	if (!dst && (dst = inet_csk_route_req(sk, &fl4, req)) == NULL)
 		return -1;
 
-	skb = tcp_make_synack(sk, dst, req, foc, synack_type, syn_skb);
+	skb = tcp_make_synack(sk, dst, req, synack_type, syn_skb);
 
 	if (skb) {
 		tcp_rsk(req)->syn_ect_snt = inet_sk(sk)->tos & INET_ECN_MASK;
@@ -1206,7 +1195,7 @@ static int tcp_v4_send_synack(const struct sock *sk, struct dst_entry *dst,
 
 		tos = READ_ONCE(inet_sk(sk)->tos);
 
-		if (READ_ONCE(sock_net(sk)->ipv4.sysctl_tcp_reflect_tos))
+		if (CONFIG_SYSCTL_TCP_REFLECT_TOS)
 			tos = (tcp_rsk(req)->syn_tos & ~INET_ECN_MASK) |
 			      (tos & INET_ECN_MASK);
 
@@ -1746,7 +1735,7 @@ struct sock *tcp_v4_syn_recv_sock(const struct sock *sk, struct sk_buff *skb,
 	/* Set ToS of the new socket based upon the value of incoming SYN.
 	 * ECT bits are set later in tcp_init_transfer().
 	 */
-	if (READ_ONCE(sock_net(sk)->ipv4.sysctl_tcp_reflect_tos))
+	if (CONFIG_SYSCTL_TCP_REFLECT_TOS)
 		newinet->tos = tcp_rsk(req)->syn_tos & ~INET_ECN_MASK;
 
 	if (!dst) {
@@ -2244,7 +2233,7 @@ lookup:
 			th = (const struct tcphdr *)skb->data;
 			iph = ip_hdr(skb);
 			tcp_v4_fill_cb(skb, iph, th);
-			nsk = tcp_check_req(sk, skb, req, false, &req_stolen,
+			nsk = tcp_check_req(sk, skb, req, &req_stolen,
 					    &drop_reason);
 		}
 		if (!nsk) {
@@ -2516,9 +2505,6 @@ void tcp_v4_destroy_sock(struct sock *sk)
 	/* Cleanup up the write buffer. */
 	tcp_write_queue_purge(sk);
 
-	/* Check if we want to disable active TFO */
-	tcp_fastopen_active_disable_ofo_check(sk);
-
 	/* Cleans up our, hopefully empty, out_of_order_queue. */
 	skb_rbtree_purge(&tp->out_of_order_queue);
 
@@ -2526,11 +2512,7 @@ void tcp_v4_destroy_sock(struct sock *sk)
 	if (inet_csk(sk)->icsk_bind_hash)
 		inet_put_port(sk);
 
-	BUG_ON(rcu_access_pointer(tp->fastopen_rsk));
-
 	/* If socket is aborted during connect operation */
-	tcp_free_fastopen_req(tp);
-	tcp_fastopen_destroy_cipher(sk);
 	tcp_saved_syn_free(tp);
 
 	sk_sockets_allocated_dec(sk);
@@ -2855,7 +2837,6 @@ static void get_tcp4_sock(struct sock *sk, struct seq_file *f, int i)
 	const struct tcp_sock *tp = tcp_sk(sk);
 	const struct inet_connection_sock *icsk = inet_csk(sk);
 	const struct inet_sock *inet = inet_sk(sk);
-	const struct fastopen_queue *fastopenq = &icsk->icsk_accept_queue.fastopenq;
 	__be32 dest = inet->inet_daddr;
 	__be32 src = inet->inet_rcv_saddr;
 	__u16 destp = ntohs(inet->inet_dport);
@@ -2908,7 +2889,7 @@ static void get_tcp4_sock(struct sock *sk, struct seq_file *f, int i)
 		(icsk->icsk_ack.quick << 1) | inet_csk_in_pingpong_mode(sk),
 		tcp_snd_cwnd(tp),
 		state == TCP_LISTEN ?
-		    fastopenq->max_qlen :
+		    0 :
 		    (tcp_in_initial_slowstart(tp) ? -1 : tp->snd_ssthresh));
 }
 
@@ -3517,7 +3498,6 @@ fallback:
 
 	net->ipv4.tcp_death_row.hashinfo = hinfo;
 	net->ipv4.tcp_death_row.sysctl_max_tw_buckets = ehash_entries / 2;
-	net->ipv4.sysctl_max_syn_backlog = max(128U, ehash_entries / 128);
 }
 
 static int __net_init tcp_sk_init(struct net *net)
@@ -3529,43 +3509,20 @@ static int __net_init tcp_sk_init(struct net *net)
 
 	net->ipv4.sysctl_tcp_base_mss = TCP_BASE_MSS;
 	net->ipv4.sysctl_tcp_min_snd_mss = TCP_MIN_SND_MSS;
-	net->ipv4.sysctl_tcp_probe_threshold = TCP_PROBE_THRESHOLD;
-	net->ipv4.sysctl_tcp_probe_interval = TCP_PROBE_INTERVAL;
 	net->ipv4.sysctl_tcp_mtu_probe_floor = TCP_MIN_SND_MSS;
 
-	net->ipv4.sysctl_tcp_keepalive_time = TCP_KEEPALIVE_TIME;
-	net->ipv4.sysctl_tcp_keepalive_probes = TCP_KEEPALIVE_PROBES;
-	net->ipv4.sysctl_tcp_keepalive_intvl = TCP_KEEPALIVE_INTVL;
-
-	net->ipv4.sysctl_tcp_syn_retries = TCP_SYN_RETRIES;
-	net->ipv4.sysctl_tcp_synack_retries = TCP_SYNACK_RETRIES;
-	net->ipv4.sysctl_tcp_syncookies = 1;
-	net->ipv4.sysctl_tcp_reordering = TCP_FASTRETRANS_THRESH;
-	net->ipv4.sysctl_tcp_retries1 = TCP_RETR1;
-	net->ipv4.sysctl_tcp_retries2 = TCP_RETR2;
-	net->ipv4.sysctl_tcp_orphan_retries = 0;
-	net->ipv4.sysctl_tcp_fin_timeout = TCP_FIN_TIMEOUT;
 	net->ipv4.sysctl_tcp_notsent_lowat = UINT_MAX;
 	net->ipv4.sysctl_tcp_tw_reuse = 2;
 	net->ipv4.sysctl_tcp_tw_reuse_delay = 1 * MSEC_PER_SEC;
-	net->ipv4.sysctl_tcp_no_ssthresh_metrics_save = 1;
 
 	refcount_set(&net->ipv4.tcp_death_row.tw_refcount, 1);
 	tcp_set_hashinfo(net);
 
 	net->ipv4.sysctl_tcp_sack = 1;
 	net->ipv4.sysctl_tcp_window_scaling = 1;
-	net->ipv4.sysctl_tcp_timestamps = 1;
 	net->ipv4.sysctl_tcp_early_retrans = 3;
-	net->ipv4.sysctl_tcp_recovery = TCP_RACK_LOSS_DETECTION;
-	net->ipv4.sysctl_tcp_slow_start_after_idle = 1; /* By default, RFC2861 behavior.  */
-	net->ipv4.sysctl_tcp_retrans_collapse = 1;
-	net->ipv4.sysctl_tcp_max_reordering = 300;
 	net->ipv4.sysctl_tcp_dsack = 1;
 	net->ipv4.sysctl_tcp_app_win = 31;
-	net->ipv4.sysctl_tcp_adv_win_scale = 1;
-	net->ipv4.sysctl_tcp_frto = 2;
-	net->ipv4.sysctl_tcp_moderate_rcvbuf = 1;
 	net->ipv4.sysctl_tcp_rcvbuf_low_rtt = USEC_PER_MSEC;
 	/* This limits the percentage of the congestion window which we
 	 * will allow a single TSO frame to consume.  Building TSO frames
@@ -3578,7 +3535,6 @@ static int __net_init tcp_sk_init(struct net *net)
 	/* rfc5961 challenge ack rate limiting, per net-ns, disabled by default. */
 	net->ipv4.sysctl_tcp_challenge_ack_limit = INT_MAX;
 
-	net->ipv4.sysctl_tcp_min_tso_segs = 2;
 	net->ipv4.sysctl_tcp_tso_rtt_log = 9;  /* 2^9 = 512 usec */
 	net->ipv4.sysctl_tcp_min_rtt_wlen = 300;
 	net->ipv4.sysctl_tcp_autocorking = 1;
@@ -3598,9 +3554,6 @@ static int __net_init tcp_sk_init(struct net *net)
 	net->ipv4.sysctl_tcp_comp_sack_nr = 44;
 	net->ipv4.sysctl_tcp_comp_sack_rtt_percent = 33;
 	net->ipv4.sysctl_tcp_backlog_ack_defer = 1;
-	net->ipv4.sysctl_tcp_fastopen = TFO_CLIENT_ENABLE;
-	net->ipv4.sysctl_tcp_fastopen_blackhole_timeout = 0;
-	atomic_set(&net->ipv4.tfo_active_disable_times, 0);
 
 	/* Set default values for PLB */
 	net->ipv4.sysctl_tcp_plb_enabled = 0; /* Disabled by default */
@@ -3617,9 +3570,6 @@ static int __net_init tcp_sk_init(struct net *net)
 		net->ipv4.tcp_congestion_control = init_net.ipv4.tcp_congestion_control;
 	else
 		net->ipv4.tcp_congestion_control = &tcp_reno;
-
-	net->ipv4.sysctl_tcp_syn_linear_timeouts = 4;
-	net->ipv4.sysctl_tcp_shrink_window = 0;
 
 	net->ipv4.sysctl_tcp_pingpong_thresh = 1;
 	net->ipv4.sysctl_tcp_rto_min_us = jiffies_to_usecs(TCP_RTO_MIN);
@@ -3647,7 +3597,6 @@ static void __net_exit tcp_sk_exit_batch(struct list_head *net_exit_list)
 	list_for_each_entry(net, net_exit_list, exit_list) {
 		inet_pernet_hashinfo_free(net->ipv4.tcp_death_row.hashinfo);
 		WARN_ON_ONCE(!refcount_dec_and_test(&net->ipv4.tcp_death_row.tw_refcount));
-		tcp_fastopen_ctx_destroy(net);
 	}
 
 	mutex_unlock(&tcp_exit_batch_mutex);

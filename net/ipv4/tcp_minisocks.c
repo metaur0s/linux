@@ -118,7 +118,7 @@ tcp_timewait_state_process(struct inet_timewait_sock *tw, struct sk_buff *skb,
 	tmp_opt.saw_tstamp = 0;
 	ts_recent_stamp = READ_ONCE(tcptw->tw_ts_recent_stamp);
 	if (th->doff > (sizeof(*th) >> 2) && ts_recent_stamp) {
-		tcp_parse_options(twsk_net(tw), skb, &tmp_opt, 0, NULL);
+		tcp_parse_options(twsk_net(tw), skb, &tmp_opt, 0);
 
 		if (tmp_opt.saw_tstamp) {
 			if (tmp_opt.rcv_tsecr)
@@ -213,7 +213,7 @@ tcp_timewait_state_process(struct inet_timewait_sock *tw, struct sk_buff *skb,
 			 * Oh well... nobody has a sufficient solution to this
 			 * protocol bug yet.
 			 */
-			if (!READ_ONCE(twsk_net(tw)->ipv4.sysctl_tcp_rfc1337)) {
+			if (!CONFIG_SYSCTL_TCP_RFC1337) {
 kill:
 				inet_twsk_deschedule_put(tw);
 				return TCP_TW_SUCCESS;
@@ -654,8 +654,6 @@ struct sock *tcp_create_openreq_child(const struct sock *sk,
 		newicsk->icsk_ack.last_seg_size = skb->len - newtp->tcp_header_len;
 	newtp->rx_opt.mss_clamp = req->mss;
 	tcp_ecn_openreq_child(newsk, req, skb);
-	newtp->fastopen_req = NULL;
-	RCU_INIT_POINTER(newtp->fastopen_rsk, NULL);
 
 	newtp->bpf_chg_cc_inprogress = 0;
 	tcp_bpf_clone(sk, newsk);
@@ -678,13 +676,12 @@ EXPORT_SYMBOL(tcp_create_openreq_child);
  *
  * We don't need to initialize tmp_opt.sack_ok as we don't use the results
  *
- * Note: If @fastopen is true, this can be called from process context.
- *       Otherwise, this is from BH context.
+ *       this is from BH context.
  */
 
 struct sock *tcp_check_req(struct sock *sk, struct sk_buff *skb,
 			   struct request_sock *req,
-			   bool fastopen, bool *req_stolen,
+			   bool *req_stolen,
 			   enum skb_drop_reason *drop_reason)
 {
 	struct tcp_options_received tmp_opt;
@@ -698,12 +695,12 @@ struct sock *tcp_check_req(struct sock *sk, struct sk_buff *skb,
 	tmp_opt.saw_tstamp = 0;
 	tmp_opt.accecn = 0;
 	if (th->doff > (sizeof(struct tcphdr)>>2)) {
-		tcp_parse_options(sock_net(sk), skb, &tmp_opt, 0, NULL);
+		tcp_parse_options(sock_net(sk), skb, &tmp_opt, 0);
 
 		if (tmp_opt.saw_tstamp) {
 			tmp_opt.ts_recent = req->ts_recent;
 			if (tmp_opt.rcv_tsecr) {
-				if (inet_rsk(req)->tstamp_ok && !fastopen)
+				if (inet_rsk(req)->tstamp_ok && !0)
 					tsecr_reject = !between(tmp_opt.rcv_tsecr,
 							tcp_rsk(req)->snt_tsval_first,
 							READ_ONCE(tcp_rsk(req)->snt_tsval_last));
@@ -754,7 +751,7 @@ struct sock *tcp_check_req(struct sock *sk, struct sk_buff *skb,
 			unsigned long expires = jiffies;
 
 			expires += tcp_reqsk_timeout(req);
-			if (!fastopen)
+			if (!0)
 				mod_timer_pending(&req->rsk_timer, expires);
 			else
 				req->rsk_timer.expires = expires;
@@ -819,7 +816,7 @@ struct sock *tcp_check_req(struct sock *sk, struct sk_buff *skb,
 	 * elsewhere and is checked directly against the child socket rather
 	 * than req because user data may have been sent out.
 	 */
-	if ((flg & TCP_FLAG_ACK) && !fastopen &&
+	if ((flg & TCP_FLAG_ACK) && !0 &&
 	    (TCP_SKB_CB(skb)->ack_seq !=
 	     tcp_rsk(req)->snt_isn + 1))
 		return sk;
@@ -887,12 +884,6 @@ struct sock *tcp_check_req(struct sock *sk, struct sk_buff *skb,
 		}
 	}
 
-	/* For Fast Open no more processing is needed (sk is the
-	 * child socket).
-	 */
-	if (fastopen)
-		return sk;
-
 	/* While TCP_DEFER_ACCEPT is active, drop bare ACK. */
 	if (req->num_timeout < READ_ONCE(inet_csk(sk)->icsk_accept_queue.rskq_defer_accept) &&
 	    TCP_SKB_CB(skb)->end_seq == tcp_rsk(req)->rcv_isn + 1) {
@@ -916,11 +907,6 @@ struct sock *tcp_check_req(struct sock *sk, struct sk_buff *skb,
 	    !after(TCP_SKB_CB(skb)->seq, tcp_rsk(req)->rcv_nxt))
 		tcp_sk(child)->rx_opt.ts_recent = tmp_opt.rcv_tsval;
 
-	if (own_req && rsk_drop_req(req)) {
-		reqsk_queue_removed(&inet_csk(req->rsk_listener)->icsk_accept_queue, req);
-		inet_csk_reqsk_queue_drop_and_put(req->rsk_listener, req);
-		return child;
-	}
 
 	sock_rps_save_rxhash(child, skb);
 	tcp_synack_rtt_meas(child, req);
@@ -932,7 +918,7 @@ listen_overflow:
 	if (sk != req->rsk_listener)
 		__NET_INC_STATS(sock_net(sk), LINUX_MIB_TCPMIGRATEREQFAILURE);
 
-	if (!READ_ONCE(sock_net(sk)->ipv4.sysctl_tcp_abort_on_overflow)) {
+	if (!CONFIG_SYSCTL_TCP_ABORT_ON_OVERFLOW) {
 		inet_rsk(req)->acked = 1;
 		return NULL;
 	}
@@ -945,11 +931,8 @@ embryonic_reset:
 		 * resetting legit local connections.
 		 */
 		req->rsk_ops->send_reset(sk, skb, SK_RST_REASON_INVALID_SYN);
-	} else if (fastopen) { /* received a valid RST pkt */
-		reqsk_fastopen_remove(sk, req, true);
-		tcp_reset(sk, skb);
 	}
-	if (!fastopen) {
+	if (!0) {
 		bool unlinked = inet_csk_reqsk_queue_drop(sk, req);
 
 		if (unlinked)

@@ -144,36 +144,6 @@ static inline void reqsk_put(struct request_sock *req)
 		__reqsk_free(req);
 }
 
-/*
- * For a TCP Fast Open listener -
- *	lock - protects the access to all the reqsk, which is co-owned by
- *		the listener and the child socket.
- *	qlen - pending TFO requests (still in TCP_SYN_RECV).
- *	max_qlen - max TFO reqs allowed before TFO is disabled.
- *
- *	XXX (TFO) - ideally these fields can be made as part of "listen_sock"
- *	structure above. But there is some implementation difficulty due to
- *	listen_sock being part of request_sock_queue hence will be freed when
- *	a listener is stopped. But TFO related fields may continue to be
- *	accessed even after a listener is closed, until its sk_refcnt drops
- *	to 0 implying no more outstanding TFO reqs. One solution is to keep
- *	listen_opt around until	sk_refcnt drops to 0. But there is some other
- *	complexity that needs to be resolved. E.g., a listener can be disabled
- *	temporarily through shutdown()->tcp_disconnect(), and re-enabled later.
- */
-struct fastopen_queue {
-	struct request_sock	*rskq_rst_head; /* Keep track of past TFO */
-	struct request_sock	*rskq_rst_tail; /* requests that caused RST.
-						 * This is part of the defense
-						 * against spoofing attack.
-						 */
-	spinlock_t	lock;
-	int		qlen;		/* # of pending (TCP_SYN_RECV) reqs */
-	int		max_qlen;	/* != 0 iff TFO is currently enabled */
-
-	struct tcp_fastopen_context __rcu *ctx; /* cipher context for cookie */
-};
-
 /** struct request_sock_queue - queue of request_socks
  *
  * @rskq_accept_head - FIFO head of established children
@@ -191,15 +161,9 @@ struct request_sock_queue {
 
 	struct request_sock	*rskq_accept_head;
 	struct request_sock	*rskq_accept_tail;
-	struct fastopen_queue	fastopenq;  /* Check max_qlen != 0 to determine
-					     * if TFO is enabled.
-					     */
 };
 
 void reqsk_queue_alloc(struct request_sock_queue *queue);
-
-void reqsk_fastopen_remove(struct sock *sk, struct request_sock *req,
-			   bool reset);
 
 static inline bool reqsk_queue_empty(const struct request_sock_queue *queue)
 {

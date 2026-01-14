@@ -33,7 +33,6 @@ static inline bool nf_reject_verify_csum(struct sk_buff *skb, int dataoff,
 		case IPPROTO_SCTP:
 
 		/* Protocols with partial checksums. */
-		case IPPROTO_UDPLITE:
 			return false;
 	}
 	return true;

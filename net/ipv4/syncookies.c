@@ -244,7 +244,7 @@ bool cookie_timestamp_decode(const struct net *net,
 		return true;
 	}
 
-	if (!READ_ONCE(net->ipv4.sysctl_tcp_timestamps))
+	if (!CONFIG_SYSCTL_TCP_TIMESTAMPS)
 		return false;
 
 	tcp_opt->sack_ok = (options & TS_OPT_SACK) ? TCP_SACK_SEEN : 0;
@@ -281,18 +281,12 @@ static int cookie_tcp_reqsk_init(struct sock *sk, struct sk_buff *skb,
 
 	treq->snt_synack = 0;
 	treq->snt_tsval_first = 0;
-	treq->tfo_listener = false;
 	treq->txhash = net_tx_rndhash();
 	treq->rcv_isn = ntohl(th->seq) - 1;
 	treq->snt_isn = ntohl(th->ack_seq) - 1;
 	treq->syn_tos = TCP_SKB_CB(skb)->ip_dsfield;
 	treq->req_usec_ts = false;
 
-#if IS_ENABLED(CONFIG_MPTCP)
-	treq->is_mptcp = sk_is_mptcp(sk);
-	if (treq->is_mptcp)
-		return mptcp_subflow_init_cookie_req(req, sk, skb);
-#endif
 
 	return 0;
 }
@@ -324,9 +318,6 @@ struct request_sock *cookie_tcp_reqsk_alloc(const struct request_sock_ops *ops,
 	struct tcp_request_sock *treq;
 	struct request_sock *req;
 
-	if (sk_is_mptcp(sk))
-		req = mptcp_subflow_reqsk_alloc(ops, sk, false);
-	else
 		req = inet_reqsk_alloc(ops, sk, false);
 
 	if (!req)
@@ -375,7 +366,7 @@ static struct request_sock *cookie_tcp_check(struct net *net, struct sock *sk,
 
 	/* check for timestamp cookie support */
 	memset(&tcp_opt, 0, sizeof(tcp_opt));
-	tcp_parse_options(net, skb, &tcp_opt, 0, NULL);
+	tcp_parse_options(net, skb, &tcp_opt, 0);
 
 	if (tcp_opt.saw_tstamp && tcp_opt.rcv_tsecr) {
 		tsoff = secure_tcp_ts_off(net,
@@ -413,7 +404,7 @@ struct sock *cookie_v4_check(struct sock *sk, struct sk_buff *skb)
 	int full_space;
 	SKB_DR(reason);
 
-	if (!READ_ONCE(net->ipv4.sysctl_tcp_syncookies) ||
+	if (!CONFIG_SYSCTL_TCP_SYNCOOKIES ||
 	    !th->ack || th->rst)
 		goto out;
 

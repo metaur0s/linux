@@ -129,27 +129,9 @@ bool inet_rcv_saddr_any(const struct sock *sk)
  */
 bool inet_sk_get_local_port_range(const struct sock *sk, int *low, int *high)
 {
-	int lo, hi, sk_lo, sk_hi;
-	bool local_range = false;
-	u32 sk_range;
-
-	inet_get_local_port_range(sock_net(sk), &lo, &hi);
-
-	sk_range = READ_ONCE(inet_sk(sk)->local_port_range);
-	if (unlikely(sk_range)) {
-		sk_lo = sk_range & 0xffff;
-		sk_hi = sk_range >> 16;
-
-		if (lo <= sk_lo && sk_lo <= hi)
-			lo = sk_lo;
-		if (lo <= sk_hi && sk_hi <= hi)
-			hi = sk_hi;
-		local_range = true;
-	}
-
-	*low = lo;
-	*high = hi;
-	return local_range;
+	*low  = CONFIG_SYSCTL_IP_LOCAL_PORTS_MIN;
+	*high = CONFIG_SYSCTL_IP_LOCAL_PORTS_MAX;
+	return false;
 }
 EXPORT_SYMBOL(inet_sk_get_local_port_range);
 
@@ -694,22 +676,6 @@ struct sock *inet_csk_accept(struct sock *sk, struct proto_accept_arg *arg)
 	arg->is_empty = reqsk_queue_empty(queue);
 	newsk = req->sk;
 
-	if (sk->sk_protocol == IPPROTO_TCP &&
-	    tcp_rsk(req)->tfo_listener) {
-		spin_lock_bh(&queue->fastopenq.lock);
-		if (tcp_rsk(req)->tfo_listener) {
-			/* We are still waiting for the final ACK from 3WHS
-			 * so can't free req now. Instead, we set req->sk to
-			 * NULL to signify that the child socket is taken
-			 * so reqsk_fastopen_remove() will free the req
-			 * when 3WHS finishes (or is aborted).
-			 */
-			req->sk = NULL;
-			req = NULL;
-		}
-		spin_unlock_bh(&queue->fastopenq.lock);
-	}
-
 	release_sock(sk);
 
 	if (req)
@@ -951,12 +917,6 @@ static struct request_sock *inet_reqsk_clone(struct request_sock *req,
 
 	nreq->rsk_listener = sk;
 
-	/* We need not acquire fastopenq->lock
-	 * because the child socket is locked in inet_csk_listen_stop().
-	 */
-	if (sk->sk_protocol == IPPROTO_TCP && tcp_rsk(nreq)->tfo_listener)
-		rcu_assign_pointer(tcp_sk(nreq->sk)->fastopen_rsk, nreq);
-
 	return nreq;
 }
 
@@ -1064,7 +1024,7 @@ static void reqsk_timer_handler(struct timer_list *t)
 	icsk = inet_csk(sk_listener);
 	net = sock_net(sk_listener);
 	max_syn_ack_retries = READ_ONCE(icsk->icsk_syn_retries) ? :
-		READ_ONCE(net->ipv4.sysctl_tcp_synack_retries);
+		CONFIG_SYSCTL_TCP_SYNACK_RETRIES;
 	/* Normally all the openreqs are young and become mature
 	 * (i.e. converted to established socket) for first timeout.
 	 * If synack was not acknowledged for 1 second, it means
@@ -1356,18 +1316,6 @@ static void inet_child_forget(struct sock *sk, struct request_sock *req,
 
 	tcp_orphan_count_inc();
 
-	if (sk->sk_protocol == IPPROTO_TCP && tcp_rsk(req)->tfo_listener) {
-		BUG_ON(rcu_access_pointer(tcp_sk(child)->fastopen_rsk) != req);
-		BUG_ON(sk != req->rsk_listener);
-
-		/* Paranoid, to prevent race condition if
-		 * an inbound pkt destined for child is
-		 * blocked by sock lock in tcp_v4_rcv().
-		 * Also to satisfy an assertion in
-		 * tcp_v4_destroy_sock().
-		 */
-		RCU_INIT_POINTER(tcp_sk(child)->fastopen_rsk, NULL);
-	}
 	inet_csk_destroy_sock(child);
 }
 
@@ -1449,7 +1397,7 @@ void inet_csk_listen_stop(struct sock *sk)
 {
 	struct inet_connection_sock *icsk = inet_csk(sk);
 	struct request_sock_queue *queue = &icsk->icsk_accept_queue;
-	struct request_sock *next, *req;
+	struct request_sock *req;
 
 	/* Following specs, it would be better either to send FIN
 	 * (and enter FIN-WAIT-1, it is normal close)
@@ -1500,18 +1448,6 @@ skip_child_forget:
 		sock_put(child);
 
 		cond_resched();
-	}
-	if (queue->fastopenq.rskq_rst_head) {
-		/* Free all the reqs queued in rskq_rst_head. */
-		spin_lock_bh(&queue->fastopenq.lock);
-		req = queue->fastopenq.rskq_rst_head;
-		queue->fastopenq.rskq_rst_head = NULL;
-		spin_unlock_bh(&queue->fastopenq.lock);
-		while (req != NULL) {
-			next = req->dl_next;
-			reqsk_put(req);
-			req = next;
-		}
 	}
 	WARN_ON_ONCE(sk->sk_ack_backlog);
 }

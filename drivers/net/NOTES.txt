@@ -1,0 +1,38 @@
+    O X DA QUESTÃO ESTÁ EM
+    static inline u32 __tcp_set_rto(const struct tcp_sock *tp)
+{
+    return usecs_to_jiffies((tp->srtt_us >> 3) + tp->rttvar_us);
+}
+
+
+consertar mais profundamente, pois é o rtt em si que eh afetado pela troca de links aqui e lá
+tp->rack.rtt_us
+
+    u64 tcp_mstamp;  most recent packet received/sent
+    u32 srtt_us;     smoothed round trip time << 3 in usecs
+    u32 mdev_us;     medium deviation
+    u32 mdev_max_us;     maximal mdev for the last rtt period
+    u32 rttvar_us;   smoothed mdev_max
+    u32 rtt_seq;     sequence number to update rttvar
+    struct  minmax rtt_min;
+
+Receiver side RTT estimation
+    u32 rcv_rtt_last_tsecr;
+    struct {
+        u32 rtt_us;
+        u32 seq;
+        u64 time;
+    } rcv_rtt_est;
+
+
+    CHECAR:
+    -> tcp_update_metrics()
+    -> funcoes que lidam com struct dst_entry
+    -> CONFIG_SYSCTL_TCP_NOMETRICS_SAVE
+
+    /proc/sys/net/ipv4/tcp_tso_rtt_log
+    /proc/sys/net/ipv4/tcp_min_rtt_wlen
+
+    SKB_DROP_REASON_UDP_CSUM
+
+- INICIALIZAR O COUNTER A ALGUM VALOR ALEATORIO

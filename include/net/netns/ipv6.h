@@ -33,10 +33,7 @@ struct netns_sysctl_ipv6 {
 	u8 bindv6only;
 	u8 flowlabel_consistency;
 	u8 auto_flowlabels;
-	int icmpv6_time;
-	u8 icmpv6_echo_ignore_all;
-	u8 icmpv6_echo_ignore_multicast;
-	u8 icmpv6_echo_ignore_anycast;
+#define CONFIG_SYSCTL_ICMPV6_TIME ((int)(CONFIG_SYSCTL_ICMPV6_TIME_*HZ))
 	DECLARE_BITMAP(icmpv6_ratemask, ICMPV6_MSG_MAX + 1);
 	unsigned long *icmpv6_ratemask_ptr;
 	u8 anycast_src_echo_reply;
@@ -55,7 +52,6 @@ struct netns_sysctl_ipv6 {
 	u64 ioam6_id_wide;
 	u8 skip_notify_on_dev_down;
 	u8 fib_notify_on_flag_change;
-	u8 icmpv6_error_anycast_as_unicast;
 	u8 icmpv6_errors_extension_mask;
 };
 

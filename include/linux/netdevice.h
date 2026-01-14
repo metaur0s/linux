@@ -160,6 +160,11 @@ static inline bool dev_xmit_complete(int rc)
  *	used.
  */
 
+#ifdef CONFIG_XGW
+#define LL_MAX_HEADER 196
+#define MAX_HEADER (196 + 48)
+#else
+
 #if defined(CONFIG_HYPERV_NET)
 # define LL_MAX_HEADER 128
 #elif defined(CONFIG_WLAN) || IS_ENABLED(CONFIG_AX25)
@@ -177,6 +182,8 @@ static inline bool dev_xmit_complete(int rc)
 #define MAX_HEADER LL_MAX_HEADER
 #else
 #define MAX_HEADER (LL_MAX_HEADER + 48)
+#endif
+
 #endif
 
 /*
@@ -2114,6 +2121,7 @@ struct net_device {
 		unsigned long		priv_flags:32;
 		unsigned long		lltx:1;
 		unsigned long		netmem_tx:1;
+		unsigned long		xgw:1;
 	);
 	const struct net_device_ops *netdev_ops;
 	const struct header_ops *header_ops;

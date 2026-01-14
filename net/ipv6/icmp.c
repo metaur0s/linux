@@ -218,7 +218,7 @@ static bool icmpv6_xrlim_allow(struct sock *sk, u8 type,
 		res = true;
 	} else {
 		struct rt6_info *rt = dst_rt6_info(dst);
-		int tmo = net->ipv6.sysctl.icmpv6_time;
+		int tmo = CONFIG_SYSCTL_ICMPV6_TIME;
 		struct inet_peer *peer;
 
 		/* Give more bandwidth to wider prefixes. */
@@ -369,7 +369,7 @@ static struct dst_entry *icmpv6_route_lookup(struct net *net,
 	 * We won't send icmp if the destination is known
 	 * anycast unless we need to treat anycast as unicast.
 	 */
-	if (!READ_ONCE(net->ipv6.sysctl.icmpv6_error_anycast_as_unicast) &&
+	if (!CONFIG_SYSCTL_ICMPV6_ERROR_ANYCAST_AS_UNICAST &&
 	    ipv6_anycast_destination(dst, &fl6->daddr)) {
 		net_dbg_ratelimited("icmp6_send: acast source\n");
 		dst_release(dst);
@@ -936,13 +936,13 @@ static enum skb_drop_reason icmpv6_echo_reply(struct sk_buff *skb)
 	u8 type;
 
 	if (ipv6_addr_is_multicast(&ipv6_hdr(skb)->daddr) &&
-	    net->ipv6.sysctl.icmpv6_echo_ignore_multicast)
+	    CONFIG_SYSCTL_ICMPV6_ECHO_IGNORE_MULTICAST)
 		return reason;
 
 	saddr = &ipv6_hdr(skb)->daddr;
 
 	acast = ipv6_anycast_destination(skb_dst(skb), saddr);
-	if (acast && net->ipv6.sysctl.icmpv6_echo_ignore_anycast)
+	if (acast && CONFIG_SYSCTL_ICMPV6_ECHO_IGNORE_ANYCAST)
 		return reason;
 
 	if (!ipv6_unicast_destination(skb) &&
@@ -1144,12 +1144,12 @@ static int icmpv6_rcv(struct sk_buff *skb)
 
 	switch (type) {
 	case ICMPV6_ECHO_REQUEST:
-		if (!net->ipv6.sysctl.icmpv6_echo_ignore_all)
+		if (!CONFIG_SYSCTL_ICMPV6_ECHO_IGNORE_ALL)
 			reason = icmpv6_echo_reply(skb);
 		break;
 	case ICMPV6_EXT_ECHO_REQUEST:
-		if (!net->ipv6.sysctl.icmpv6_echo_ignore_all &&
-		    READ_ONCE(net->ipv4.sysctl_icmp_echo_enable_probe))
+		if (!CONFIG_SYSCTL_ICMPV6_ECHO_IGNORE_ALL &&
+		    CONFIG_SYSCTL_ICMP_ECHO_ENABLE_PROBE)
 			reason = icmpv6_echo_reply(skb);
 		break;
 
@@ -1373,48 +1373,11 @@ static u32 icmpv6_errors_extension_mask_all =
 
 static struct ctl_table ipv6_icmp_table_template[] = {
 	{
-		.procname	= "ratelimit",
-		.data		= &init_net.ipv6.sysctl.icmpv6_time,
-		.maxlen		= sizeof(int),
-		.mode		= 0644,
-		.proc_handler	= proc_dointvec_ms_jiffies,
-	},
-	{
-		.procname	= "echo_ignore_all",
-		.data		= &init_net.ipv6.sysctl.icmpv6_echo_ignore_all,
-		.maxlen		= sizeof(u8),
-		.mode		= 0644,
-		.proc_handler = proc_dou8vec_minmax,
-	},
-	{
-		.procname	= "echo_ignore_multicast",
-		.data		= &init_net.ipv6.sysctl.icmpv6_echo_ignore_multicast,
-		.maxlen		= sizeof(u8),
-		.mode		= 0644,
-		.proc_handler = proc_dou8vec_minmax,
-	},
-	{
-		.procname	= "echo_ignore_anycast",
-		.data		= &init_net.ipv6.sysctl.icmpv6_echo_ignore_anycast,
-		.maxlen		= sizeof(u8),
-		.mode		= 0644,
-		.proc_handler = proc_dou8vec_minmax,
-	},
-	{
 		.procname	= "ratemask",
 		.data		= &init_net.ipv6.sysctl.icmpv6_ratemask_ptr,
 		.maxlen		= ICMPV6_MSG_MAX + 1,
 		.mode		= 0644,
 		.proc_handler = proc_do_large_bitmap,
-	},
-	{
-		.procname	= "error_anycast_as_unicast",
-		.data		= &init_net.ipv6.sysctl.icmpv6_error_anycast_as_unicast,
-		.maxlen		= sizeof(u8),
-		.mode		= 0644,
-		.proc_handler	= proc_dou8vec_minmax,
-		.extra1		= SYSCTL_ZERO,
-		.extra2		= SYSCTL_ONE,
 	},
 	{
 		.procname	= "errors_extension_mask",
@@ -1436,13 +1399,8 @@ struct ctl_table * __net_init ipv6_icmp_sysctl_init(struct net *net)
 			GFP_KERNEL);
 
 	if (table) {
-		table[0].data = &net->ipv6.sysctl.icmpv6_time;
-		table[1].data = &net->ipv6.sysctl.icmpv6_echo_ignore_all;
-		table[2].data = &net->ipv6.sysctl.icmpv6_echo_ignore_multicast;
-		table[3].data = &net->ipv6.sysctl.icmpv6_echo_ignore_anycast;
-		table[4].data = &net->ipv6.sysctl.icmpv6_ratemask_ptr;
-		table[5].data = &net->ipv6.sysctl.icmpv6_error_anycast_as_unicast;
-		table[6].data = &net->ipv6.sysctl.icmpv6_errors_extension_mask;
+		table[0].data = &net->ipv6.sysctl.icmpv6_ratemask_ptr;
+		table[1].data = &net->ipv6.sysctl.icmpv6_errors_extension_mask;
 	}
 	return table;
 }

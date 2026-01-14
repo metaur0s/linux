@@ -24,6 +24,9 @@
 #include <net/tcp.h>
 #include <net/rstreason.h>
 
+#if 1 // TODO: REMOVE struct inet_connection_sock icsk_user_timeout
+#define tcp_clamp_rto_to_user_timeout(sk) icsk->icsk_rto
+#else
 static u32 tcp_clamp_rto_to_user_timeout(const struct sock *sk)
 {
 	const struct inet_connection_sock *icsk = inet_csk(sk);
@@ -64,6 +67,7 @@ u32 tcp_clamp_probe0_to_user_timeout(const struct sock *sk, u32 when)
 
 	return min_t(u32, remaining, when);
 }
+#endif
 
 /**
  *  tcp_write_err() - close socket and save error info
@@ -147,7 +151,7 @@ static int tcp_out_of_resources(struct sock *sk, bool do_reset)
  */
 static int tcp_orphan_retries(struct sock *sk, bool alive)
 {
-	int retries = READ_ONCE(sock_net(sk)->ipv4.sysctl_tcp_orphan_retries); /* May be zero. */
+	int retries = CONFIG_SYSCTL_TCP_ORPHAN_RETRIES; /* May be zero. */
 
 	/* We know from an ICMP that something is wrong. */
 	if (READ_ONCE(sk->sk_err_soft) && !alive)
@@ -251,22 +255,22 @@ static int tcp_write_timeout(struct sock *sk)
 			__dst_negative_advice(sk);
 		/* Paired with WRITE_ONCE() in tcp_sock_set_syncnt() */
 		retry_until = READ_ONCE(icsk->icsk_syn_retries) ? :
-			READ_ONCE(net->ipv4.sysctl_tcp_syn_retries);
+			CONFIG_SYSCTL_TCP_SYN_RETRIES;
 
 		max_retransmits = retry_until;
 		if (sk->sk_state == TCP_SYN_SENT)
-			max_retransmits += READ_ONCE(net->ipv4.sysctl_tcp_syn_linear_timeouts);
+			max_retransmits += CONFIG_SYSCTL_TCP_SYN_LINEAR_TIMEOUTS;
 
 		expired = icsk->icsk_retransmits >= max_retransmits;
 	} else {
-		if (retransmits_timed_out(sk, READ_ONCE(net->ipv4.sysctl_tcp_retries1), 0)) {
+		if (retransmits_timed_out(sk, CONFIG_SYSCTL_TCP_RETRIES1, 0)) {
 			/* Black hole detection */
 			tcp_mtu_probing(icsk, sk);
 
 			__dst_negative_advice(sk);
 		}
 
-		retry_until = READ_ONCE(net->ipv4.sysctl_tcp_retries2);
+		retry_until = CONFIG_SYSCTL_TCP_RETRIES2;
 		if (sock_flag(sk, SOCK_DEAD)) {
 			const bool alive = icsk->icsk_rto < tcp_rto_max(sk);
 
@@ -281,8 +285,6 @@ static int tcp_write_timeout(struct sock *sk)
 	if (!expired)
 		expired = retransmits_timed_out(sk, retry_until,
 						READ_ONCE(icsk->icsk_user_timeout));
-	tcp_fastopen_active_detect_blackhole(sk, expired);
-	mptcp_active_detect_blackhole(sk, expired);
 
 	if (BPF_SOCK_OPS_TEST_FLAG(tp, BPF_SOCK_OPS_RTO_CB_FLAG))
 		tcp_call_bpf_3arg(sk, BPF_SOCK_OPS_RTO_CB,
@@ -415,7 +417,7 @@ static void tcp_probe_timer(struct sock *sk)
 		     msecs_to_jiffies(user_timeout))
 			goto abort;
 	}
-	max_probes = READ_ONCE(sock_net(sk)->ipv4.sysctl_tcp_retries2);
+	max_probes = CONFIG_SYSCTL_TCP_RETRIES2;
 	if (sock_flag(sk, SOCK_DEAD)) {
 		unsigned int rto_max = tcp_rto_max(sk);
 		const bool alive = inet_csk_rto_backoff(icsk, rto_max) < rto_max;
@@ -446,45 +448,6 @@ static void tcp_update_rto_stats(struct sock *sk)
 	}
 	WRITE_ONCE(icsk->icsk_retransmits, icsk->icsk_retransmits + 1);
 	tp->total_rto++;
-}
-
-/*
- *	Timer for Fast Open socket to retransmit SYNACK. Note that the
- *	sk here is the child socket, not the parent (listener) socket.
- */
-static void tcp_fastopen_synack_timer(struct sock *sk, struct request_sock *req)
-{
-	struct inet_connection_sock *icsk = inet_csk(sk);
-	struct tcp_sock *tp = tcp_sk(sk);
-	int max_retries;
-
-	tcp_syn_ack_timeout(req);
-
-	/* Add one more retry for fastopen.
-	 * Paired with WRITE_ONCE() in tcp_sock_set_syncnt()
-	 */
-	max_retries = READ_ONCE(icsk->icsk_syn_retries) ? :
-		READ_ONCE(sock_net(sk)->ipv4.sysctl_tcp_synack_retries) + 1;
-
-	if (req->num_timeout >= max_retries) {
-		tcp_write_err(sk);
-		return;
-	}
-	/* Lower cwnd after certain SYNACK timeout like tcp_init_transfer() */
-	if (icsk->icsk_retransmits == 1)
-		tcp_enter_loss(sk);
-	/* XXX (TFO) - Unlike regular SYN-ACK retransmit, we ignore error
-	 * returned from rtx_syn_ack() to make it more persistent like
-	 * regular retransmit because if the child socket has been accepted
-	 * it's not good to give up too easily.
-	 */
-	tcp_rtx_synack(sk, req);
-	req->num_timeout++;
-	tcp_update_rto_stats(sk);
-	if (!tp->retrans_stamp)
-		tp->retrans_stamp = tcp_time_stamp_ts(tp);
-	tcp_reset_xmit_timer(sk, ICSK_TIME_RETRANS,
-			  req->timeout << req->num_timeout, false);
 }
 
 static bool tcp_rtx_probe0_timed_out(const struct sock *sk,
@@ -536,17 +499,7 @@ void tcp_retransmit_timer(struct sock *sk)
 	struct request_sock *req;
 	struct sk_buff *skb;
 
-	req = rcu_dereference_protected(tp->fastopen_rsk,
-					lockdep_sock_is_held(sk));
-	if (req) {
-		WARN_ON_ONCE(sk->sk_state != TCP_SYN_RECV &&
-			     sk->sk_state != TCP_FIN_WAIT1);
-		tcp_fastopen_synack_timer(sk, req);
-		/* Before we receive ACK to our SYN-ACK don't retransmit
-		 * anything else (e.g., data or FIN segments).
-		 */
-		return;
-	}
+	req = NULL;
 
 	if (!tp->packets_out)
 		return;
@@ -661,7 +614,7 @@ out_reset_timer:
 	 * linear-timeout retransmissions into a black hole
 	 */
 	if (sk->sk_state == TCP_ESTABLISHED &&
-	    (tp->thin_lto || READ_ONCE(net->ipv4.sysctl_tcp_thin_linear_timeouts)) &&
+	    (tp->thin_lto || CONFIG_SYSCTL_TCP_THIN_LINEAR_TIMEOUTS) &&
 	    tcp_stream_is_thin(tp) &&
 	    icsk->icsk_retransmits <= TCP_THIN_LINEAR_RETRIES) {
 		icsk->icsk_backoff = 0;
@@ -670,7 +623,7 @@ out_reset_timer:
 				       tcp_rto_max(sk));
 	} else if (sk->sk_state != TCP_SYN_SENT ||
 		   tp->total_rto >
-		   READ_ONCE(net->ipv4.sysctl_tcp_syn_linear_timeouts)) {
+		   CONFIG_SYSCTL_TCP_SYN_LINEAR_TIMEOUTS) {
 		/* Use normal (exponential) backoff unless linear timeouts are
 		 * activated.
 		 */
@@ -679,7 +632,7 @@ out_reset_timer:
 	}
 	tcp_reset_xmit_timer(sk, ICSK_TIME_RETRANS,
 			     tcp_clamp_rto_to_user_timeout(sk), false);
-	if (retransmits_timed_out(sk, READ_ONCE(net->ipv4.sysctl_tcp_retries1) + 1, 0))
+	if (retransmits_timed_out(sk, CONFIG_SYSCTL_TCP_RETRIES1 + 1, 0))
 		__sk_dst_reset(sk);
 
 out:;

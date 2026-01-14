@@ -347,3 +347,10 @@ void __init kvmclock_init(void)
 	clocksource_register_hz(&kvm_clock, NSEC_PER_SEC);
 	pv_info.name = "KVM";
 }
+
+#ifdef CONFIG_CLOCKSOURCE_KVM_DEFAULT
+struct clocksource * __init __weak clocksource_default_clock(void)
+{
+	return &kvm_clock;
+}
+#endif

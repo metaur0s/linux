@@ -121,14 +121,14 @@ typedef __u64 __bitwise __addrpair;
  *	@skc_bypass_prot_mem: bypass the per-protocol memory accounting for skb
  *	@skc_bound_dev_if: bound device index if != 0
  *	@skc_bind_node: bind hash linkage for various protocol lookup tables
- *	@skc_portaddr_node: second hash linkage for UDP/UDP-Lite protocol
+ *	@skc_portaddr_node: second hash linkage for UDP protocol
  *	@skc_prot: protocol handlers inside a network family
  *	@skc_net: reference to the network namespace of this socket
  *	@skc_v6_daddr: IPV6 destination address
  *	@skc_v6_rcv_saddr: IPV6 source address
  *	@skc_cookie: socket's cookie value
  *	@skc_node: main hash linkage for various protocol lookup tables
- *	@skc_nulls_node: main hash linkage for TCP/UDP/UDP-Lite protocol
+ *	@skc_nulls_node: main hash linkage for TCP/UDP protocol
  *	@skc_tx_queue_mapping: tx queue number for this connection
  *	@skc_rx_queue_mapping: rx queue number for this connection
  *	@skc_flags: place holder for sk_flags
@@ -267,8 +267,6 @@ struct sk_filter;
   *	@sk_pacing_status: Pacing status (requested, handled by sch_fq)
   *	@sk_max_pacing_rate: Maximum pacing rate (%SO_MAX_PACING_RATE)
   *	@sk_sndbuf: size of send buffer in bytes
-  *	@sk_no_check_tx: %SO_NO_CHECK setting, set checksum in TX packets
-  *	@sk_no_check_rx: allow zero checksum in RX packets
   *	@sk_route_caps: route capabilities (e.g. %NETIF_F_TSO)
   *	@sk_gso_disabled: if set, NETIF_F_GSO_MASK is forbidden.
   *	@sk_gso_type: GSO type (e.g. %SKB_GSO_TCPV4)
@@ -528,8 +526,8 @@ struct sock {
 	 */
 	u8			sk_gso_disabled : 1,
 				sk_kern_sock : 1,
-				sk_no_check_tx : 1,
-				sk_no_check_rx : 1;
+				XXXXXXXXXXXXXX : 1,
+				ZZZZZZZZZZZZZZ : 1;
 	u8			sk_shutdown;
 	unsigned long	        sk_lingertime;
 	struct proto		*sk_prot_creator;
@@ -1505,7 +1503,7 @@ static inline int __sk_prot_rehash(struct sock *sk)
 #define SOCK_DESTROY_TIME (10*HZ)
 
 /* Sockets 0-1023 can't be bound to unless you are superuser */
-#define PROT_SOCK	1024
+#define PROT_SOCK	20 // PRIVILEGED PORTS
 
 #define SHUTDOWN_MASK	3
 #define RCV_SHUTDOWN	1

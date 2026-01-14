@@ -1271,7 +1271,9 @@ void __init setup_arch(char **cmdline_p)
 
 	mcheck_init();
 
+#ifdef CONFIG_CLOCKSOURCE_REFINED_JIFFIES
 	register_refined_jiffies(CLOCK_TICK_RATE);
+#endif
 
 #ifdef CONFIG_EFI
 	if (efi_enabled(EFI_BOOT))

@@ -1767,7 +1767,7 @@ int fib_dump_info(struct sk_buff *skb, u32 portid, u32 seq, int event,
 			goto nla_put_failure;
 		if (nexthop_is_blackhole(fi->nh))
 			rtm->rtm_type = RTN_BLACKHOLE;
-		if (!READ_ONCE(fi->fib_net->ipv4.sysctl_nexthop_compat_mode))
+		if (!CONFIG_SYSCTL_NEXTHOP_COMPAT_MODE)
 			goto offload;
 	}
 

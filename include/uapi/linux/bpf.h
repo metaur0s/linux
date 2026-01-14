@@ -5616,12 +5616,6 @@ union bpf_attr {
  * 		Map value associated to *key* on *cpu*, or **NULL** if no entry
  * 		was found or *cpu* is invalid.
  *
- * struct mptcp_sock *bpf_skc_to_mptcp_sock(void *sk)
- *	Description
- *		Dynamically cast a *sk* pointer to a *mptcp_sock* pointer.
- *	Return
- *		*sk* if casting is valid, or **NULL** otherwise.
- *
  * long bpf_dynptr_from_mem(void *data, u64 size, u64 flags, struct bpf_dynptr *ptr)
  *	Description
  *		Get a dynptr to local memory *data*.

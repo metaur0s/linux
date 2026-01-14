@@ -62,9 +62,11 @@ static void sch_frag_prepare_frag(struct sk_buff *skb,
 	data->cb = *qdisc_skb_cb(skb);
 	data->xmit = xmit;
 	data->inner_protocol = skb->inner_protocol;
+#ifdef CONFIG_VLAN_CORE
 	if (skb_vlan_tag_present(skb))
 		data->vlan_tci = skb_vlan_tag_get(skb) | VLAN_CFI_MASK;
 	else
+#endif
 		data->vlan_tci = 0;
 	data->vlan_proto = skb->vlan_proto;
 	data->l2_len = hlen;

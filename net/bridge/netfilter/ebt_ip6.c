@@ -117,7 +117,6 @@ static int ebt_ip6_mt_check(const struct xt_mtchk_param *par)
 			return -EINVAL;
 		if (info->protocol != IPPROTO_TCP &&
 		    info->protocol != IPPROTO_UDP &&
-		    info->protocol != IPPROTO_UDPLITE &&
 		    info->protocol != IPPROTO_SCTP &&
 		    info->protocol != IPPROTO_DCCP)
 			return -EINVAL;

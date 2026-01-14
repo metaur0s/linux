@@ -4203,11 +4203,13 @@ static int ixgbevf_xmit_frame_ring(struct sk_buff *skb,
 	first->bytecount = skb->len;
 	first->gso_segs = 1;
 
+#ifdef CONFIG_VLAN_IXGBE
 	if (skb_vlan_tag_present(skb)) {
 		tx_flags |= skb_vlan_tag_get(skb);
 		tx_flags <<= IXGBE_TX_FLAGS_VLAN_SHIFT;
 		tx_flags |= IXGBE_TX_FLAGS_VLAN;
 	}
+#endif
 
 	/* record initial flags and protocol */
 	first->tx_flags = tx_flags;

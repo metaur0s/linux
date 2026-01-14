@@ -79,7 +79,6 @@
 #include <linux/btf_ids.h>
 #include <net/tls.h>
 #include <net/xdp.h>
-#include <net/mptcp.h>
 #include <net/netfilter/nf_conntrack_bpf.h>
 #include <net/netkit.h>
 #include <linux/un.h>
@@ -5377,7 +5376,7 @@ static int bpf_sol_tcp_setsockopt(struct sock *sk, int optname,
 	/* Only some options are supported */
 	switch (optname) {
 	case TCP_BPF_IW:
-		if (val <= 0 || tp->data_segs_out > tp->syn_data)
+		if (val <= 0 || tp->data_segs_out > 0)
 			return -EINVAL;
 		tcp_snd_cwnd_set(tp, val);
 		break;
@@ -7558,7 +7557,7 @@ BPF_CALL_5(bpf_tcp_check_syncookie, struct sock *, sk, void *, iph, u32, iph_len
 	if (sk->sk_protocol != IPPROTO_TCP || sk->sk_state != TCP_LISTEN)
 		return -EINVAL;
 
-	if (!READ_ONCE(sock_net(sk)->ipv4.sysctl_tcp_syncookies))
+	if (!CONFIG_SYSCTL_TCP_SYNCOOKIES)
 		return -EINVAL;
 
 	if (!th->ack || th->rst || th->syn)
@@ -7631,7 +7630,7 @@ BPF_CALL_5(bpf_tcp_gen_syncookie, struct sock *, sk, void *, iph, u32, iph_len,
 	if (sk->sk_protocol != IPPROTO_TCP || sk->sk_state != TCP_LISTEN)
 		return -EINVAL;
 
-	if (!READ_ONCE(sock_net(sk)->ipv4.sysctl_tcp_syncookies))
+	if (!CONFIG_SYSCTL_TCP_SYNCOOKIES)
 		return -ENOENT;
 
 	if (!th->syn || th->ack || th->fin || th->rst)
@@ -12035,20 +12034,6 @@ const struct bpf_func_proto bpf_skc_to_unix_sock_proto = {
 	.ret_btf_id		= &btf_sock_ids[BTF_SOCK_TYPE_UNIX],
 };
 
-BPF_CALL_1(bpf_skc_to_mptcp_sock, struct sock *, sk)
-{
-	BTF_TYPE_EMIT(struct mptcp_sock);
-	return (unsigned long)bpf_mptcp_sock_from_subflow(sk);
-}
-
-const struct bpf_func_proto bpf_skc_to_mptcp_sock_proto = {
-	.func		= bpf_skc_to_mptcp_sock,
-	.gpl_only	= false,
-	.ret_type	= RET_PTR_TO_BTF_ID_OR_NULL,
-	.arg1_type	= ARG_PTR_TO_SOCK_COMMON,
-	.ret_btf_id	= &btf_sock_ids[BTF_SOCK_TYPE_MPTCP],
-};
-
 BPF_CALL_1(bpf_sock_from_file, struct file *, file)
 {
 	return (unsigned long)sock_from_file(file);
@@ -12090,9 +12075,6 @@ bpf_sk_base_func_proto(enum bpf_func_id func_id, const struct bpf_prog *prog)
 		break;
 	case BPF_FUNC_skc_to_unix_sock:
 		func = &bpf_skc_to_unix_sock_proto;
-		break;
-	case BPF_FUNC_skc_to_mptcp_sock:
-		func = &bpf_skc_to_mptcp_sock_proto;
 		break;
 	case BPF_FUNC_ktime_get_coarse_ns:
 		return &bpf_ktime_get_coarse_ns_proto;
@@ -12252,7 +12234,7 @@ __bpf_kfunc int bpf_sk_assign_tcp_reqsk(struct __sk_buff *s, struct sock *sk,
 	}
 
 	if (sk->sk_type != SOCK_STREAM || sk->sk_state != TCP_LISTEN ||
-	    sk_is_mptcp(sk))
+	    0)
 		return -EINVAL;
 
 	if (attrs->mss < min_mss)
@@ -12271,7 +12253,7 @@ __bpf_kfunc int bpf_sk_assign_tcp_reqsk(struct __sk_buff *s, struct sock *sk,
 		return -EINVAL;
 
 	if (attrs->tstamp_ok) {
-		if (!READ_ONCE(net->ipv4.sysctl_tcp_timestamps))
+		if (!CONFIG_SYSCTL_TCP_TIMESTAMPS)
 			return -EINVAL;
 
 		tsoff = attrs->rcv_tsecr - tcp_ns_to_ts(attrs->usec_ts_ok, tcp_clock_ns());

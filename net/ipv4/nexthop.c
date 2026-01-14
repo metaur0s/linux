@@ -2147,7 +2147,7 @@ static void __remove_nexthop_fib(struct net *net, struct nexthop *nh)
 
 		spin_unlock_bh(&nh->lock);
 		ipv6_stub->ip6_del_rt(net, f6i,
-				      !READ_ONCE(net->ipv4.sysctl_nexthop_compat_mode));
+				      !CONFIG_SYSCTL_NEXTHOP_COMPAT_MODE);
 
 		spin_lock_bh(&nh->lock);
 	}
@@ -2662,7 +2662,7 @@ out:
 		nh_base_seq_inc(net);
 		nexthop_notify(RTM_NEWNEXTHOP, new_nh, &cfg->nlinfo);
 		if (replace_notify &&
-		    READ_ONCE(net->ipv4.sysctl_nexthop_compat_mode))
+		    CONFIG_SYSCTL_NEXTHOP_COMPAT_MODE)
 			nexthop_replace_notify(net, new_nh, &cfg->nlinfo);
 	}
 

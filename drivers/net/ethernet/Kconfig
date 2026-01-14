@@ -50,7 +50,6 @@ source "drivers/net/ethernet/broadcom/Kconfig"
 source "drivers/net/ethernet/cadence/Kconfig"
 source "drivers/net/ethernet/calxeda/Kconfig"
 source "drivers/net/ethernet/cavium/Kconfig"
-source "drivers/net/ethernet/chelsio/Kconfig"
 source "drivers/net/ethernet/cirrus/Kconfig"
 source "drivers/net/ethernet/cisco/Kconfig"
 source "drivers/net/ethernet/cortina/Kconfig"
@@ -142,9 +141,6 @@ config FEALNX
 	  cards. <http://www.myson.com.tw/>
 
 source "drivers/net/ethernet/ni/Kconfig"
-source "drivers/net/ethernet/natsemi/Kconfig"
-source "drivers/net/ethernet/neterion/Kconfig"
-source "drivers/net/ethernet/netronome/Kconfig"
 source "drivers/net/ethernet/8390/Kconfig"
 source "drivers/net/ethernet/nvidia/Kconfig"
 source "drivers/net/ethernet/nxp/Kconfig"

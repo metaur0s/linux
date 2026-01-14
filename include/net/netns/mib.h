@@ -24,14 +24,7 @@ struct netns_mib {
 #if IS_ENABLED(CONFIG_TLS)
 	DEFINE_SNMP_STAT(struct linux_tls_mib, tls_statistics);
 #endif
-#ifdef CONFIG_MPTCP
-	DEFINE_SNMP_STAT(struct mptcp_mib, mptcp_statistics);
-#endif
 
-	DEFINE_SNMP_STAT(struct udp_mib, udplite_statistics);
-#if IS_ENABLED(CONFIG_IPV6)
-	DEFINE_SNMP_STAT(struct udp_mib, udplite_stats_in6);
-#endif
 
 	DEFINE_SNMP_STAT(struct icmp_mib, icmp_statistics);
 	DEFINE_SNMP_STAT_ATOMIC(struct icmpmsg_mib, icmpmsg_statistics);

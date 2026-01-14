@@ -334,13 +334,13 @@ static int ip_rcv_finish_core(struct net *net,
 			goto drop_error;
 	}
 
-	if (READ_ONCE(net->ipv4.sysctl_ip_early_demux) &&
+	if (CONFIG_SYSCTL_IP_EARLY_DEMUX &&
 	    !skb_dst(skb) &&
 	    !skb->sk &&
 	    !ip_is_fragment(iph)) {
 		switch (iph->protocol) {
 		case IPPROTO_TCP:
-			if (READ_ONCE(net->ipv4.sysctl_tcp_early_demux)) {
+			if (CONFIG_SYSCTL_TCP_EARLY_DEMUX) {
 				tcp_v4_early_demux(skb);
 
 				/* must reload iph, skb->head might have changed */
@@ -348,7 +348,7 @@ static int ip_rcv_finish_core(struct net *net,
 			}
 			break;
 		case IPPROTO_UDP:
-			if (READ_ONCE(net->ipv4.sysctl_udp_early_demux)) {
+			if (CONFIG_SYSCTL_UDP_EARLY_DEMUX) {
 				drop_reason = udp_v4_early_demux(skb);
 				if (unlikely(drop_reason))
 					goto drop_error;

@@ -39,7 +39,6 @@
 
 #include <net/tcp.h>
 #include <net/tcp_ecn.h>
-#include <net/mptcp.h>
 #include <net/smc.h>
 #include <net/proto_memory.h>
 #include <net/psp.h>
@@ -232,7 +231,7 @@ void tcp_select_initial_window(const struct sock *sk, int __space, __u32 mss,
 	 * which we interpret as a sign the remote TCP is not
 	 * misinterpreting the window field as a signed quantity.
 	 */
-	if (READ_ONCE(sock_net(sk)->ipv4.sysctl_tcp_workaround_signed_windows))
+	if (CONFIG_SYSCTL_TCP_WORKAROUND_SIGNED_WINDOWS)
 		(*rcv_wnd) = min(space, MAX_TCP_WINDOW);
 	else
 		(*rcv_wnd) = space;
@@ -287,7 +286,7 @@ static u16 tcp_select_window(struct sock *sk)
 		 *
 		 * Relax Will Robinson.
 		 */
-		if (!READ_ONCE(net->ipv4.sysctl_tcp_shrink_window) || !tp->rx_opt.rcv_wscale) {
+		if (!CONFIG_SYSCTL_TCP_SHRINK_WINDOW || !tp->rx_opt.rcv_wscale) {
 			/* Never shrink the offered window */
 			if (new_win == 0)
 				NET_INC_STATS(net, LINUX_MIB_TCPWANTZEROWINDOWADV);
@@ -302,7 +301,7 @@ static u16 tcp_select_window(struct sock *sk)
 	 * scaled window.
 	 */
 	if (!tp->rx_opt.rcv_wscale &&
-	    READ_ONCE(net->ipv4.sysctl_tcp_workaround_signed_windows))
+	    CONFIG_SYSCTL_TCP_WORKAROUND_SIGNED_WINDOWS)
 		new_win = min(new_win, MAX_TCP_WINDOW);
 	else
 		new_win = min(new_win, (65535U << tp->rx_opt.rcv_wscale));
@@ -385,9 +384,7 @@ static inline bool tcp_urg_mode(const struct tcp_sock *tp)
 #define OPTION_TS		BIT(1)
 #define OPTION_MD5		BIT(2)
 #define OPTION_WSCALE		BIT(3)
-#define OPTION_FAST_OPEN_COOKIE	BIT(8)
 #define OPTION_SMC		BIT(9)
-#define OPTION_MPTCP		BIT(10)
 #define OPTION_AO		BIT(11)
 #define OPTION_ACCECN		BIT(12)
 
@@ -417,19 +414,7 @@ struct tcp_out_options {
 	u8 bpf_opt_len;		/* length of BPF hdr option */
 	__u8 *hash_location;	/* temporary pointer, overloaded */
 	__u32 tsval, tsecr;	/* need to include OPTION_TS */
-	struct tcp_fastopen_cookie *fastopen_cookie;	/* Fast open cookie */
-	struct mptcp_out_options mptcp;
 };
-
-static void mptcp_options_write(struct tcphdr *th, __be32 *ptr,
-				struct tcp_sock *tp,
-				struct tcp_out_options *opts)
-{
-#if IS_ENABLED(CONFIG_MPTCP)
-	if (unlikely(OPTION_MPTCP & opts->options))
-		mptcp_write_options(th, ptr, tp, &opts->mptcp);
-#endif
-}
 
 #ifdef CONFIG_CGROUP_BPF
 static int bpf_skops_write_hdr_opt_arg0(struct sk_buff *skb,
@@ -774,33 +759,7 @@ static void tcp_options_write(struct tcphdr *th, struct tcp_sock *tp,
 		leftover_lowbyte = TCPOPT_NOP;
 	}
 
-	if (unlikely(OPTION_FAST_OPEN_COOKIE & options)) {
-		struct tcp_fastopen_cookie *foc = opts->fastopen_cookie;
-		u8 *p = (u8 *)ptr;
-		u32 len; /* Fast Open option length */
-
-		if (foc->exp) {
-			len = TCPOLEN_EXP_FASTOPEN_BASE + foc->len;
-			*ptr = htonl((TCPOPT_EXP << 24) | (len << 16) |
-				     TCPOPT_FASTOPEN_MAGIC);
-			p += TCPOLEN_EXP_FASTOPEN_BASE;
-		} else {
-			len = TCPOLEN_FASTOPEN_BASE + foc->len;
-			*p++ = TCPOPT_FASTOPEN;
-			*p++ = len;
-		}
-
-		memcpy(p, foc->val, foc->len);
-		if ((len & 3) == 2) {
-			p[foc->len] = TCPOPT_NOP;
-			p[foc->len + 1] = TCPOPT_NOP;
-		}
-		ptr += (len + 3) >> 2;
-	}
-
 	smc_options_write(ptr, &options);
-
-	mptcp_options_write(th, ptr, tp, opts);
 }
 
 static void smc_set_option(struct tcp_sock *tp,
@@ -836,22 +795,6 @@ static void smc_set_option_cond(const struct tcp_sock *tp,
 		}
 	}
 #endif
-}
-
-static void mptcp_set_option_cond(const struct request_sock *req,
-				  struct tcp_out_options *opts,
-				  unsigned int *remaining)
-{
-	if (rsk_is_mptcp(req)) {
-		unsigned int size;
-
-		if (mptcp_synack_options(req, &size, &opts->mptcp)) {
-			if (*remaining >= size) {
-				opts->options |= OPTION_MPTCP;
-				*remaining -= size;
-			}
-		}
-	}
 }
 
 static u32 tcp_synack_options_combine_saving(struct tcp_out_options *opts)
@@ -937,7 +880,6 @@ static unsigned int tcp_syn_options(struct sock *sk, struct sk_buff *skb,
 {
 	struct tcp_sock *tp = tcp_sk(sk);
 	unsigned int remaining = MAX_TCP_OPTION_SPACE;
-	struct tcp_fastopen_request *fastopen = tp->fastopen_req;
 	bool timestamps;
 
 	/* Better than switch (key.type) as it has static branches */
@@ -946,7 +888,7 @@ static unsigned int tcp_syn_options(struct sock *sk, struct sk_buff *skb,
 		opts->options |= OPTION_MD5;
 		remaining -= TCPOLEN_MD5SIG_ALIGNED;
 	} else {
-		timestamps = READ_ONCE(sock_net(sk)->ipv4.sysctl_tcp_timestamps);
+		timestamps = CONFIG_SYSCTL_TCP_TIMESTAMPS;
 		if (tcp_key_is_ao(key)) {
 			opts->options |= OPTION_AO;
 			remaining -= tcp_ao_len_aligned(key->ao_key);
@@ -982,33 +924,9 @@ static unsigned int tcp_syn_options(struct sock *sk, struct sk_buff *skb,
 			remaining -= TCPOLEN_SACKPERM_ALIGNED;
 	}
 
-	if (fastopen && fastopen->cookie.len >= 0) {
-		u32 need = fastopen->cookie.len;
-
-		need += fastopen->cookie.exp ? TCPOLEN_EXP_FASTOPEN_BASE :
-					       TCPOLEN_FASTOPEN_BASE;
-		need = (need + 3) & ~3U;  /* Align to 32 bits */
-		if (remaining >= need) {
-			opts->options |= OPTION_FAST_OPEN_COOKIE;
-			opts->fastopen_cookie = &fastopen->cookie;
-			remaining -= need;
-			tp->syn_fastopen = 1;
-			tp->syn_fastopen_exp = fastopen->cookie.exp ? 1 : 0;
-		}
-	}
 
 	smc_set_option(tp, opts, &remaining);
 
-	if (sk_is_mptcp(sk)) {
-		unsigned int size;
-
-		if (mptcp_syn_options(sk, skb, &size, &opts->mptcp)) {
-			if (remaining >= size) {
-				opts->options |= OPTION_MPTCP;
-				remaining -= size;
-			}
-		}
-	}
 
 	/* Simultaneous open SYN/ACK needs AccECN option but not SYN.
 	 * It is attempted to negotiate the use of AccECN also on the first
@@ -1035,7 +953,6 @@ static unsigned int tcp_synack_options(const struct sock *sk,
 				       unsigned int mss, struct sk_buff *skb,
 				       struct tcp_out_options *opts,
 				       const struct tcp_key *key,
-				       struct tcp_fastopen_cookie *foc,
 				       enum tcp_synack_type synack_type,
 				       struct sk_buff *syn_skb)
 {
@@ -1087,20 +1004,6 @@ static unsigned int tcp_synack_options(const struct sock *sk,
 		if (unlikely(!ireq->tstamp_ok))
 			remaining -= TCPOLEN_SACKPERM_ALIGNED;
 	}
-	if (foc != NULL && foc->len >= 0) {
-		u32 need = foc->len;
-
-		need += foc->exp ? TCPOLEN_EXP_FASTOPEN_BASE :
-				   TCPOLEN_FASTOPEN_BASE;
-		need = (need + 3) & ~3U;  /* Align to 32 bits */
-		if (remaining >= need) {
-			opts->options |= OPTION_FAST_OPEN_COOKIE;
-			opts->fastopen_cookie = foc;
-			remaining -= need;
-		}
-	}
-
-	mptcp_set_option_cond(req, opts, &remaining);
 
 	smc_set_option_cond(tcp_sk(sk), ireq, opts, &remaining);
 
@@ -1145,23 +1048,6 @@ static unsigned int tcp_established_options(struct sock *sk, struct sk_buff *skb
 				tp->tsoffset : 0;
 		opts->tsecr = tp->rx_opt.ts_recent;
 		size += TCPOLEN_TSTAMP_ALIGNED;
-	}
-
-	/* MPTCP options have precedence over SACK for the limited TCP
-	 * option space because a MPTCP connection would be forced to
-	 * fall back to regular TCP if a required multipath option is
-	 * missing. SACK still gets a chance to use whatever space is
-	 * left.
-	 */
-	if (sk_is_mptcp(sk)) {
-		unsigned int remaining = MAX_TCP_OPTION_SPACE - size;
-		unsigned int opt_size = 0;
-
-		if (mptcp_established_options(sk, skb, &opt_size, remaining,
-					      &opts->mptcp)) {
-			opts->options |= OPTION_MPTCP;
-			size += opt_size;
-		}
 	}
 
 	eff_sacks = tp->rx_opt.num_sacks + tp->rx_opt.dsack;
@@ -1794,7 +1680,6 @@ int tcp_fragment(struct sock *sk, enum tcp_queue tcp_queue,
 	if (!buff)
 		return -ENOMEM; /* We'll just try again later. */
 	skb_copy_decrypted(buff, skb);
-	mptcp_skb_ext_copy(buff, skb);
 
 	sk_wmem_queued_add(sk, buff->truesize);
 	sk_mem_charge(sk, buff->truesize);
@@ -2100,7 +1985,7 @@ static void tcp_cwnd_validate(struct sock *sk, bool is_cwnd_limited)
 		if (tp->packets_out > tp->snd_cwnd_used)
 			tp->snd_cwnd_used = tp->packets_out;
 
-		if (READ_ONCE(sock_net(sk)->ipv4.sysctl_tcp_slow_start_after_idle) &&
+		if (CONFIG_SYSCTL_TCP_SLOW_START_AFTER_IDLE &&
 		    (s32)(tcp_jiffies32 - tp->snd_cwnd_stamp) >= inet_csk(sk)->icsk_rto &&
 		    !ca_ops->cong_control)
 			tcp_cwnd_application_limited(sk);
@@ -2197,7 +2082,7 @@ static u32 tcp_tso_segs(struct sock *sk, unsigned int mss_now)
 
 	min_tso = ca_ops->min_tso_segs ?
 			ca_ops->min_tso_segs(sk) :
-			READ_ONCE(sock_net(sk)->ipv4.sysctl_tcp_min_tso_segs);
+			CONFIG_SYSCTL_TCP_MIN_TSO_SEGS;
 
 	tso_segs = tcp_tso_autosize(sk, mss_now, min_tso);
 	return min_t(u32, tso_segs, sk->sk_gso_max_segs);
@@ -2328,7 +2213,6 @@ static int tso_fragment(struct sock *sk, struct sk_buff *skb, unsigned int len,
 	if (unlikely(!buff))
 		return -ENOMEM;
 	skb_copy_decrypted(buff, skb);
-	mptcp_skb_ext_copy(buff, skb);
 
 	sk_wmem_queued_add(sk, buff->truesize);
 	sk_mem_charge(sk, buff->truesize);
@@ -2487,7 +2371,7 @@ static inline void tcp_mtu_check_reprobe(struct sock *sk)
 	u32 interval;
 	s32 delta;
 
-	interval = READ_ONCE(net->ipv4.sysctl_tcp_probe_interval);
+	interval = CONFIG_SYSCTL_TCP_PROBE_INTERVAL;
 	delta = tcp_jiffies32 - icsk->icsk_mtup.probe_timestamp;
 	if (unlikely(delta >= interval * HZ)) {
 		int mss = tcp_current_mss(sk);
@@ -2635,7 +2519,7 @@ static int tcp_mtu_probe(struct sock *sk)
 	 * probing process by not resetting search range to its orignal.
 	 */
 	if (probe_size > tcp_mtu_to_mss(sk, icsk->icsk_mtup.search_high) ||
-	    interval < READ_ONCE(net->ipv4.sysctl_tcp_probe_threshold)) {
+	    interval < CONFIG_SYSCTL_TCP_PROBE_THRESHOLD) {
 		/* Check whether enough time has elaplased for
 		 * another round of probing.
 		 */
@@ -2679,7 +2563,6 @@ static int tcp_mtu_probe(struct sock *sk)
 
 	skb = tcp_send_head(sk);
 	skb_copy_decrypted(nskb, skb);
-	mptcp_skb_ext_copy(nskb, skb);
 
 	TCP_SKB_CB(nskb)->seq = TCP_SKB_CB(skb)->seq;
 	TCP_SKB_CB(nskb)->end_seq = TCP_SKB_CB(skb)->seq + probe_size;
@@ -3043,12 +2926,6 @@ bool tcp_schedule_loss_probe(struct sock *sk, bool advancing_rto)
 	u32 timeout, timeout_us, rto_delta_us;
 	int early_retrans;
 
-	/* Don't do any loss probe on a Fast Open connection before 3WHS
-	 * finishes.
-	 */
-	if (rcu_access_pointer(tp->fastopen_rsk))
-		return false;
-
 	early_retrans = READ_ONCE(sock_net(sk)->ipv4.sysctl_tcp_early_retrans);
 	/* Schedule a loss probe in 2*RTT for SACK capable connections
 	 * not in loss recovery, that are either limited by cwnd or application.
@@ -3267,9 +3144,6 @@ u32 __tcp_select_window(struct sock *sk)
 	int allowed_space = tcp_full_space(sk);
 	int full_space, window;
 
-	if (sk_is_mptcp(sk))
-		mptcp_space(sk, &free_space, &allowed_space);
-
 	full_space = min_t(int, tp->window_clamp, allowed_space);
 
 	if (unlikely(mss > full_space)) {
@@ -3281,7 +3155,7 @@ u32 __tcp_select_window(struct sock *sk)
 	/* Only allow window shrink if the sysctl is enabled and we have
 	 * a non-zero scaling factor in effect.
 	 */
-	if (READ_ONCE(net->ipv4.sysctl_tcp_shrink_window) && tp->rx_opt.rcv_wscale)
+	if (CONFIG_SYSCTL_TCP_SHRINK_WINDOW && tp->rx_opt.rcv_wscale)
 		goto shrink_window_allowed;
 
 	/* do not allow window to shrink */
@@ -3453,7 +3327,7 @@ static void tcp_retrans_try_collapse(struct sock *sk, struct sk_buff *to,
 	struct sk_buff *skb = to, *tmp;
 	bool first = true;
 
-	if (!READ_ONCE(sock_net(sk)->ipv4.sysctl_tcp_retrans_collapse))
+	if (!CONFIG_SYSCTL_TCP_RETRANS_COLLAPSE)
 		return;
 	if (TCP_SKB_CB(skb)->tcp_flags & TCPHDR_SYN)
 		return;
@@ -3888,13 +3762,11 @@ int tcp_send_synack(struct sock *sk)
  * @dst: dst entry attached to the SYNACK. It is consumed and caller
  *       should not use it again.
  * @req: request_sock pointer
- * @foc: cookie for tcp fast open
  * @synack_type: Type of synack to prepare
  * @syn_skb: SYN packet just received.  It could be NULL for rtx case.
  */
 struct sk_buff *tcp_make_synack(const struct sock *sk, struct dst_entry *dst,
 				struct request_sock *req,
-				struct tcp_fastopen_cookie *foc,
 				enum tcp_synack_type synack_type,
 				struct sk_buff *syn_skb)
 {
@@ -3925,13 +3797,8 @@ struct sk_buff *tcp_make_synack(const struct sock *sk, struct dst_entry *dst,
 		 * to avoid false sharing.
 		 */
 		break;
-	case TCP_SYNACK_FASTOPEN:
-		/* sk is a const pointer, because we want to express multiple
-		 * cpu might call us concurrently.
-		 * sk->sk_wmem_alloc in an atomic, we can promote to rw.
-		 */
-		skb_set_owner_w(skb, (struct sock *)sk);
-		break;
+    case __NOTFO_TCP_SYNACK_FASTOPEN:
+        break;
 	}
 	skb_dst_set(skb, dst);
 
@@ -3990,7 +3857,7 @@ struct sk_buff *tcp_make_synack(const struct sock *sk, struct dst_entry *dst,
 	/* bpf program will be interested in the tcp_flags */
 	TCP_SKB_CB(skb)->tcp_flags = TCPHDR_SYN | TCPHDR_ACK;
 	tcp_header_size = tcp_synack_options(sk, req, mss, skb, &opts,
-					     &key, foc, synack_type, syn_skb)
+					     &key, synack_type, syn_skb)
 					+ sizeof(*th);
 
 	skb_push(skb, tcp_header_size);
@@ -4074,7 +3941,7 @@ static void tcp_connect_init(struct sock *sk)
 	 * See tcp_input.c:tcp_rcv_state_process case TCP_SYN_SENT.
 	 */
 	tp->tcp_header_len = sizeof(struct tcphdr);
-	if (READ_ONCE(sock_net(sk)->ipv4.sysctl_tcp_timestamps))
+	if (CONFIG_SYSCTL_TCP_TIMESTAMPS)
 		tp->tcp_header_len += TCPOLEN_TSTAMP_ALIGNED;
 
 	tcp_ao_connect_init(sk);
@@ -4148,109 +4015,6 @@ static void tcp_connect_queue_skb(struct sock *sk, struct sk_buff *skb)
 	sk_mem_charge(sk, skb->truesize);
 	WRITE_ONCE(tp->write_seq, tcb->end_seq);
 	tp->packets_out += tcp_skb_pcount(skb);
-}
-
-/* Build and send a SYN with data and (cached) Fast Open cookie. However,
- * queue a data-only packet after the regular SYN, such that regular SYNs
- * are retransmitted on timeouts. Also if the remote SYN-ACK acknowledges
- * only the SYN sequence, the data are retransmitted in the first ACK.
- * If cookie is not cached or other error occurs, falls back to send a
- * regular SYN with Fast Open cookie request option.
- */
-static int tcp_send_syn_data(struct sock *sk, struct sk_buff *syn)
-{
-	struct inet_connection_sock *icsk = inet_csk(sk);
-	struct tcp_sock *tp = tcp_sk(sk);
-	struct tcp_fastopen_request *fo = tp->fastopen_req;
-	struct page_frag *pfrag = sk_page_frag(sk);
-	struct sk_buff *syn_data;
-	int space, err = 0;
-
-	tp->rx_opt.mss_clamp = tp->advmss;  /* If MSS is not cached */
-	if (!tcp_fastopen_cookie_check(sk, &tp->rx_opt.mss_clamp, &fo->cookie))
-		goto fallback;
-
-	/* MSS for SYN-data is based on cached MSS and bounded by PMTU and
-	 * user-MSS. Reserve maximum option space for middleboxes that add
-	 * private TCP options. The cost is reduced data space in SYN :(
-	 */
-	tp->rx_opt.mss_clamp = tcp_mss_clamp(tp, tp->rx_opt.mss_clamp);
-	/* Sync mss_cache after updating the mss_clamp */
-	tcp_sync_mss(sk, icsk->icsk_pmtu_cookie);
-
-	space = __tcp_mtu_to_mss(sk, icsk->icsk_pmtu_cookie) -
-		MAX_TCP_OPTION_SPACE;
-
-	space = min_t(size_t, space, fo->size);
-
-	if (space &&
-	    !skb_page_frag_refill(min_t(size_t, space, PAGE_SIZE),
-				  pfrag, sk->sk_allocation))
-		goto fallback;
-	syn_data = tcp_stream_alloc_skb(sk, sk->sk_allocation, false);
-	if (!syn_data)
-		goto fallback;
-	memcpy(syn_data->cb, syn->cb, sizeof(syn->cb));
-	if (space) {
-		space = min_t(size_t, space, pfrag->size - pfrag->offset);
-		space = tcp_wmem_schedule(sk, space);
-	}
-	if (space) {
-		space = copy_page_from_iter(pfrag->page, pfrag->offset,
-					    space, &fo->data->msg_iter);
-		if (unlikely(!space)) {
-			tcp_skb_tsorted_anchor_cleanup(syn_data);
-			kfree_skb(syn_data);
-			goto fallback;
-		}
-		skb_fill_page_desc(syn_data, 0, pfrag->page,
-				   pfrag->offset, space);
-		page_ref_inc(pfrag->page);
-		pfrag->offset += space;
-		skb_len_add(syn_data, space);
-		skb_zcopy_set(syn_data, fo->uarg, NULL);
-	}
-	/* No more data pending in inet_wait_for_connect() */
-	if (space == fo->size)
-		fo->data = NULL;
-	fo->copied = space;
-
-	tcp_connect_queue_skb(sk, syn_data);
-	if (syn_data->len)
-		tcp_chrono_start(sk, TCP_CHRONO_BUSY);
-
-	err = tcp_transmit_skb(sk, syn_data, 1, sk->sk_allocation);
-
-	skb_set_delivery_time(syn, syn_data->skb_mstamp_ns, SKB_CLOCK_MONOTONIC);
-
-	/* Now full SYN+DATA was cloned and sent (or not),
-	 * remove the SYN from the original skb (syn_data)
-	 * we keep in write queue in case of a retransmit, as we
-	 * also have the SYN packet (with no data) in the same queue.
-	 */
-	TCP_SKB_CB(syn_data)->seq++;
-	TCP_SKB_CB(syn_data)->tcp_flags = TCPHDR_ACK | TCPHDR_PSH;
-	if (!err) {
-		tp->syn_data = (fo->copied > 0);
-		tcp_rbtree_insert(&sk->tcp_rtx_queue, syn_data);
-		NET_INC_STATS(sock_net(sk), LINUX_MIB_TCPORIGDATASENT);
-		goto done;
-	}
-
-	/* data was not sent, put it in write_queue */
-	__skb_queue_tail(&sk->sk_write_queue, syn_data);
-	tp->packets_out -= tcp_skb_pcount(syn_data);
-
-fallback:
-	/* Send a regular SYN with Fast Open cookie request option */
-	if (fo->cookie.len > 0)
-		fo->cookie.len = 0;
-	err = tcp_transmit_skb(sk, syn, 1, sk->sk_allocation);
-	if (err)
-		tp->syn_fastopen = 0;
-done:
-	fo->cookie.len = -1;  /* Exclude Fast Open option for SYN retries */
-	return err;
 }
 
 /* Build a SYN and send it off. */
@@ -4334,7 +4098,7 @@ int tcp_connect(struct sock *sk)
 	tcp_rbtree_insert(&sk->tcp_rtx_queue, buff);
 
 	/* Send off SYN; include data in Fast Open. */
-	err = tp->fastopen_req ? tcp_send_syn_data(sk, buff) :
+	err = 
 	      tcp_transmit_skb(sk, buff, 1, sk->sk_allocation);
 	if (err == -ECONNREFUSED)
 		return err;
@@ -4580,7 +4344,7 @@ void tcp_send_probe0(struct sock *sk)
 
 	WRITE_ONCE(icsk->icsk_probes_out, icsk->icsk_probes_out + 1);
 	if (err <= 0) {
-		if (icsk->icsk_backoff < READ_ONCE(net->ipv4.sysctl_tcp_retries2))
+		if (icsk->icsk_backoff < CONFIG_SYSCTL_TCP_RETRIES2)
 			icsk->icsk_backoff++;
 		timeout = tcp_probe0_when(sk, tcp_rto_max(sk));
 	} else {
@@ -4603,18 +4367,11 @@ int tcp_rtx_synack(const struct sock *sk, struct request_sock *req)
 	/* Paired with WRITE_ONCE() in sock_setsockopt() */
 	if (READ_ONCE(sk->sk_txrehash) == SOCK_TXREHASH_ENABLED)
 		WRITE_ONCE(tcp_rsk(req)->txhash, net_tx_rndhash());
-	res = af_ops->send_synack(sk, NULL, &fl, req, NULL, TCP_SYNACK_NORMAL,
+	res = af_ops->send_synack(sk, NULL, &fl, req, TCP_SYNACK_NORMAL,
 				  NULL);
 	if (!res) {
 		TCP_INC_STATS(sock_net(sk), TCP_MIB_RETRANSSEGS);
 		NET_INC_STATS(sock_net(sk), LINUX_MIB_TCPSYNRETRANS);
-		if (unlikely(tcp_passive_fastopen(sk))) {
-			/* sk has const attribute because listeners are lockless.
-			 * However in this case, we are dealing with a passive fastopen
-			 * socket thus we can change total_retrans value.
-			 */
-			tcp_sk_rw(sk)->total_retrans++;
-		}
 		trace_tcp_retransmit_synack(sk, req);
 		WRITE_ONCE(req->num_retrans, req->num_retrans + 1);
 	}

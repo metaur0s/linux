@@ -48,15 +48,15 @@
 static void ip6_rcv_finish_core(struct net *net, struct sock *sk,
 				struct sk_buff *skb)
 {
-	if (READ_ONCE(net->ipv4.sysctl_ip_early_demux) &&
+	if (CONFIG_SYSCTL_IP_EARLY_DEMUX &&
 	    !skb_dst(skb) && !skb->sk) {
 		switch (ipv6_hdr(skb)->nexthdr) {
 		case IPPROTO_TCP:
-			if (READ_ONCE(net->ipv4.sysctl_tcp_early_demux))
+			if (CONFIG_SYSCTL_TCP_EARLY_DEMUX)
 				tcp_v6_early_demux(skb);
 			break;
 		case IPPROTO_UDP:
-			if (READ_ONCE(net->ipv4.sysctl_udp_early_demux))
+			if (CONFIG_SYSCTL_UDP_EARLY_DEMUX)
 				udp_v6_early_demux(skb);
 			break;
 		}

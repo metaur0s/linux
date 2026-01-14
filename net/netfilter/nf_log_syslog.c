@@ -271,11 +271,8 @@ nf_log_dump_udp_header(struct nf_log_buf *m,
 	struct udphdr _udph;
 	const struct udphdr *uh;
 
-	if (proto == IPPROTO_UDP)
 		/* Max length: 10 "PROTO=UDP "     */
 		nf_log_buf_add(m, "PROTO=UDP ");
-	else	/* Max length: 14 "PROTO=UDPLITE " */
-		nf_log_buf_add(m, "PROTO=UDPLITE ");
 
 	if (fragment)
 		goto out;
@@ -369,7 +366,6 @@ dump_ipv4_packet(struct net *net, struct nf_log_buf *m,
 			return;
 		break;
 	case IPPROTO_UDP:
-	case IPPROTO_UDPLITE:
 		if (nf_log_dump_udp_header(m, skb, ih->protocol,
 					   ntohs(ih->frag_off) & IP_OFFSET,
 					   iphoff + ih->ihl * 4))
@@ -520,7 +516,6 @@ dump_ipv4_packet(struct net *net, struct nf_log_buf *m,
 	/* IP:	    40+46+6+11+127 = 230 */
 	/* TCP:     10+max(25,20+30+13+9+35+11+127) = 255 */
 	/* UDP:     10+max(25,20) = 35 */
-	/* UDPLITE: 14+max(25,20) = 39 */
 	/* ICMP:    11+max(25, 18+25+max(19,14,24+3+n+10,3+n+10)) = 91+n */
 	/* ESP:     10+max(25)+15 = 50 */
 	/* AH:	    9+max(25)+15 = 49 */
@@ -697,7 +692,6 @@ dump_ipv6_packet(struct net *net, struct nf_log_buf *m,
 			return;
 		break;
 	case IPPROTO_UDP:
-	case IPPROTO_UDPLITE:
 		if (nf_log_dump_udp_header(m, skb, currenthdr, fragment, ptr))
 			return;
 		break;

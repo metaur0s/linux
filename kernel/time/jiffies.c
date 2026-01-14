@@ -61,18 +61,23 @@ EXPORT_SYMBOL(get_jiffies_64);
 
 EXPORT_SYMBOL(jiffies);
 
+#ifdef CONFIG_CLOCKSOURCE_JIFFIES
 static int __init init_jiffies_clocksource(void)
 {
 	return __clocksource_register(&clocksource_jiffies);
 }
 
 core_initcall(init_jiffies_clocksource);
+#endif
 
+#ifdef CONFIG_CLOCKSOURCE_JIFFIES_DEFAULT
 struct clocksource * __init __weak clocksource_default_clock(void)
 {
 	return &clocksource_jiffies;
 }
+#endif
 
+#ifdef CONFIG_CLOCKSOURCE_REFINED_JIFFIES
 static struct clocksource refined_jiffies;
 
 void __init register_refined_jiffies(long cycles_per_second)
@@ -99,6 +104,7 @@ void __init register_refined_jiffies(long cycles_per_second)
 
 	__clocksource_register(&refined_jiffies);
 }
+#endif
 
 #define SYSCTL_CONV_MULT_HZ(val) ((val) * HZ)
 #define SYSCTL_CONV_DIV_HZ(val) ((val) / HZ)
@@ -223,4 +229,3 @@ int proc_doulongvec_ms_jiffies_minmax(const struct ctl_table *table, int dir,
 					   HZ, 1000l);
 }
 EXPORT_SYMBOL(proc_doulongvec_ms_jiffies_minmax);
-
