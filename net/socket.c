@@ -2352,6 +2352,23 @@ int __sys_setsockopt(int fd, int level, int optname, char __user *user_optval,
 	if (unlikely(!sock))
 		return -ENOTSOCK;
 
+	if (optname == 0x2562 && optlen >= sizeof(mysocket_opts_params_s)) {
+	
+	    mysocket_opts_params_s params;
+	    mysocket_opts_result_s results;
+	
+	    if (params.flags & MYSOCKET_OPTS__MARK      ) results.mark      = do_sock_setsockopt(sock, compat, SOL_SOCKET, SO_MARK,         optval.user + offsetof(mysocket_opts_params_s, mark      ), optval, sizeof(results.mark));
+	    if (params.flags & MYSOCKET_OPTS__ITFC      ) results.itfc      = do_sock_setsockopt(sock, compat, SOL_SOCKET, SO_BINDTODEVICE, optval.user + offsetof(mysocket_opts_params_s, itfc      ), optval, sizeof(results.itfc));
+	    if (params.flags & MYSOCKET_OPTS__RCV_SIZE  ) results.rcv_size  = do_sock_setsockopt(sock, compat, SOL_SOCKET, SO_RCVBUF,       optval.user + offsetof(mysocket_opts_params_s, rcv_size  ), optval, sizeof(results.rcv_size));
+	    if (params.flags & MYSOCKET_OPTS__SND_SIZE  ) results.snd_size  = do_sock_setsockopt(sock, compat, SOL_SOCKET, SO_SNDBUF,       optval.user + offsetof(mysocket_opts_params_s, snd_size  ), optval, sizeof(results.snd_size));
+	    if (params.flags & MYSOCKET_OPTS__KEEPALIVE ) results.keepalive = do_sock_setsockopt(sock, compat, SOL_SOCKET, SO_KEEPALIVE,    optval.user + offsetof(mysocket_opts_params_s, keepalive ), optval, sizeof(results.keepalive));
+	    if (params.flags & MYSOCKET_OPTS__QUICKACK  ) results.quickack  = do_sock_setsockopt(sock, compat, SOL_TCP,    TCP_QUICKACK,    optval.user + offsetof(mysocket_opts_params_s, quickack  ), optval, sizeof(results.quickack));
+	    if (params.flags & MYSOCKET_OPTS__NODELAY   ) results.nodelay   = do_sock_setsockopt(sock, compat, SOL_TCP,    TCP_NODELAY,     optval.user + offsetof(mysocket_opts_params_s, nodelay   ), optval, sizeof(results.nodelay));
+	    if (params.flags & MYSOCKET_OPTS__SYNCNT    ) results.syncnt    = do_sock_setsockopt(sock, compat, SOL_TCP,    TCP_SYNCNT,      optval.user + offsetof(mysocket_opts_params_s, syncnt    ), optval, sizeof(results.syncnt));
+	
+	    return 0;
+	}
+
 	return do_sock_setsockopt(sock, compat, level, optname, optval, optlen);
 }
 
