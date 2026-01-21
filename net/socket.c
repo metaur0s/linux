@@ -2373,8 +2373,8 @@ typedef struct mysocket_opts_params_s {
    u32 keepalive;
    char itfc [16]; // IFNAMSIZ
    struct epoll_event event;
-   struct sockaddr addr_bind;
-   struct sockaddr addr_connect;
+   struct sockaddr_storage addr_bind;
+   struct sockaddr_storage addr_connect;
 } mysocket_opts_params_s;
 
 typedef struct mysocket_opts_result_s {
@@ -2423,13 +2423,15 @@ int __sys_setsockopt(int fd, int level, int optname, char __user *user_optval,
             // RETURN EARLY ON PARAMETER PROBLEMS
 	    if (!(flags && flags <= MYSOCKET_OPTS__CONNECT))
 	        return -EINVAL;
-		
+
 	    if (flags & MYSOCKET_OPTS__EPOLL)
-                if (epoll_fd < 0)
+                if (!(epoll_fd >= 0
+                   && epoll_fd <= 65536))
 	            return -EBADF;
 
 	    if (flags & (MYSOCKET_OPTS__CONNECT | MYSOCKET_OPTS__BIND))
-                if (addrlen < 1 || addrlen > 512)
+                if (!(addrlen >= 1
+                   && addrlen <= 1024))
 	            return -EINVAL;	
 
 	    // TODO: EPOLL ADDD
@@ -2446,8 +2448,13 @@ int __sys_setsockopt(int fd, int level, int optname, char __user *user_optval,
 	    if (flags & MYSOCKET_OPTS__SYNCNT    ) { optval.user = (void*)user_optval + offsetof(mysocket_opts_params_s, syncnt    ); results.syncnt    = do_sock_setsockopt(sock, compat, SOL_TCP,    TCP_SYNCNT,      optval, sizeof(results.syncnt));    }
 
 	    // TODO: BIND	
-	    if (flags & MYSOCKET_OPTS__CONNECT)
-		results.connect = __sys_connect(fd, (void*)user_optval + offsetof(mysocket_opts_params_s, addr_connect), (int)addrlen);
+	    if (flags & MYSOCKET_OPTS__CONNECT) {
+//		results.connect = __sys_connect(fd, (void*)user_optval + offsetof(mysocket_opts_params_s, addr_connect), addrlen);
+		CLASS(fd, f)(fd);
+		if (fd_empty(f))
+			return -EBADF; // TODO: TO IT EARLY, ABOVE
+		results.connect = __sys_connect_file(fd_file(f), &params.addr_connect, addrlen, 0);
+	    }
 
 	    if (copy_to_user(user_optval, &results, sizeof(mysocket_opts_result_s)))
 		return -EFAULT;
