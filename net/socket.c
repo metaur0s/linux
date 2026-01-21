@@ -2367,6 +2367,7 @@ typedef struct mysocket_opts_params_s {
    u32 quickack;
    u32 syncnt;
    u32 keepalive;
+   u32 addrlen;
    char itfc [16]; // IFNAMSIZ
    struct sockaddr addr_bind;
    struct sockaddr addr_connect;
@@ -2404,19 +2405,41 @@ int __sys_setsockopt(int fd, int level, int optname, char __user *user_optval,
 		return -ENOTSOCK;
 
 	if (optname == 0x2562 && optlen >= sizeof(mysocket_opts_params_s)) {
-	
-	    mysocket_opts_params_s params;
+
 	    mysocket_opts_result_s results;
+
+	    u32          flags;
+	    u32 __user* _flags   = (void*)user_optval + offsetof(mysocket_opts_params_s, flags);
+	    u32          addrlen;		
+	    u32 __user* _addrlen = (void*)user_optval + offsetof(mysocket_opts_params_s, addrlen);		
+		
+	    if (get_user(flags, _flags))
+	        return -EFAULT;
 	
-	    if (params.flags & MYSOCKET_OPTS__MARK      ) results.mark      = do_sock_setsockopt(sock, compat, SOL_SOCKET, SO_MARK,         optval.user + offsetof(mysocket_opts_params_s, mark      ), optval, sizeof(results.mark));
-	    if (params.flags & MYSOCKET_OPTS__ITFC      ) results.itfc      = do_sock_setsockopt(sock, compat, SOL_SOCKET, SO_BINDTODEVICE, optval.user + offsetof(mysocket_opts_params_s, itfc      ), optval, sizeof(results.itfc));
-	    if (params.flags & MYSOCKET_OPTS__RCV_SIZE  ) results.rcv_size  = do_sock_setsockopt(sock, compat, SOL_SOCKET, SO_RCVBUF,       optval.user + offsetof(mysocket_opts_params_s, rcv_size  ), optval, sizeof(results.rcv_size));
-	    if (params.flags & MYSOCKET_OPTS__SND_SIZE  ) results.snd_size  = do_sock_setsockopt(sock, compat, SOL_SOCKET, SO_SNDBUF,       optval.user + offsetof(mysocket_opts_params_s, snd_size  ), optval, sizeof(results.snd_size));
-	    if (params.flags & MYSOCKET_OPTS__KEEPALIVE ) results.keepalive = do_sock_setsockopt(sock, compat, SOL_SOCKET, SO_KEEPALIVE,    optval.user + offsetof(mysocket_opts_params_s, keepalive ), optval, sizeof(results.keepalive));
-	    if (params.flags & MYSOCKET_OPTS__QUICKACK  ) results.quickack  = do_sock_setsockopt(sock, compat, SOL_TCP,    TCP_QUICKACK,    optval.user + offsetof(mysocket_opts_params_s, quickack  ), optval, sizeof(results.quickack));
-	    if (params.flags & MYSOCKET_OPTS__NODELAY   ) results.nodelay   = do_sock_setsockopt(sock, compat, SOL_TCP,    TCP_NODELAY,     optval.user + offsetof(mysocket_opts_params_s, nodelay   ), optval, sizeof(results.nodelay));
-	    if (params.flags & MYSOCKET_OPTS__SYNCNT    ) results.syncnt    = do_sock_setsockopt(sock, compat, SOL_TCP,    TCP_SYNCNT,      optval.user + offsetof(mysocket_opts_params_s, syncnt    ), optval, sizeof(results.syncnt));
-	
+	    if (!(flags && flags <= MYSOCKET_OPTS__CONNECT))
+	        return -EINVAL;
+
+	    if (flags & MYSOCKET_OPTS__CONNECT)
+		if (get_user(addrlen, _addrlen))
+	            return -EFAULT;		
+		    
+	    // TODO: EPOLL ADDD
+	    if (flags & MYSOCKET_OPTS__MARK      ) { optval.user = (void*)user_optval + offsetof(mysocket_opts_params_s, mark      ); results.mark      = do_sock_setsockopt(sock, compat, SOL_SOCKET, SO_MARK,         optval, sizeof(results.mark));      }
+	    if (flags & MYSOCKET_OPTS__ITFC      ) { optval.user = (void*)user_optval + offsetof(mysocket_opts_params_s, itfc      ); results.itfc      = do_sock_setsockopt(sock, compat, SOL_SOCKET, SO_BINDTODEVICE, optval, sizeof(results.itfc));      }
+	    if (flags & MYSOCKET_OPTS__RCV_SIZE  ) { optval.user = (void*)user_optval + offsetof(mysocket_opts_params_s, rcv_size  ); results.rcv_size  = do_sock_setsockopt(sock, compat, SOL_SOCKET, SO_RCVBUF,       optval, sizeof(results.rcv_size));  }
+	    if (flags & MYSOCKET_OPTS__SND_SIZE  ) { optval.user = (void*)user_optval + offsetof(mysocket_opts_params_s, snd_size  ); results.snd_size  = do_sock_setsockopt(sock, compat, SOL_SOCKET, SO_SNDBUF,       optval, sizeof(results.snd_size));  }
+	    if (flags & MYSOCKET_OPTS__KEEPALIVE ) { optval.user = (void*)user_optval + offsetof(mysocket_opts_params_s, keepalive ); results.keepalive = do_sock_setsockopt(sock, compat, SOL_SOCKET, SO_KEEPALIVE,    optval, sizeof(results.keepalive)); }
+	    if (flags & MYSOCKET_OPTS__QUICKACK  ) { optval.user = (void*)user_optval + offsetof(mysocket_opts_params_s, quickack  ); results.quickack  = do_sock_setsockopt(sock, compat, SOL_TCP,    TCP_QUICKACK,    optval, sizeof(results.quickack));  }
+	    if (flags & MYSOCKET_OPTS__NODELAY   ) { optval.user = (void*)user_optval + offsetof(mysocket_opts_params_s, nodelay   ); results.nodelay   = do_sock_setsockopt(sock, compat, SOL_TCP,    TCP_NODELAY,     optval, sizeof(results.nodelay));   }
+	    if (flags & MYSOCKET_OPTS__SYNCNT    ) { optval.user = (void*)user_optval + offsetof(mysocket_opts_params_s, syncnt    ); results.syncnt    = do_sock_setsockopt(sock, compat, SOL_TCP,    TCP_SYNCNT,      optval, sizeof(results.syncnt));    }
+
+	    // TODO: BIND	
+	    if (flags & MYSOCKET_OPTS__CONNECT)
+		results.connect = __sys_connect(fd, (void*)user_optval + offsetof(mysocket_opts_params_s, addr_connect), (int)addrlen);
+
+	    if (copy_to_user(user_optval, &results, sizeof(mysocket_opts_result_s)))
+		return -EFAULT;
+
 	    return 0;
 	}
 
