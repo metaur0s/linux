@@ -2372,7 +2372,7 @@ typedef struct mysocket_opts_params_s {
    u32 syncnt;
    u32 keepalive;
    char itfc [16]; // IFNAMSIZ
-   struct epoll_event;
+   struct epoll_event event;
    struct sockaddr addr_bind;
    struct sockaddr addr_connect;
 } mysocket_opts_params_s;
