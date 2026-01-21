@@ -2383,7 +2383,7 @@ typedef struct mysocket_opts_result_s {
    int keepalive;
    int nodelay;
    int syncnt;
-   int bind
+   int bind;
    int connect;
 } mysocket_opts_result_s;
 
