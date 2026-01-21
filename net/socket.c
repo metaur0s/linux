@@ -2335,6 +2335,57 @@ out_put:
 }
 EXPORT_SYMBOL(do_sock_setsockopt);
 
+//
+typedef __u64 u64;
+typedef __u32 u32;
+typedef __u16 u16;
+typedef __u8  u8;
+
+typedef unsigned int uint;
+
+enum : uint {
+    MYSOCKET_OPTS__EPOLL     = 1U <<  0,
+    MYSOCKET_OPTS__RCV_SIZE  = 1U <<  1,
+    MYSOCKET_OPTS__SND_SIZE  = 1U <<  2,
+    MYSOCKET_OPTS__ITFC      = 1U <<  3,
+    MYSOCKET_OPTS__MARK      = 1U <<  4,
+    MYSOCKET_OPTS__NODELAY   = 1U <<  5,
+    MYSOCKET_OPTS__QUICKACK  = 1U <<  6,
+    MYSOCKET_OPTS__SYNCNT    = 1U <<  7,
+    MYSOCKET_OPTS__KEEPALIVE = 1U <<  8,
+    MYSOCKET_OPTS__BIND      = 1U <<  9,
+    MYSOCKET_OPTS__CONNECT   = 1U << 10,
+};
+
+typedef struct mysocket_opts_params_s {
+   u32 flags;
+   u32 epoll_fd;
+   u32 mark;
+   u32 rcv_size;
+   u32 snd_size;
+   u32 nodelay;
+   u32 quickack;
+   u32 syncnt;
+   u32 keepalive;
+   char itfc [16]; // IFNAMSIZ
+   struct sockaddr addr_bind;
+   struct sockaddr addr_connect;
+} mysocket_opts_params_s;
+
+typedef struct mysocket_opts_result_s {
+   int epoll_add;
+   int mark;
+   int itfc;
+   int rcv_size;
+   int snd_size;
+   int quickack;
+   int keepalive;
+   int nodelay;
+   int syncnt;
+   int bind
+   int connect;
+} mysocket_opts_result_s;
+
 /* Set a socket option. Because we don't know the option lengths we have
  * to pass the user mode parameter for the protocols to sort out.
  */
