@@ -2408,21 +2408,19 @@ int __sys_setsockopt(int fd, int level, int optname, char __user *user_optval,
 
 	    mysocket_opts_result_s results;
 
-	    u32          flags;
-	    u32 __user* _flags   = (void*)user_optval + offsetof(mysocket_opts_params_s, flags);
-	    u32          addrlen;		
-	    u32 __user* _addrlen = (void*)user_optval + offsetof(mysocket_opts_params_s, addrlen);		
-		
+	    u32 flags  ; const u32 __user* const _flags   = (void*)user_optval + offsetof(mysocket_opts_params_s, flags);
+	    u32 addrlen; const u32 __user* const _addrlen = (void*)user_optval + offsetof(mysocket_opts_params_s, addrlen);		
+
 	    if (get_user(flags, _flags))
 	        return -EFAULT;
-	
+
 	    if (!(flags && flags <= MYSOCKET_OPTS__CONNECT))
 	        return -EINVAL;
 
-	    if (flags & MYSOCKET_OPTS__CONNECT)
+	    if (flags & (MYSOCKET_OPTS__CONNECT | MYSOCKET_OPTS__BIND))
 		if (get_user(addrlen, _addrlen))
 	            return -EFAULT;		
-		    
+
 	    // TODO: EPOLL ADDD
 	    if (flags & MYSOCKET_OPTS__MARK      ) { optval.user = (void*)user_optval + offsetof(mysocket_opts_params_s, mark      ); results.mark      = do_sock_setsockopt(sock, compat, SOL_SOCKET, SO_MARK,         optval, sizeof(results.mark));      }
 	    if (flags & MYSOCKET_OPTS__ITFC      ) { optval.user = (void*)user_optval + offsetof(mysocket_opts_params_s, itfc      ); results.itfc      = do_sock_setsockopt(sock, compat, SOL_SOCKET, SO_BINDTODEVICE, optval, sizeof(results.itfc));      }
