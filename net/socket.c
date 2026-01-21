@@ -71,6 +71,7 @@
 #include <linux/ptp_classify.h>
 #include <linux/init.h>
 #include <linux/poll.h>
+#include <linux/eventpoll.h> // speedyb0y
 #include <linux/cache.h>
 #include <linux/module.h>
 #include <linux/highmem.h>
