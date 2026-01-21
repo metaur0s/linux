@@ -1825,23 +1825,15 @@ static int ep_send_events(struct eventpoll *ep,
 
 #define EPOLL_WAIT_SUPER_EVENTS_N (((256 + 1)*1024) / sizeof(struct epoll_event))
 		if (maxevents == EPOLL_WAIT_SUPER_EVENTS_N) {
-		
-		    const   int watched_fd = (int)(epi->event.data & 0xFFFFFFFFU);
-		    const __u64 watched_id =       epi->event.data;
-		
-		    const int recv_ret   = __sys_recvfrom(watched_fd, events, 256*1024, 0, NULL, 0);
-		    const int recv_size  = recv_ret > 0 ? eventrecv_ret_read_ret : 0;
-		
-		    __u64 resultado = watched_id | ((__u64)recv_ret);
-		    __u64 __user* _resultado = (void*)events + recv_size;
-		
+		    __u64 resultado =          	      (epi->event.data << 32)
+			| (__u64)(__sys_recvfrom((int)(epi->event.data >> 32), (void*)events + sizeof(__u64), 256*1024, 0, NULL, 0));
+		    __u64 __user* _resultado = (__u64*)events;
 		    // O epoll_put_uevent()
 		    //      - RETORNA NULL SE O USER COPY FALHOU
 		    //      - (events + 1) EM CASO DE SUCESSO
 		    // EM NOSSO CASO SO TEMOS UM EVENTO, DEIXA ELE COMO ESTA
 		    if (__put_user(resultado, _resultado))
 		        events = NULL;
-		
 		    // FIX OUR HACK
 		    maxevents = 1;
 		} else // AQUELA LINHA ORIGINAL
