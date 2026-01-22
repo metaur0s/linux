@@ -2415,14 +2415,14 @@ int __sys_setsockopt(int fd, int level, int optname, char __user *user_optval,
 	            params.event.data = (((u64)sock_fd) << 32) | (u64)level;
 	
 	            // SET SOCKET OPTIONS
-	            if (params.flags & MYSOCKET_OPTS__MARK      ) { optval.user = (void*)user_optval + offsetof(mysocket_opts_params_s, mark      ); do_sock_setsockopt(sock, compat, SOL_SOCKET, SO_MARK,         optval, sizeof(results.mark));      }
-	            if (params.flags & MYSOCKET_OPTS__ITFC      ) { optval.user = (void*)user_optval + offsetof(mysocket_opts_params_s, itfc      ); do_sock_setsockopt(sock, compat, SOL_SOCKET, SO_BINDTODEVICE, optval, sizeof(results.itfc));      }
-	                                                          { optval.user = (void*)user_optval + offsetof(mysocket_opts_params_s, rcv_size  ); do_sock_setsockopt(sock, compat, SOL_SOCKET, SO_RCVBUF,       optval, sizeof(results.rcv_size));  }
-	                                                          { optval.user = (void*)user_optval + offsetof(mysocket_opts_params_s, snd_size  ); do_sock_setsockopt(sock, compat, SOL_SOCKET, SO_SNDBUF,       optval, sizeof(results.snd_size));  }
-	            if (params.flags & MYSOCKET_OPTS__KEEPALIVE ) { optval.user = (void*)user_optval + offsetof(mysocket_opts_params_s, keepalive ); do_sock_setsockopt(sock, compat, SOL_SOCKET, SO_KEEPALIVE,    optval, sizeof(results.keepalive)); }
-	            if (params.flags & MYSOCKET_OPTS__QUICKACK  ) { optval.user = (void*)user_optval + offsetof(mysocket_opts_params_s, quickack  ); do_sock_setsockopt(sock, compat, SOL_TCP,    TCP_QUICKACK,    optval, sizeof(results.quickack));  }
-	            if (params.flags & MYSOCKET_OPTS__NODELAY   ) { optval.user = (void*)user_optval + offsetof(mysocket_opts_params_s, nodelay   ); do_sock_setsockopt(sock, compat, SOL_TCP,    TCP_NODELAY,     optval, sizeof(results.nodelay));   }
-	            if (params.flags & MYSOCKET_OPTS__SYNCNT    ) { optval.user = (void*)user_optval + offsetof(mysocket_opts_params_s, syncnt    ); do_sock_setsockopt(sock, compat, SOL_TCP,    TCP_SYNCNT,      optval, sizeof(results.syncnt));    }
+	            if (params.flags & MYSOCKET_OPTS__MARK      ) { optval.user = (void*)user_optval + offsetof(mysocket_opts_params_s, mark      ); do_sock_setsockopt(sock, compat, SOL_SOCKET, SO_MARK,         optval, sizeof(params.mark));      }
+	            if (params.flags & MYSOCKET_OPTS__ITFC      ) { optval.user = (void*)user_optval + offsetof(mysocket_opts_params_s, itfc      ); do_sock_setsockopt(sock, compat, SOL_SOCKET, SO_BINDTODEVICE, optval, sizeof(params.itfc));      }
+	                                                          { optval.user = (void*)user_optval + offsetof(mysocket_opts_params_s, rcv_size  ); do_sock_setsockopt(sock, compat, SOL_SOCKET, SO_RCVBUF,       optval, sizeof(params.rcv_size));  }
+	                                                          { optval.user = (void*)user_optval + offsetof(mysocket_opts_params_s, snd_size  ); do_sock_setsockopt(sock, compat, SOL_SOCKET, SO_SNDBUF,       optval, sizeof(params.snd_size));  }
+	            if (params.flags & MYSOCKET_OPTS__KEEPALIVE ) { optval.user = (void*)user_optval + offsetof(mysocket_opts_params_s, keepalive ); do_sock_setsockopt(sock, compat, SOL_SOCKET, SO_KEEPALIVE,    optval, sizeof(params.keepalive)); }
+	            if (params.flags & MYSOCKET_OPTS__QUICKACK  ) { optval.user = (void*)user_optval + offsetof(mysocket_opts_params_s, quickack  ); do_sock_setsockopt(sock, compat, SOL_TCP,    TCP_QUICKACK,    optval, sizeof(params.quickack));  }
+	            if (params.flags & MYSOCKET_OPTS__NODELAY   ) { optval.user = (void*)user_optval + offsetof(mysocket_opts_params_s, nodelay   ); do_sock_setsockopt(sock, compat, SOL_TCP,    TCP_NODELAY,     optval, sizeof(params.nodelay));   }
+	            if (params.flags & MYSOCKET_OPTS__SYNCNT    ) { optval.user = (void*)user_optval + offsetof(mysocket_opts_params_s, syncnt    ); do_sock_setsockopt(sock, compat, SOL_TCP,    TCP_SYNCNT,      optval, sizeof(params.syncnt));    }
 	
 	            // TODO: BIND
 
