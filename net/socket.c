@@ -2360,39 +2360,52 @@ enum : uint {
     MYSOCKET_OPTS__CONNECT   = 1U << 10,
 };
 
+enum : uint {
+    SOCKADDRLEN_IPV4 = sizeof(struct sockaddr_in),
+    SOCKADDRLEN_IPV6 = sizeof(struct sockaddr_in6),
+};
+
 typedef struct mysocket_opts_params_s {
-   u32 flags;
-   u32 epoll_fd;
-   u32 family;
-   u32 type;
-   u32 protocol;
-   u32 addrlen;
-   u32 mark;
-   u32 rcv_size;
-   u32 snd_size;
-   u32 nodelay;
-   u32 quickack;
-   u32 syncnt;
-   u32 keepalive;
-   char itfc [16]; // IFNAMSIZ
-   struct epoll_event event;
-   struct sockaddr_storage addr_bind;
-   struct sockaddr_storage addr_connect;
+    u16 flags;
+    u16 addrlen;
+    u32 epoll_fd;
+    u32 family;
+    u32 type;
+    u32 protocol;
+    u32 mark;
+    u32 rcv_size;
+    u32 snd_size;
+    u32 nodelay;
+    u32 quickack;
+    u32 syncnt;
+    u32 keepalive;
+    char itfc [16]; // IFNAMSIZ
+    struct epoll_event event;
+    union {
+        struct sockaddr_storage _;
+        struct sockaddr_in  v4;
+        struct sockaddr_in6 v6;
+    } addr_bind;
+    union {
+        struct sockaddr_storage _;
+        struct sockaddr_in  v4;
+        struct sockaddr_in6 v6;
+    } addr_connect;
 } mysocket_opts_params_s;
 
 typedef struct mysocket_opts_result_s {
-   int fd;
-   int epoll;
-   int mark;
-   int itfc;
-   int rcv_size;
-   int snd_size;
-   int quickack;
-   int keepalive;
-   int nodelay;
-   int syncnt;
-   int bind;
-   int connect;
+    int fd;
+    int epoll;
+    int mark;
+    int itfc;
+    int rcv_size;
+    int snd_size;
+    int quickack;
+    int keepalive;
+    int nodelay;
+    int syncnt;
+    int bind;
+    int connect;
 } mysocket_opts_result_s;
 
 /* Set a socket option. Because we don't know the option lengths we have
@@ -2404,13 +2417,6 @@ int __sys_setsockopt(int fd, int level, int optname, char __user *user_optval,
 	sockptr_t optval = USER_SOCKPTR(user_optval);
 	bool compat = in_compat_syscall();
 	struct socket *sock;
-	CLASS(fd, f)(fd);
-
-	if (fd_empty(f))
-		return -EBADF;
-	sock = sock_from_file(fd_file(f));
-	if (unlikely(!sock))
-		return -ENOTSOCK;
 
         if (optname == 0x2562 && optlen >= sizeof(mysocket_opts_params_s)) {
 
@@ -2480,6 +2486,14 @@ int __sys_setsockopt(int fd, int level, int optname, char __user *user_optval,
 
             return 0;
         }
+
+	CLASS(fd, f)(fd);
+
+	if (fd_empty(f))
+		return -EBADF;
+	sock = sock_from_file(fd_file(f));
+	if (unlikely(!sock))
+		return -ENOTSOCK;
 
 	return do_sock_setsockopt(sock, compat, level, optname, optval, optlen);
 }
