@@ -2477,7 +2477,7 @@ int __sys_setsockopt(int fd, int level, int optname, char __user *user_optval,
                 // __sys_connect_file
                 CLASS(fd, f)(fd);
 
-                results.connect = __sys_connect_file(fd_file(f), &params.addr_connect, addrlen, 0);
+                results.connect = __sys_connect_file(fd_file(f), &params.addr_connect._, addrlen, 0);
             }
 
             if (copy_to_user(user_optval, &results, sizeof(mysocket_opts_result_s)))
