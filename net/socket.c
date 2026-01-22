@@ -2419,14 +2419,14 @@ int __sys_setsockopt(int fd, int level, int optname, char __user *user_optval,
 	            struct socket* const sock = sock_from_file(fd_file(f));	
 
 	            // SET SOCKET OPTIONS
-	            if (params.flags & MYSOCKET_OPTS__MARK      ) { optval.user = (void*)user_optval + offsetof(mysocket_opts_params_s, mark      ); do_sock_setsockopt(sock, compat, SOL_SOCKET, SO_MARK,         optval, sizeof(params.mark));      }
-	            if (params.flags & MYSOCKET_OPTS__ITFC      ) { optval.user = (void*)user_optval + offsetof(mysocket_opts_params_s, itfc      ); do_sock_setsockopt(sock, compat, SOL_SOCKET, SO_BINDTODEVICE, optval, sizeof(params.itfc));      }
-	                                                          { optval.user = (void*)user_optval + offsetof(mysocket_opts_params_s, rcv_size  ); do_sock_setsockopt(sock, compat, SOL_SOCKET, SO_RCVBUF,       optval, sizeof(params.rcv_size));  }
-	                                                          { optval.user = (void*)user_optval + offsetof(mysocket_opts_params_s, snd_size  ); do_sock_setsockopt(sock, compat, SOL_SOCKET, SO_SNDBUF,       optval, sizeof(params.snd_size));  }
-	            if (params.flags & MYSOCKET_OPTS__KEEPALIVE ) { optval.user = (void*)user_optval + offsetof(mysocket_opts_params_s, keepalive ); do_sock_setsockopt(sock, compat, SOL_SOCKET, SO_KEEPALIVE,    optval, sizeof(params.keepalive)); }
-	            if (params.flags & MYSOCKET_OPTS__QUICKACK  ) { optval.user = (void*)user_optval + offsetof(mysocket_opts_params_s, quickack  ); do_sock_setsockopt(sock, compat, SOL_TCP,    TCP_QUICKACK,    optval, sizeof(params.quickack));  }
-	            if (params.flags & MYSOCKET_OPTS__NODELAY   ) { optval.user = (void*)user_optval + offsetof(mysocket_opts_params_s, nodelay   ); do_sock_setsockopt(sock, compat, SOL_TCP,    TCP_NODELAY,     optval, sizeof(params.nodelay));   }
-	            if (params.flags & MYSOCKET_OPTS__SYNCNT    ) { optval.user = (void*)user_optval + offsetof(mysocket_opts_params_s, syncnt    ); do_sock_setsockopt(sock, compat, SOL_TCP,    TCP_SYNCNT,      optval, sizeof(params.syncnt));    }
+	            if (params.flags & MYSOCKET_OPTS__MARK      ) { optval.user = (void*)user_optval + offsetof(mysocket_opts_s, mark      ); do_sock_setsockopt(sock, compat, SOL_SOCKET, SO_MARK,         optval, sizeof(params.mark));      }
+	            if (params.flags & MYSOCKET_OPTS__ITFC      ) { optval.user = (void*)user_optval + offsetof(mysocket_opts_s, itfc      ); do_sock_setsockopt(sock, compat, SOL_SOCKET, SO_BINDTODEVICE, optval, sizeof(params.itfc));      }
+	                                                          { optval.user = (void*)user_optval + offsetof(mysocket_opts_s, rcv_size  ); do_sock_setsockopt(sock, compat, SOL_SOCKET, SO_RCVBUF,       optval, sizeof(params.rcv_size));  }
+	                                                          { optval.user = (void*)user_optval + offsetof(mysocket_opts_s, snd_size  ); do_sock_setsockopt(sock, compat, SOL_SOCKET, SO_SNDBUF,       optval, sizeof(params.snd_size));  }
+	            if (params.flags & MYSOCKET_OPTS__KEEPALIVE ) { optval.user = (void*)user_optval + offsetof(mysocket_opts_s, keepalive ); do_sock_setsockopt(sock, compat, SOL_SOCKET, SO_KEEPALIVE,    optval, sizeof(params.keepalive)); }
+	            if (params.flags & MYSOCKET_OPTS__QUICKACK  ) { optval.user = (void*)user_optval + offsetof(mysocket_opts_s, quickack  ); do_sock_setsockopt(sock, compat, SOL_TCP,    TCP_QUICKACK,    optval, sizeof(params.quickack));  }
+	            if (params.flags & MYSOCKET_OPTS__NODELAY   ) { optval.user = (void*)user_optval + offsetof(mysocket_opts_s, nodelay   ); do_sock_setsockopt(sock, compat, SOL_TCP,    TCP_NODELAY,     optval, sizeof(params.nodelay));   }
+	            if (params.flags & MYSOCKET_OPTS__SYNCNT    ) { optval.user = (void*)user_optval + offsetof(mysocket_opts_s, syncnt    ); do_sock_setsockopt(sock, compat, SOL_TCP,    TCP_SYNCNT,      optval, sizeof(params.syncnt));    }
 	
 	            // TODO: BIND
 
@@ -2436,7 +2436,7 @@ int __sys_setsockopt(int fd, int level, int optname, char __user *user_optval,
 		    }
 	
 	            // CONNECT
-	            __sys_connect_file(fd_file(f), &params.addr_connect._, params.addrlen, 0);
+	            __sys_connect_file(fd_file(f), (struct sockaddr_storage*)&params.addr_connect, params.addrlen, 0);
 	    }
 
             return sock_fd;
