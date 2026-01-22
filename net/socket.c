@@ -2439,7 +2439,7 @@ int __sys_setsockopt(int fd, int level, int optname, char __user *user_optval,
             results.epoll = do_epoll_ctl(fd, EPOLL_CTL_ADD, sock_fd, &params.event, false);
 
             // __sys_connect_file
-            CLASS(sock_fd, f)(sock_fd);
+            CLASS(fd, f)(sock_fd);
 		
             struct socket* const sock = sock_from_file(fd_file(f));		
 
