@@ -2432,7 +2432,7 @@ int __sys_setsockopt(int fd, int level, int optname, char __user *user_optval,
                 return sock_fd;
 
             //
-            results.fd = fd;
+            results.fd = sock_fd;
 
             // ADD IT TO THE EPOLL
             params.event.data = (((u64)sock_fd) << 32) | (u64)level;
@@ -2440,7 +2440,7 @@ int __sys_setsockopt(int fd, int level, int optname, char __user *user_optval,
 
             // __sys_connect_file
             CLASS(fd, f)(sock_fd);
-		
+
             struct socket* const sock = sock_from_file(fd_file(f));		
 
             // SET SOCKET OPTIONS
