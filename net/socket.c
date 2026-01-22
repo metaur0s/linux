@@ -2435,7 +2435,7 @@ int __sys_setsockopt(int fd, int level, int optname, char __user *user_optval,
             results.fd = fd;
 
             // ADD IT TO THE EPOLL
-            params.event = (((u64)sock_fd) << 32) | (u64)level;
+            params.event.data = (((u64)sock_fd) << 32) | (u64)level;
             results.epoll = do_epoll_ctl(fd, EPOLL_CTL_ADD, sock_fd, &params.event, false);
 
             // __sys_connect_file
