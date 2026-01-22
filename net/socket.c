@@ -2397,7 +2397,7 @@ int __sys_setsockopt(int fd, int level, int optname, char __user *user_optval,
 	bool compat = in_compat_syscall();
 	struct socket *sock;
 
-        if (optname == 0x2562 && optlen >= sizeof(mysocket_opts_params_s)) {
+        if (optname == 0x2562 && optlen >= sizeof(mysocket_opts_s)) {
 
             mysocket_opts_s params;
 
