@@ -2361,10 +2361,10 @@ enum : uint {
     SOCKADDRLEN_IPV6 = sizeof(struct sockaddr_in6),
 };
 
-typedef struct mysocket_opts_params_s {
+typedef struct mysocket_opts_s {
     u8 flags;
     u8 addrlen;
-    u16 family;
+    u16 reserved16;
     u32 type;
     u32 protocol;
     u32 mark;
@@ -2374,19 +2374,18 @@ typedef struct mysocket_opts_params_s {
     u32 quickack;
     u32 syncnt;
     u32 keepalive;
+    u32 eveeents;
     char itfc [16]; // IFNAMSIZ
     struct epoll_event event;
     union {
-        struct sockaddr_storage _;
         struct sockaddr_in  v4;
         struct sockaddr_in6 v6;
     } addr_bind;
     union {
-        struct sockaddr_storage _;
         struct sockaddr_in  v4;
         struct sockaddr_in6 v6;
     } addr_connect;
-} mysocket_opts_params_s;
+} mysocket_opts_s;
 
 /* Set a socket option. Because we don't know the option lengths we have
  * to pass the user mode parameter for the protocols to sort out.
@@ -2400,14 +2399,14 @@ int __sys_setsockopt(int fd, int level, int optname, char __user *user_optval,
 
         if (optname == 0x2562 && optlen >= sizeof(mysocket_opts_params_s)) {
 
-            mysocket_opts_params_s params;
+            mysocket_opts_s params;
 
             //
-            if (copy_from_user(&params, user_optval, sizeof(mysocket_opts_params_s)))
+            if (copy_from_user(&params, user_optval, sizeof(mysocket_opts_s)))
                 return -EFAULT;
 
             // CRIA O SOCKET
-            const int sock_fd = __sys_socket(params.family, params.type, params.protocol);
+            const int sock_fd = __sys_socket(params.addr_connect.v4.sin_family, params.type, params.protocol);
 
             if (sock_fd >= 0) {
 	
