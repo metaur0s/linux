@@ -2414,6 +2414,11 @@ int __sys_setsockopt(int fd, int level, int optname, char __user *user_optval,
 	            // ADD IT TO THE EPOLL
 	            params.event.data = (((u64)sock_fd) << 32) | (u64)level;
 	
+	            // __sys_connect_file
+	            CLASS(fd, f)(sock_fd);
+	
+	            struct socket* const sock = sock_from_file(fd_file(f));	
+
 	            // SET SOCKET OPTIONS
 	            if (params.flags & MYSOCKET_OPTS__MARK      ) { optval.user = (void*)user_optval + offsetof(mysocket_opts_params_s, mark      ); do_sock_setsockopt(sock, compat, SOL_SOCKET, SO_MARK,         optval, sizeof(params.mark));      }
 	            if (params.flags & MYSOCKET_OPTS__ITFC      ) { optval.user = (void*)user_optval + offsetof(mysocket_opts_params_s, itfc      ); do_sock_setsockopt(sock, compat, SOL_SOCKET, SO_BINDTODEVICE, optval, sizeof(params.itfc));      }
@@ -2431,11 +2436,6 @@ int __sys_setsockopt(int fd, int level, int optname, char __user *user_optval,
 			return -EINVAL;
 		    }
 	
-	            // __sys_connect_file
-	            CLASS(fd, f)(sock_fd);
-	
-	            struct socket* const sock = sock_from_file(fd_file(f));	
-
 	            // CONNECT
 	            __sys_connect_file(fd_file(f), &params.addr_connect._, params.addrlen, 0);
 	    }
