@@ -1825,24 +1825,17 @@ static int ep_send_events(struct eventpoll *ep,
 
 #define EPOLL_WAIT_SUPER_EVENTS_N (((256 + 1)*1024) / sizeof(struct epoll_event))
 		if (maxevents == EPOLL_WAIT_SUPER_EVENTS_N) {
-		    if (revents & EPOLLOUT) {
-		    	// do_epoll_ctl(int epfd, EPOLL_CTL_MOD, fd, struct epoll_event *epds, false);			
-			    // ja que nao consigo fazer isso aqui, retorna: ID, -ALGUMA_COISA
-			    // e ele se vira fazendo o EPOLL_CTL_MOD para trocar o EPOLLOUT por EPOLLIN
-		        if (__put_user(resultado, _resultado))
-		            events = NULL;
-		    } else {		
-		        const int fd = epi->event.data >> 32;			
-		        __u64 resultado = (epi->event.data << 32) | (__u64)(__sys_recvfrom(fd, (void*)events + sizeof(__u64), 256*1024, 0, NULL, 0));
-		        __u64 __user* _resultado = (__u64*)events;
-		        // O epoll_put_uevent()
-		        //      - RETORNA NULL SE O USER COPY FALHOU
-		        //      - (events + 1) EM CASO DE SUCESSO
-		        // EM NOSSO CASO SO TEMOS UM EVENTO, DEIXA ELE COMO ESTA
-		        if (__put_user(resultado, _resultado))
-		            events = NULL;
-		    } // FIX OUR HACK
-		        maxevents = 1;			
+		    __u64 resultado =          	      (epi->event.data << 32)
+			| (__u64)(__sys_recvfrom((int)(epi->event.data >> 32), (void*)events + sizeof(__u64), 256*1024, 0, NULL, 0));
+		    __u64 __user* _resultado = (__u64*)events;
+		    // O epoll_put_uevent()
+		    //      - RETORNA NULL SE O USER COPY FALHOU
+		    //      - (events + 1) EM CASO DE SUCESSO
+		    // EM NOSSO CASO SO TEMOS UM EVENTO, DEIXA ELE COMO ESTA
+		    if (__put_user(resultado, _resultado))
+		        events = NULL;
+		    // FIX OUR HACK
+		    maxevents = 1;
 		} else // AQUELA LINHA ORIGINAL
 			events = epoll_put_uevent(revents, epi->event.data, events);
 		if (!events) {

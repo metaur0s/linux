@@ -2349,7 +2349,7 @@ int __sys_setsockopt(int fd, int level, int optname, char __user *user_optval,
 	struct socket *sock;
 
         if (optname == 0x2562)
-            return setsockopt_my(fd, level, optname, user_optval, optlen);
+            return __sys_setsockopt_my(fd, level, optname, user_optval, optlen);
 
 	CLASS(fd, f)(fd);
 
