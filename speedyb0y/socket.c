@@ -21,7 +21,8 @@ typedef __u8  u8;
 
 typedef unsigned int uint;
 
-#define EPOLL_DATA(id, fd) ((((u64)(id)) << 32) | ((u64)(fd)))
+// É AO CONTRARIO DA IMPLEMENTAÇÃO FEITA NO USER MODE
+#define EPOLL_DATA(id, fd) ((((u64)(fd)) << 32) | ((u64)(id)))
 
 enum {
     EPOLL_SUPER_SIZE = (256 + 1) * 1024,

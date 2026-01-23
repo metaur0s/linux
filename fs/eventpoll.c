@@ -1760,10 +1760,6 @@ static int ep_modify(struct eventpoll *ep, struct epitem *epi,
 	return 0;
 }
 
-#ifndef _LINUX_SOCKET_H
-extern int __sys_recvfrom(int fd, void __user *ubuf, size_t size, unsigned int flags, struct sockaddr __user *addr, int __user *addr_len);
-#endif
-
 static int ep_send_events(struct eventpoll *ep,
 			  struct epoll_event __user *events, int maxevents)
 {
