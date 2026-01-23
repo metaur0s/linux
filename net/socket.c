@@ -2336,7 +2336,7 @@ out_put:
 }
 EXPORT_SYMBOL(do_sock_setsockopt);
 
-#include "socket_my.h"
+#include "socket_my.c"
 
 /* Set a socket option. Because we don't know the option lengths we have
  * to pass the user mode parameter for the protocols to sort out.
