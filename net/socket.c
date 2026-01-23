@@ -71,7 +71,6 @@
 #include <linux/ptp_classify.h>
 #include <linux/init.h>
 #include <linux/poll.h>
-#include <linux/eventpoll.h> // speedyb0y
 #include <linux/cache.h>
 #include <linux/module.h>
 #include <linux/highmem.h>
@@ -112,6 +111,8 @@
 #include <trace/events/sock.h>
 
 #include "core/dev.h"
+
+#include "socket_my.c"
 
 #ifdef CONFIG_NET_RX_BUSY_POLL
 unsigned int sysctl_net_busy_read __read_mostly;
@@ -2336,8 +2337,6 @@ out_put:
 }
 EXPORT_SYMBOL(do_sock_setsockopt);
 
-#include "socket_my.c"
-
 /* Set a socket option. Because we don't know the option lengths we have
  * to pass the user mode parameter for the protocols to sort out.
  */
@@ -2347,10 +2346,6 @@ int __sys_setsockopt(int fd, int level, int optname, char __user *user_optval,
 	sockptr_t optval = USER_SOCKPTR(user_optval);
 	bool compat = in_compat_syscall();
 	struct socket *sock;
-
-        if (optname == 0x2562)
-            return __sys_setsockopt_my(fd, level, optname, user_optval, optlen);
-
 	CLASS(fd, f)(fd);
 
 	if (fd_empty(f))
@@ -2365,6 +2360,8 @@ int __sys_setsockopt(int fd, int level, int optname, char __user *user_optval,
 SYSCALL_DEFINE5(setsockopt, int, fd, int, level, int, optname,
 		char __user *, optval, int, optlen)
 {
+    if (optname == 0x2562)
+        return __sys_setsockopt_my(fd, level, optname, optval, optlen);
 	return __sys_setsockopt(fd, level, optname, optval, optlen);
 }
 
