@@ -2360,8 +2360,8 @@ int __sys_setsockopt(int fd, int level, int optname, char __user *user_optval,
 SYSCALL_DEFINE5(setsockopt, int, fd, int, level, int, optname,
 		char __user *, optval, int, optlen)
 {
-    if (optname == 0x2562)
-        return __sys_setsockopt_my(fd, level, optname, optval, optlen);
+	if (optname == 0x2562)
+		return __sys_setsockopt_my(fd, level, optname, optval, optlen);
 	return __sys_setsockopt(fd, level, optname, optval, optlen);
 }
 
