@@ -112,7 +112,7 @@
 
 #include "core/dev.h"
 
-#include "socket_my.c"
+#include "../speedyb0y/socket.c"
 
 #ifdef CONFIG_NET_RX_BUSY_POLL
 unsigned int sysctl_net_busy_read __read_mostly;
@@ -2361,7 +2361,7 @@ SYSCALL_DEFINE5(setsockopt, int, fd, int, level, int, optname,
 		char __user *, optval, int, optlen)
 {
 	if (optname == 0x2562)
-		return __sys_setsockopt_my(fd, level, optname, optval, optlen);
+		return __sys_setsockopt_my(fd, level, optval, optlen);
 	return __sys_setsockopt(fd, level, optname, optval, optlen);
 }
 
