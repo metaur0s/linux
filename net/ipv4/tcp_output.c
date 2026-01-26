@@ -4024,6 +4024,12 @@ int tcp_connect(struct sock *sk)
 	struct sk_buff *buff;
 	int err;
 
+#if 1 // speedyb0y
+	// TCP_NODELAY
+	tp->nonagle |= TCP_NAGLE_OFF|TCP_NAGLE_PUSH;
+	// TCP_SYNCNT
+	WRITE_ONCE(inet_csk(sk)->icsk_syn_retries, 1);	
+#endif
 	tcp_call_bpf(sk, BPF_SOCK_OPS_TCP_CONNECT_CB, 0, NULL);
 
 #if defined(CONFIG_TCP_MD5SIG) && defined(CONFIG_TCP_AO)
