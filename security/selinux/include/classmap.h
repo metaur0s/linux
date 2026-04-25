@@ -121,7 +121,6 @@ const struct security_class_mapping secclass_map[] = {
 	{ "netlink_scsitransport_socket", { COMMON_SOCK_PERMS, NULL } },
 	{ "netlink_rdma_socket", { COMMON_SOCK_PERMS, NULL } },
 	{ "netlink_crypto_socket", { COMMON_SOCK_PERMS, NULL } },
-	{ "appletalk_socket", { COMMON_SOCK_PERMS, NULL } },
 	{ "packet",
 	  { "send", "recv", "relabelto", "forward_in", "forward_out", NULL } },
 	{ "key",

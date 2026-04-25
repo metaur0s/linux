@@ -315,13 +315,6 @@ config APPLE_DART
 
 	  Say Y here if you are using an Apple SoC.
 
-config S390_IOMMU
-	def_bool y if S390 && PCI
-	depends on S390 && PCI
-	select IOMMU_API
-	help
-	  Support for the IOMMU API for s390 PCI devices.
-
 config MTK_IOMMU
 	tristate "MediaTek IOMMU Support"
 	depends on ARCH_MEDIATEK || COMPILE_TEST

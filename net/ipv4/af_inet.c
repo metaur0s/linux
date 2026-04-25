@@ -198,7 +198,7 @@ static int inet_autobind(struct sock *sk)
 int __inet_listen_sk(struct sock *sk, int backlog)
 {
 	unsigned char old_state = sk->sk_state;
-	int err, tcp_fastopen;
+	int err;
 
 	if (!((1 << old_state) & (TCPF_CLOSE | TCPF_LISTEN)))
 		return -EINVAL;
@@ -208,19 +208,6 @@ int __inet_listen_sk(struct sock *sk, int backlog)
 	 * we can only allow the backlog to be adjusted.
 	 */
 	if (old_state != TCP_LISTEN) {
-		/* Enable TFO w/o requiring TCP_FASTOPEN socket option.
-		 * Note that only TCP sockets (SOCK_STREAM) will reach here.
-		 * Also fastopen backlog may already been set via the option
-		 * because the socket was in TCP_LISTEN state previously but
-		 * was shutdown() rather than close().
-		 */
-		tcp_fastopen = READ_ONCE(sock_net(sk)->ipv4.sysctl_tcp_fastopen);
-		if ((tcp_fastopen & TFO_SERVER_WO_SOCKOPT1) &&
-		    (tcp_fastopen & TFO_SERVER_ENABLE) &&
-		    !inet_csk(sk)->icsk_accept_queue.fastopenq.max_qlen) {
-			fastopen_queue_tune(sk, backlog);
-			tcp_fastopen_init_key_once(sock_net(sk));
-		}
 
 		err = inet_csk_listen_start(sk);
 		if (err)
@@ -664,9 +651,6 @@ int __inet_stream_connect(struct socket *sock, struct sockaddr_unsized *uaddr,
 		err = -EISCONN;
 		goto out;
 	case SS_CONNECTING:
-		if (inet_test_bit(DEFER_CONNECT, sk))
-			err = is_sendmsg ? -EINPROGRESS : -EISCONN;
-		else
 			err = -EALREADY;
 		/* Fall out of switch with err, set for this state */
 		break;
@@ -687,7 +671,7 @@ int __inet_stream_connect(struct socket *sock, struct sockaddr_unsized *uaddr,
 
 		sock->state = SS_CONNECTING;
 
-		if (!err && inet_test_bit(DEFER_CONNECT, sk))
+		if (!err && 0)
 			goto out;
 
 		/* Just entered SS_CONNECTING state; the only
@@ -702,8 +686,8 @@ int __inet_stream_connect(struct socket *sock, struct sockaddr_unsized *uaddr,
 
 	if ((1 << sk->sk_state) & (TCPF_SYN_SENT | TCPF_SYN_RECV)) {
 		int writebias = (sk->sk_protocol == IPPROTO_TCP) &&
-				tcp_sk(sk)->fastopen_req &&
-				tcp_sk(sk)->fastopen_req->data ? 1 : 0;
+				0 &&
+				0 ? 1 : 0;
 		int dis = sk->sk_disconnects;
 
 		/* Error code is set above */
@@ -1766,10 +1750,6 @@ static __net_exit void ipv4_mib_exit_net(struct net *net)
 	free_percpu(net->mib.net_statistics);
 	free_percpu(net->mib.ip_statistics);
 	free_percpu(net->mib.tcp_statistics);
-#ifdef CONFIG_MPTCP
-	/* allocated on demand, see mptcp_init_sock() */
-	free_percpu(net->mib.mptcp_statistics);
-#endif
 }
 
 static __net_initdata struct pernet_operations ipv4_mib_ops = {
@@ -1784,10 +1764,6 @@ static int __init init_ipv4_mibs(void)
 
 static __net_init int inet_init_net(struct net *net)
 {
-	/*
-	 * Set defaults for local port range
-	 */
-	net->ipv4.ip_local_ports.range = 60999u << 16 | 32768u;
 
 	seqlock_init(&net->ipv4.ping_group_range.lock);
 	/*
@@ -1800,16 +1776,8 @@ static __net_init int inet_init_net(struct net *net)
 	/* Default values for sysctl-controlled parameters.
 	 * We set them here, in case sysctl is not compiled.
 	 */
-	net->ipv4.sysctl_ip_default_ttl = IPDEFTTL;
 	net->ipv4.sysctl_ip_fwd_update_priority = 1;
 	net->ipv4.sysctl_ip_dynaddr = 0;
-	net->ipv4.sysctl_ip_early_demux = 1;
-	net->ipv4.sysctl_udp_early_demux = 1;
-	net->ipv4.sysctl_tcp_early_demux = 1;
-	net->ipv4.sysctl_nexthop_compat_mode = 1;
-#ifdef CONFIG_SYSCTL
-	net->ipv4.sysctl_ip_prot_sock = PROT_SOCK;
-#endif
 
 	/* Some igmp sysctl, whose values are always used */
 	net->ipv4.sysctl_igmp_max_memberships = 20;

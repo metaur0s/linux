@@ -113,9 +113,7 @@ libchacha-y += mips/chacha-core.o
 AFLAGS_mips/chacha-core.o += -O2 # needed to fill branch delay slots
 endif
 
-libchacha-$(CONFIG_PPC) += powerpc/chacha-p10le-8x.o
 libchacha-$(CONFIG_RISCV) += riscv/chacha-riscv64-zvkb.o
-libchacha-$(CONFIG_S390) += s390/chacha-s390.o
 libchacha-$(CONFIG_X86) += x86/chacha-ssse3-x86_64.o \
 			   x86/chacha-avx2-x86_64.o \
 			   x86/chacha-avx512vl-x86_64.o
@@ -147,7 +145,6 @@ endif
 ifeq ($(CONFIG_CRYPTO_LIB_CURVE25519_ARCH),y)
 CFLAGS_curve25519.o += -I$(src)/$(SRCARCH)
 libcurve25519-$(CONFIG_ARM) += arm/curve25519-core.o
-libcurve25519-$(CONFIG_PPC) += powerpc/curve25519-ppc64le_asm.o
 endif
 
 ################################################################################
@@ -189,7 +186,6 @@ obj-$(CONFIG_CRYPTO_LIB_MD5) += libmd5.o
 libmd5-y := md5.o
 ifeq ($(CONFIG_CRYPTO_LIB_MD5_ARCH),y)
 CFLAGS_md5.o += -I$(src)/$(SRCARCH)
-libmd5-$(CONFIG_PPC) += powerpc/md5-asm.o
 endif # CONFIG_CRYPTO_LIB_MD5_ARCH
 
 ################################################################################
@@ -249,8 +245,6 @@ $(obj)/mips/poly1305-core.S: $(src)/mips/poly1305-mips.pl FORCE
 targets += mips/poly1305-core.S
 endif
 
-libpoly1305-$(CONFIG_PPC) += powerpc/poly1305-p10le_64.o
-
 ifeq ($(CONFIG_RISCV),y)
 libpoly1305-y += riscv/poly1305-core.o
 poly1305-perlasm-flavour-$(CONFIG_32BIT) := 32
@@ -291,11 +285,6 @@ libsha1-$(CONFIG_KERNEL_MODE_NEON) += arm/sha1-armv7-neon.o \
 				      arm/sha1-ce-core.o
 endif
 libsha1-$(CONFIG_ARM64) += arm64/sha1-ce-core.o
-ifeq ($(CONFIG_PPC),y)
-libsha1-y += powerpc/sha1-powerpc-asm.o
-libsha1-$(CONFIG_SPE) += powerpc/sha1-spe-asm.o
-endif
-libsha1-$(CONFIG_SPARC) += sparc/sha1_asm.o
 libsha1-$(CONFIG_X86) += x86/sha1-ssse3-and-avx.o \
 			 x86/sha1-avx2-asm.o \
 			 x86/sha1-ni-asm.o
@@ -321,9 +310,7 @@ $(obj)/arm64/sha256-core.S: $(src)/arm64/sha2-armv8.pl
 	$(call cmd,perlasm_with_args)
 endif
 
-libsha256-$(CONFIG_PPC) += powerpc/sha256-spe-asm.o
 libsha256-$(CONFIG_RISCV) += riscv/sha256-riscv64-zvknha_or_zvknhb-zvkb.o
-libsha256-$(CONFIG_SPARC) += sparc/sha256_asm.o
 libsha256-$(CONFIG_X86) += x86/sha256-ssse3-asm.o \
 			   x86/sha256-avx-asm.o \
 			   x86/sha256-avx2-asm.o \
@@ -351,7 +338,6 @@ $(obj)/arm64/sha512-core.S: $(src)/arm64/sha2-armv8.pl
 endif
 
 libsha512-$(CONFIG_RISCV) += riscv/sha512-riscv64-zvknhb-zvkb.o
-libsha512-$(CONFIG_SPARC) += sparc/sha512_asm.o
 libsha512-$(CONFIG_X86) += x86/sha512-ssse3-asm.o \
 			   x86/sha512-avx-asm.o \
 			   x86/sha512-avx2-asm.o

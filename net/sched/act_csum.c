@@ -253,7 +253,7 @@ static int tcf_csum_ipv6_tcp(struct sk_buff *skb, unsigned int ihl,
 }
 
 static int tcf_csum_ipv4_udp(struct sk_buff *skb, unsigned int ihl,
-			     unsigned int ipl, int udplite)
+			     unsigned int ipl)
 {
 	struct udphdr *udph;
 	const struct iphdr *iph;
@@ -263,9 +263,8 @@ static int tcf_csum_ipv4_udp(struct sk_buff *skb, unsigned int ihl,
 		return 1;
 
 	/*
-	 * Support both UDP and UDPLITE checksum algorithms, Don't use
+	 * Support both UDP checksum algorithms, Don't use
 	 * udph->len to get the real length without any protocol check,
-	 * UDPLITE uses udph->len for another thing,
 	 * Use iph->tot_len, or just ipl.
 	 */
 
@@ -276,18 +275,11 @@ static int tcf_csum_ipv4_udp(struct sk_buff *skb, unsigned int ihl,
 	iph = ip_hdr(skb);
 	ul = ntohs(udph->len);
 
-	if (udplite || udph->check) {
+	if (udph->check) {
 
 		udph->check = 0;
 
-		if (udplite) {
-			if (ul == 0)
-				skb->csum = csum_partial(udph, ipl - ihl, 0);
-			else if ((ul >= sizeof(*udph)) && (ul <= ipl - ihl))
-				skb->csum = csum_partial(udph, ul, 0);
-			else
-				goto ignore_obscure_skb;
-		} else {
+		{
 			if (ul != ipl - ihl)
 				goto ignore_obscure_skb;
 
@@ -309,7 +301,7 @@ ignore_obscure_skb:
 }
 
 static int tcf_csum_ipv6_udp(struct sk_buff *skb, unsigned int ihl,
-			     unsigned int ipl, int udplite)
+			     unsigned int ipl)
 {
 	struct udphdr *udph;
 	const struct ipv6hdr *ip6h;
@@ -319,9 +311,8 @@ static int tcf_csum_ipv6_udp(struct sk_buff *skb, unsigned int ihl,
 		return 1;
 
 	/*
-	 * Support both UDP and UDPLITE checksum algorithms, Don't use
+	 * Support both UDP checksum algorithms, Don't use
 	 * udph->len to get the real length without any protocol check,
-	 * UDPLITE uses udph->len for another thing,
 	 * Use ip6h->payload_len + sizeof(*ip6h) ... , or just ipl.
 	 */
 
@@ -334,16 +325,7 @@ static int tcf_csum_ipv6_udp(struct sk_buff *skb, unsigned int ihl,
 
 	udph->check = 0;
 
-	if (udplite) {
-		if (ul == 0)
-			skb->csum = csum_partial(udph, ipl - ihl, 0);
-
-		else if ((ul >= sizeof(*udph)) && (ul <= ipl - ihl))
-			skb->csum = csum_partial(udph, ul, 0);
-
-		else
-			goto ignore_obscure_skb;
-	} else {
+	{
 		if (ul != ipl - ihl)
 			goto ignore_obscure_skb;
 
@@ -351,7 +333,7 @@ static int tcf_csum_ipv6_udp(struct sk_buff *skb, unsigned int ihl,
 	}
 
 	udph->check = csum_ipv6_magic(&ip6h->saddr, &ip6h->daddr, ul,
-				      udplite ? IPPROTO_UDPLITE : IPPROTO_UDP,
+				      IPPROTO_UDP,
 				      skb->csum);
 
 	if (!udph->check)
@@ -417,12 +399,6 @@ static int tcf_csum_ipv4(struct sk_buff *skb, u32 update_flags)
 		if (update_flags & TCA_CSUM_UPDATE_FLAG_UDP)
 			if (!tcf_csum_ipv4_udp(skb, iph->ihl * 4,
 					       ntohs(iph->tot_len), 0))
-				goto fail;
-		break;
-	case IPPROTO_UDPLITE:
-		if (update_flags & TCA_CSUM_UPDATE_FLAG_UDPLITE)
-			if (!tcf_csum_ipv4_udp(skb, iph->ihl * 4,
-					       ntohs(iph->tot_len), 1))
 				goto fail;
 		break;
 	case IPPROTO_SCTP:
@@ -538,12 +514,6 @@ static int tcf_csum_ipv6(struct sk_buff *skb, u32 update_flags)
 			if (update_flags & TCA_CSUM_UPDATE_FLAG_UDP)
 				if (!tcf_csum_ipv6_udp(skb, hl,
 						       pl + sizeof(*ip6h), 0))
-					goto fail;
-			goto done;
-		case IPPROTO_UDPLITE:
-			if (update_flags & TCA_CSUM_UPDATE_FLAG_UDPLITE)
-				if (!tcf_csum_ipv6_udp(skb, hl,
-						       pl + sizeof(*ip6h), 1))
 					goto fail;
 			goto done;
 		case IPPROTO_SCTP:

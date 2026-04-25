@@ -923,11 +923,6 @@ static int __net_init inet6_net_init(struct net *net)
 	int err = 0;
 
 	net->ipv6.sysctl.bindv6only = 0;
-	net->ipv6.sysctl.icmpv6_time = HZ / 10;
-	net->ipv6.sysctl.icmpv6_echo_ignore_all = 0;
-	net->ipv6.sysctl.icmpv6_echo_ignore_multicast = 0;
-	net->ipv6.sysctl.icmpv6_echo_ignore_anycast = 0;
-	net->ipv6.sysctl.icmpv6_error_anycast_as_unicast = 0;
 	net->ipv6.sysctl.icmpv6_errors_extension_mask = 0;
 
 	/* By default, rate limit error messages.

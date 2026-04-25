@@ -1122,7 +1122,7 @@ static int udp_send_skb(struct sk_buff *skb, struct flowi4 *fl4,
 			kfree_skb(skb);
 			return -EINVAL;
 		}
-		if (sk->sk_no_check_tx) {
+		if (1) {
 			kfree_skb(skb);
 			return -EINVAL;
 		}
@@ -1142,7 +1142,7 @@ static int udp_send_skb(struct sk_buff *skb, struct flowi4 *fl4,
 		}
 	}
 
-	if (sk->sk_no_check_tx) {			 /* UDP csum off */
+	if (1) {			 /* UDP csum off */
 		skb->ip_summed = CHECKSUM_NONE;
 		goto send;
 	} else if (skb->ip_summed == CHECKSUM_PARTIAL) { /* UDP hardware csum */
@@ -3737,7 +3737,7 @@ static void __net_init udp_set_table(struct net *net)
 		goto fallback;
 
 	old_net = current->nsproxy->net_ns;
-	hash_entries = READ_ONCE(old_net->ipv4.sysctl_udp_child_hash_entries);
+	hash_entries = CONFIG_SYSCTL_UDP_CHILD_HASH_ENTRIES;
 	if (!hash_entries)
 		goto fallback;
 

@@ -41,6 +41,7 @@ struct io_socket {
 	int				protocol;
 	int				flags;
 	u32				file_slot;
+	u32				mark;
 	unsigned long			nofile;
 };
 
@@ -1678,9 +1679,10 @@ int io_socket_prep(struct io_kiocb *req, const struct io_uring_sqe *sqe)
 {
 	struct io_socket *sock = io_kiocb_to_cmd(req, struct io_socket);
 
-	if (sqe->addr || sqe->rw_flags || sqe->buf_index)
+	if (sqe->rw_flags || sqe->buf_index)
 		return -EINVAL;
 
+	sock->mark = (u32) READ_ONCE(sqe->addr);
 	sock->domain = READ_ONCE(sqe->fd);
 	sock->type = READ_ONCE(sqe->off);
 	sock->protocol = READ_ONCE(sqe->len);
@@ -1721,6 +1723,8 @@ int io_socket(struct io_kiocb *req, unsigned int issue_flags)
 		fd_install(fd, file);
 		ret = fd;
 	} else {
+		if (sock->mark)
+			sock_from_file(file)->sk->sk_mark = sock->mark; // TODO: ALSO ON NON FIXED VERSION, ABOVE
 		ret = io_fixed_fd_install(req, issue_flags, file,
 					    sock->file_slot);
 	}

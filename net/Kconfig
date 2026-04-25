@@ -137,7 +137,6 @@ if INET
 source "net/ipv4/Kconfig"
 source "net/ipv6/Kconfig"
 source "net/netlabel/Kconfig"
-source "net/mptcp/Kconfig"
 
 endif # if INET
 
@@ -255,16 +254,13 @@ source "net/sctp/Kconfig"
 source "net/rds/Kconfig"
 source "net/tipc/Kconfig"
 source "net/atm/Kconfig"
-source "net/l2tp/Kconfig"
 source "net/802/Kconfig"
 source "net/bridge/Kconfig"
 source "net/dsa/Kconfig"
 source "net/8021q/Kconfig"
 source "net/llc/Kconfig"
-source "net/appletalk/Kconfig"
 source "net/x25/Kconfig"
 source "net/lapb/Kconfig"
-source "net/phonet/Kconfig"
 source "net/6lowpan/Kconfig"
 source "net/ieee802154/Kconfig"
 source "net/mac802154/Kconfig"
@@ -272,7 +268,6 @@ source "net/sched/Kconfig"
 source "net/dcb/Kconfig"
 source "net/dns_resolver/Kconfig"
 source "net/batman-adv/Kconfig"
-source "net/openvswitch/Kconfig"
 source "net/vmw_vsock/Kconfig"
 source "net/netlink/Kconfig"
 source "net/mpls/Kconfig"
@@ -324,7 +319,7 @@ config SOCK_RX_QUEUE_MAPPING
 	bool
 
 config XPS
-	bool
+	bool "XPS"
 	depends on SMP
 	select SOCK_RX_QUEUE_MAPPING
 	default y
@@ -460,11 +455,11 @@ config LWTUNNEL_BPF
 	  lookup for incoming and outgoing packets.
 
 config DST_CACHE
-	bool
+	bool "DST_CACHE"
 	default n
 
 config GRO_CELLS
-	bool
+	bool "GRO_CELLS"
 	default n
 
 config SOCK_VALIDATE_XMIT

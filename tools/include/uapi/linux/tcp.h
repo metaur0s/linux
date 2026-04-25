@@ -169,7 +169,6 @@ enum tcp_fastopen_client_fail {
 #define TCPI_OPT_WSCALE		4
 #define TCPI_OPT_ECN		8 /* ECN was negociated at TCP session init */
 #define TCPI_OPT_ECN_SEEN	16 /* we received at least one packet with ECT */
-#define TCPI_OPT_SYN_DATA	32 /* SYN-ACK acked data in SYN sent or rcvd */
 
 /*
  * Sender's congestion state indicating normal or abnormal situations
@@ -219,7 +218,7 @@ struct tcp_info {
 	__u8	tcpi_backoff;
 	__u8	tcpi_options;
 	__u8	tcpi_snd_wscale : 4, tcpi_rcv_wscale : 4;
-	__u8	tcpi_delivery_rate_app_limited:1, tcpi_fastopen_client_fail:2;
+	__u8	tcpi_delivery_rate_app_limited:1, ZZZ:2;
 
 	__u32	tcpi_rto;
 	__u32	tcpi_ato;

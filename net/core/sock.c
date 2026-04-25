@@ -144,7 +144,6 @@
 
 #include <net/tcp.h>
 #include <net/busy_poll.h>
-#include <net/phonet/phonet.h>
 
 #include <linux/ethtool.h>
 
@@ -1397,10 +1396,6 @@ set_sndbuf:
 		sock_valbool_flag(sk, SOCK_URGINLINE, valbool);
 		break;
 
-	case SO_NO_CHECK:
-		sk->sk_no_check_tx = valbool;
-		break;
-
 	case SO_LINGER:
 		if (optlen < sizeof(ling)) {
 			ret = -EINVAL;	/* 1003.1g */
@@ -1804,10 +1799,6 @@ int sk_getsockopt(struct sock *sk, int level, int optname,
 
 	case SO_OOBINLINE:
 		v.val = sock_flag(sk, SOCK_URGINLINE);
-		break;
-
-	case SO_NO_CHECK:
-		v.val = sk->sk_no_check_tx;
 		break;
 
 	case SO_PRIORITY:
@@ -4490,8 +4481,6 @@ int sk_ioctl(struct sock *sk, unsigned int cmd, void __user *arg)
 		rc = ipmr_sk_ioctl(sk, cmd, arg);
 	else if (sk->sk_type == SOCK_RAW && sk->sk_family == AF_INET6)
 		rc = ip6mr_sk_ioctl(sk, cmd, arg);
-	else if (sk_is_phonet(sk))
-		rc = phonet_sk_ioctl(sk, cmd, arg);
 
 	/* If ioctl was processed, returns its value */
 	if (rc <= 0)
