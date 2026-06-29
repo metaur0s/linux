@@ -272,8 +272,6 @@ struct sk_filter;
   *	@sk_pacing_status: Pacing status (requested, handled by sch_fq)
   *	@sk_max_pacing_rate: Maximum pacing rate (%SO_MAX_PACING_RATE)
   *	@sk_sndbuf: size of send buffer in bytes
-  *	@sk_no_check_tx: %SO_NO_CHECK setting, set checksum in TX packets
-  *	@sk_no_check_rx: allow zero checksum in RX packets
   *	@sk_route_caps: route capabilities (e.g. %NETIF_F_TSO)
   *	@sk_gso_disabled: if set, NETIF_F_GSO_MASK is forbidden.
   *	@sk_gso_type: GSO type (e.g. %SKB_GSO_TCPV4)
@@ -311,7 +309,6 @@ struct sk_filter;
   *	@sk_filter: socket filtering instructions
   *	@sk_timer: sock cleanup timer
   *	@tcp_retransmit_timer: tcp retransmit timer
-  *	@mptcp_retransmit_timer: mptcp retransmit timer
   *	@sk_stamp: time stamp of last packet received
   *	@sk_stamp_seq: lock for accessing sk_stamp on 32 bit architectures only
   *	@sk_tsflags: SO_TIMESTAMPING flags
@@ -493,7 +490,6 @@ struct sock {
 	union {
 		struct timer_list	sk_timer;
 		struct timer_list	tcp_retransmit_timer;
-		struct timer_list	mptcp_retransmit_timer;
 	};
 	unsigned long		sk_pacing_rate; /* bytes per second */
 	atomic_t		sk_zckey;
@@ -534,8 +530,8 @@ struct sock {
 	 */
 	u8			sk_gso_disabled : 1,
 				sk_kern_sock : 1,
-				sk_no_check_tx : 1,
-				sk_no_check_rx : 1;
+				XXXXXXXXXXXXXX : 1,
+				ZZZZZZZZZZZZZZ : 1;
 	u8			sk_shutdown;
 	unsigned long	        sk_lingertime;
 	struct proto		*sk_prot_creator;
@@ -1518,7 +1514,7 @@ static inline int __sk_prot_rehash(struct sock *sk)
 #define SOCK_DESTROY_TIME (10*HZ)
 
 /* Sockets 0-1023 can't be bound to unless you are superuser */
-#define PROT_SOCK	1024
+#define PROT_SOCK	20 // PRIVILEGED PORTS
 
 #define SHUTDOWN_MASK	3
 #define RCV_SHUTDOWN	1

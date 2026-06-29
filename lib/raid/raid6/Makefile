@@ -24,18 +24,8 @@ raid6_pq-$(CONFIG_KERNEL_MODE_NEON) += arm/neon.o \
 				   arm/recov_neon_inner.o
 raid6_pq-$(CONFIG_LOONGARCH)	+= loongarch/loongarch_simd.o \
 				   loongarch/recov_loongarch_simd.o
-raid6_pq-$(CONFIG_ALTIVEC)	+= powerpc/altivec1.o \
-				   powerpc/altivec2.o \
-				   powerpc/altivec4.o \
-				   powerpc/altivec8.o \
-				   powerpc/vpermxor1.o \
-				   powerpc/vpermxor2.o \
-				   powerpc/vpermxor4.o \
-				   powerpc/vpermxor8.o
 raid6_pq-$(CONFIG_RISCV_ISA_V)	+= riscv/rvv.o \
 				   riscv/recov_rvv.o
-raid6_pq-$(CONFIG_S390)		+= s390/s390vx8.o \
-				   s390/recov_s390xc.o
 ifeq ($(CONFIG_X86),y)
 raid6_pq-$(CONFIG_X86_32)	+= x86/mmx.o \
 				   x86/sse1.o
@@ -105,22 +95,4 @@ $(obj)/int%.c: $(src)/int.uc $(src)/unroll.awk FORCE
 
 targets += arm/neon1.c arm/neon2.c arm/neon4.c arm/neon8.c
 $(obj)/arm/neon%.c: $(src)/arm/neon.uc $(src)/unroll.awk FORCE
-	$(call if_changed,unroll)
-
-targets += powerpc/altivec1.c \
-	   powerpc/altivec2.c \
-	   powerpc/altivec4.c \
-	   powerpc/altivec8.c
-$(obj)/powerpc/altivec%.c: $(src)/powerpc/altivec.uc $(src)/unroll.awk FORCE
-	$(call if_changed,unroll)
-
-targets += powerpc/vpermxor1.c \
-	   powerpc/vpermxor2.c \
-	   powerpc/vpermxor4.c \
-	   powerpc/vpermxor8.c
-$(obj)/powerpc/vpermxor%.c: $(src)/powerpc/vpermxor.uc $(src)/unroll.awk FORCE
-	$(call if_changed,unroll)
-
-targets += s390/s390vx8.c
-$(obj)/s390/s390vx%.c: $(src)/s390/s390vx.uc $(src)/unroll.awk FORCE
 	$(call if_changed,unroll)

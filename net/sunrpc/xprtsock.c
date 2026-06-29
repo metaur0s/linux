@@ -2310,7 +2310,7 @@ static void xs_tcp_set_socket_timeouts(struct rpc_xprt *xprt,
 	connect_timeout = max_t(unsigned long,
 				DIV_ROUND_UP(xprt->connect_timeout, HZ), 1);
 	syn_retries = max_t(unsigned long,
-			    READ_ONCE(net->ipv4.sysctl_tcp_syn_retries), 1);
+			    CONFIG_SYSCTL_TCP_SYN_RETRIES, 1);
 	for (t = 0; t <= syn_retries && (1UL << t) < connect_timeout; t++)
 		;
 	if (t <= syn_retries)

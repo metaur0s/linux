@@ -144,7 +144,6 @@
 
 #include <net/tcp.h>
 #include <net/busy_poll.h>
-#include <net/phonet/phonet.h>
 
 #include <linux/ethtool.h>
 
@@ -1397,10 +1396,6 @@ set_sndbuf:
 		sock_valbool_flag(sk, SOCK_URGINLINE, valbool);
 		break;
 
-	case SO_NO_CHECK:
-		sk->sk_no_check_tx = valbool;
-		break;
-
 	case SO_LINGER:
 		if (optlen < sizeof(ling)) {
 			ret = -EINVAL;	/* 1003.1g */
@@ -1525,11 +1520,13 @@ set_sndbuf:
 		break;
 
 	case SO_MARK:
+#if 0
 		if (!sockopt_ns_capable(sock_net(sk)->user_ns, CAP_NET_RAW) &&
 		    !sockopt_ns_capable(sock_net(sk)->user_ns, CAP_NET_ADMIN)) {
 			ret = -EPERM;
 			break;
 		}
+#endif
 
 		__sock_set_mark(sk, val);
 		break;
@@ -1809,10 +1806,6 @@ int sk_getsockopt(struct sock *sk, int level, int optname,
 
 	case SO_OOBINLINE:
 		v.val = sock_flag(sk, SOCK_URGINLINE);
-		break;
-
-	case SO_NO_CHECK:
-		v.val = sk->sk_no_check_tx;
 		break;
 
 	case SO_PRIORITY:
@@ -3030,9 +3023,11 @@ int __sock_cmsg_send(struct sock *sk, struct cmsghdr *cmsg,
 
 	switch (cmsg->cmsg_type) {
 	case SO_MARK:
+#if 0
 		if (!ns_capable(sock_net(sk)->user_ns, CAP_NET_RAW) &&
 		    !ns_capable(sock_net(sk)->user_ns, CAP_NET_ADMIN))
 			return -EPERM;
+#endif
 		if (cmsg->cmsg_len != CMSG_LEN(sizeof(u32)))
 			return -EINVAL;
 		sockc->mark = *(u32 *)CMSG_DATA(cmsg);
@@ -4532,8 +4527,6 @@ int sk_ioctl(struct sock *sk, unsigned int cmd, void __user *arg)
 		rc = ipmr_sk_ioctl(sk, cmd, arg);
 	else if (sk->sk_type == SOCK_RAW && sk->sk_family == AF_INET6)
 		rc = ip6mr_sk_ioctl(sk, cmd, arg);
-	else if (sk_is_phonet(sk))
-		rc = phonet_sk_ioctl(sk, cmd, arg);
 
 	/* If ioctl was processed, returns its value */
 	if (rc <= 0)

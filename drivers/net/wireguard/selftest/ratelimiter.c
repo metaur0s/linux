@@ -63,7 +63,7 @@ static __init int timings_test(struct sk_buff *skb4, struct iphdr *hdr4,
 
 		hdr4->saddr = htonl(ntohl(hdr4->saddr) - i - 1);
 
-#if IS_ENABLED(CONFIG_IPV6)
+#ifdef CONFIG_WIREGUARD_IP6
 		hdr6->saddr.in6_u.u6_addr32[2] = htonl(i);
 		hdr6->saddr.in6_u.u6_addr32[3] = htonl(i);
 		if (time_is_before_jiffies(loop_start_time +
@@ -153,7 +153,7 @@ bool __init wg_ratelimiter_selftest(void)
 	skb_reset_network_header(skb4);
 	++test;
 
-#if IS_ENABLED(CONFIG_IPV6)
+#ifdef CONFIG_WIREGUARD_IP6
 	skb6 = alloc_skb(sizeof(struct ipv6hdr), GFP_KERNEL);
 	if (unlikely(!skb6)) {
 		kfree_skb(skb4);
@@ -204,7 +204,7 @@ bool __init wg_ratelimiter_selftest(void)
 
 err:
 	kfree_skb(skb4);
-#if IS_ENABLED(CONFIG_IPV6)
+#ifdef CONFIG_WIREGUARD_IP6
 	kfree_skb(skb6);
 #endif
 err_nofree:

@@ -34,8 +34,6 @@ obj-$(CONFIG_WDTPCI) += wdt_pci.o
 # USB-based Watchdog Cards
 obj-$(CONFIG_USBPCWATCHDOG) += pcwd_usb.o
 
-# ALPHA Architecture
-
 # ARM Architecture
 obj-$(CONFIG_ARM_SP805_WATCHDOG) += sp805_wdt.o
 obj-$(CONFIG_ARM_SBSA_WATCHDOG) += sbsa_gwdt.o
@@ -156,13 +154,6 @@ obj-$(CONFIG_MLX_WDT) += mlx_wdt.o
 obj-$(CONFIG_KEEMBAY_WATCHDOG) += keembay_wdt.o
 obj-$(CONFIG_SIEMENS_SIMATIC_IPC_WDT) += simatic-ipc-wdt.o
 
-# M68K Architecture
-obj-$(CONFIG_M54xx_WATCHDOG) += m54xx_wdt.o
-
-# MicroBlaze Architecture
-obj-$(CONFIG_XILINX_WATCHDOG) += of_xilinx_wdt.o
-obj-$(CONFIG_XILINX_WINDOW_WATCHDOG) += xilinx_wwdt.o
-
 # MIPS Architecture
 obj-$(CONFIG_ATH79_WDT) += ath79_wdt.o
 obj-$(CONFIG_BCM47XX_WDT) += bcm47xx_wdt.o
@@ -183,38 +174,9 @@ obj-$(CONFIG_PIC32_WDT) += pic32-wdt.o
 obj-$(CONFIG_PIC32_DMT) += pic32-dmt.o
 obj-$(CONFIG_REALTEK_OTTO_WDT) += realtek_otto_wdt.o
 
-# PARISC Architecture
-
-# POWERPC Architecture
-obj-$(CONFIG_GEF_WDT) += gef_wdt.o
-obj-$(CONFIG_8xxx_WDT) += mpc8xxx_wdt.o
-obj-$(CONFIG_PIKA_WDT) += pika_wdt.o
-obj-$(CONFIG_BOOKE_WDT) += booke_wdt.o
-obj-$(CONFIG_MEN_A21_WDT) += mena21_wdt.o
-
-# PPC64 Architecture
-obj-$(CONFIG_PSERIES_WDT) += pseries-wdt.o
-obj-$(CONFIG_WATCHDOG_RTAS) += wdrtas.o
-
 # RISC-V Architecture
 obj-$(CONFIG_ATCWDT200_WATCHDOG) += atcwdt200_wdt.o
 obj-$(CONFIG_STARFIVE_WATCHDOG) += starfive-wdt.o
-
-# S390 Architecture
-obj-$(CONFIG_DIAG288_WATCHDOG) += diag288_wdt.o
-
-# SUPERH (sh + sh64) Architecture
-obj-$(CONFIG_SH_WDT) += shwdt.o
-
-# SPARC Architecture
-
-# SPARC64 Architecture
-
-obj-$(CONFIG_WATCHDOG_RIO)		+= riowd.o
-obj-$(CONFIG_WATCHDOG_CP1XXX)		+= cpwd.o
-obj-$(CONFIG_WATCHDOG_SUN4V)		+= sun4v_wdt.o
-
-# XTENSA Architecture
 
 # Xen
 obj-$(CONFIG_XEN_WDT) += xen_wdt.o

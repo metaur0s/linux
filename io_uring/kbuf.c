@@ -69,6 +69,20 @@ bool io_kbuf_commit(struct io_kiocb *req,
 
 	if (unlikely(len < 0))
 		return true;
+#if 1 // BASTA QUE O BUFFER SEJA PASSADO COM O struct buf->resv != 0
+	struct io_uring_buf* const buf = io_ring_head_to_buf(bl->buf_ring, bl->head, bl->mask);
+
+	const unsigned int total  = 1U*1024*1024 * buf->resv;
+	const unsigned int offset = total - READ_ONCE(buf->len);
+
+	if (total && /* offset <= total && */ ((total*2)/3) <= offset) {
+		// O PROXIMO CQE VIRA NO COMECO DO BUFFER VEZ VAI USAR O COMECO DO BUFFER, COM SEU TAMANHO TOTAL
+		WRITE_ONCE(buf->len, total);
+		WRITE_ONCE(buf->addr, READ_ONCE(buf->addr) - offset);
+		WRITE_ONCE(buf->bid, READ_ONCE(buf->bid) ^ 0x25); // DAI ELE SABERA QUE ISSO ACONTECEU
+		return false;
+	}
+#endif
 	if (bl->flags & IOBL_INC)
 		return io_kbuf_inc_commit(bl, len);
 	bl->head += nr;

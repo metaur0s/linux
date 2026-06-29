@@ -8,10 +8,6 @@ quiet_cmd_perlasm = PERLASM $@
 quiet_cmd_perlasm_with_args = PERLASM $@
       cmd_perlasm_with_args = $(PERL) $(<) void $(@)
 
-ppc64-perlasm-flavour-y := linux-ppc64
-ppc64-perlasm-flavour-$(CONFIG_PPC64_ELF_ABI_V2) := linux-ppc64-elfv2
-ppc64-perlasm-flavour-$(CONFIG_CPU_LITTLE_ENDIAN) := linux-ppc64le
-
 obj-$(CONFIG_KUNIT)				+= tests/
 
 obj-$(CONFIG_CRYPTO_HASH_INFO)			+= hash_info.o
@@ -32,31 +28,9 @@ libaes-$(CONFIG_ARM64) += arm64/aes-cipher-core.o \
 			  arm64/aes-ce.o \
 			  arm64/aes-neon.o
 
-ifeq ($(CONFIG_PPC),y)
-ifeq ($(CONFIG_SPE),y)
-libaes-y += powerpc/aes-spe-core.o \
-	    powerpc/aes-spe-keys.o \
-	    powerpc/aes-spe-modes.o \
-	    powerpc/aes-tab-4k.o
-else
-libaes-y += powerpc/aesp8-ppc.o
-quiet_cmd_perlasm_aes = PERLASM $@
-      cmd_perlasm_aes = $(PERL) $< $(ppc64-perlasm-flavour-y) $@
-# Use if_changed instead of cmd, in case the flavour changed.
-$(obj)/powerpc/aesp8-ppc.S: $(src)/powerpc/aesp8-ppc.pl FORCE
-	$(call if_changed,perlasm_aes)
-targets += powerpc/aesp8-ppc.S
-OBJECT_FILES_NON_STANDARD_powerpc/aesp8-ppc.o := y
-endif # !CONFIG_SPE
-endif # CONFIG_PPC
-
 libaes-$(CONFIG_RISCV) += riscv/aes-riscv64-zvkned.o
-libaes-$(CONFIG_SPARC) += sparc/aes_asm.o
 libaes-$(CONFIG_X86) += x86/aes-aesni.o
 endif # CONFIG_CRYPTO_LIB_AES_ARCH
-
-# clean-files must be defined unconditionally
-clean-files += powerpc/aesp8-ppc.S
 
 ################################################################################
 
@@ -113,9 +87,7 @@ libchacha-y += mips/chacha-core.o
 AFLAGS_mips/chacha-core.o += -O2 # needed to fill branch delay slots
 endif
 
-libchacha-$(CONFIG_PPC) += powerpc/chacha-p10le-8x.o
 libchacha-$(CONFIG_RISCV) += riscv/chacha-riscv64-zvkb.o
-libchacha-$(CONFIG_S390) += s390/chacha-s390.o
 libchacha-$(CONFIG_X86) += x86/chacha-ssse3-x86_64.o \
 			   x86/chacha-avx2-x86_64.o \
 			   x86/chacha-avx512vl-x86_64.o
@@ -147,7 +119,6 @@ endif
 ifeq ($(CONFIG_CRYPTO_LIB_CURVE25519_ARCH),y)
 CFLAGS_curve25519.o += -I$(src)/$(SRCARCH)
 libcurve25519-$(CONFIG_ARM) += arm/curve25519-core.o
-libcurve25519-$(CONFIG_PPC) += powerpc/curve25519-ppc64le_asm.o
 endif
 
 ################################################################################
@@ -165,23 +136,10 @@ libgf128hash-$(CONFIG_ARM) += arm/ghash-neon-core.o
 libgf128hash-$(CONFIG_ARM64) += arm64/ghash-neon-core.o \
 				arm64/polyval-ce-core.o
 
-ifeq ($(CONFIG_PPC),y)
-libgf128hash-y += powerpc/ghashp8-ppc.o
-quiet_cmd_perlasm_ghash = PERLASM $@
-      cmd_perlasm_ghash = $(PERL) $< $(ppc64-perlasm-flavour-y) $@
-$(obj)/powerpc/ghashp8-ppc.S: $(src)/powerpc/ghashp8-ppc.pl FORCE
-	$(call if_changed,perlasm_ghash)
-targets += powerpc/ghashp8-ppc.S
-OBJECT_FILES_NON_STANDARD_powerpc/ghashp8-ppc.o := y
-endif
-
 libgf128hash-$(CONFIG_RISCV) += riscv/ghash-riscv64-zvkg.o
 libgf128hash-$(CONFIG_X86) += x86/ghash-pclmul.o \
 			      x86/polyval-pclmul-avx.o
 endif # CONFIG_CRYPTO_LIB_GF128HASH_ARCH
-
-# clean-files must be defined unconditionally
-clean-files += powerpc/ghashp8-ppc.S
 
 ################################################################################
 
@@ -245,8 +203,6 @@ $(obj)/mips/poly1305-core.S: $(src)/mips/poly1305-mips.pl FORCE
 targets += mips/poly1305-core.S
 endif
 
-libpoly1305-$(CONFIG_PPC) += powerpc/poly1305-p10le_64.o
-
 ifeq ($(CONFIG_RISCV),y)
 libpoly1305-y += riscv/poly1305-core.o
 poly1305-perlasm-flavour-$(CONFIG_32BIT) := 32
@@ -287,11 +243,6 @@ libsha1-$(CONFIG_KERNEL_MODE_NEON) += arm/sha1-armv7-neon.o \
 				      arm/sha1-ce-core.o
 endif
 libsha1-$(CONFIG_ARM64) += arm64/sha1-ce-core.o
-ifeq ($(CONFIG_PPC),y)
-libsha1-y += powerpc/sha1-powerpc-asm.o
-libsha1-$(CONFIG_SPE) += powerpc/sha1-spe-asm.o
-endif
-libsha1-$(CONFIG_SPARC) += sparc/sha1_asm.o
 libsha1-$(CONFIG_X86) += x86/sha1-ssse3-and-avx.o \
 			 x86/sha1-avx2-asm.o \
 			 x86/sha1-ni-asm.o
@@ -317,9 +268,7 @@ $(obj)/arm64/sha256-core.S: $(src)/arm64/sha2-armv8.pl
 	$(call cmd,perlasm_with_args)
 endif
 
-libsha256-$(CONFIG_PPC) += powerpc/sha256-spe-asm.o
 libsha256-$(CONFIG_RISCV) += riscv/sha256-riscv64-zvknha_or_zvknhb-zvkb.o
-libsha256-$(CONFIG_SPARC) += sparc/sha256_asm.o
 libsha256-$(CONFIG_X86) += x86/sha256-ssse3-asm.o \
 			   x86/sha256-avx-asm.o \
 			   x86/sha256-avx2-asm.o \
@@ -347,7 +296,6 @@ $(obj)/arm64/sha512-core.S: $(src)/arm64/sha2-armv8.pl
 endif
 
 libsha512-$(CONFIG_RISCV) += riscv/sha512-riscv64-zvknhb-zvkb.o
-libsha512-$(CONFIG_SPARC) += sparc/sha512_asm.o
 libsha512-$(CONFIG_X86) += x86/sha512-ssse3-asm.o \
 			   x86/sha512-avx-asm.o \
 			   x86/sha512-avx2-asm.o

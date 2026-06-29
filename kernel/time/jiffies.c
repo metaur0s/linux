@@ -62,6 +62,7 @@ EXPORT_SYMBOL(jiffies);
 
 static bool cs_jiffies_registered __initdata;
 
+#ifdef CONFIG_CLOCKSOURCE_JIFFIES_DEFAULT
 struct clocksource * __init __weak clocksource_default_clock(void)
 {
 	if (!cs_jiffies_registered) {
@@ -70,7 +71,9 @@ struct clocksource * __init __weak clocksource_default_clock(void)
 	}
 	return &clocksource_jiffies;
 }
+#endif
 
+#ifdef CONFIG_CLOCKSOURCE_REFINED_JIFFIES
 static struct clocksource refined_jiffies;
 
 void __init register_refined_jiffies(long cycles_per_second)
@@ -97,6 +100,7 @@ void __init register_refined_jiffies(long cycles_per_second)
 
 	__clocksource_register(&refined_jiffies);
 }
+#endif
 
 #ifdef CONFIG_PROC_SYSCTL
 static ulong mult_hz(const ulong val)
@@ -313,4 +317,3 @@ int proc_doulongvec_ms_jiffies_minmax(const struct ctl_table *table, int dir,
 					   HZ, 1000l);
 }
 EXPORT_SYMBOL(proc_doulongvec_ms_jiffies_minmax);
-
