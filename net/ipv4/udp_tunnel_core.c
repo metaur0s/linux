@@ -44,7 +44,6 @@ int udp_sock_create4(struct net *net, struct udp_port_cfg *cfg,
 			goto error;
 	}
 
-	sock->sk->sk_no_check_tx = !cfg->use_udp_checksums;
 
 	*sockp = sock;
 	return 0;

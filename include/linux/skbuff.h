@@ -3339,7 +3339,7 @@ static inline int pskb_network_may_pull(struct sk_buff *skb, unsigned int len)
  * NET_IP_ALIGN(2) + ethernet_header(14) + IP_header(20/40) + ports(8)
  */
 #ifndef NET_SKB_PAD
-#define NET_SKB_PAD	max(32, L1_CACHE_BYTES)
+#define NET_SKB_PAD	max(256, L1_CACHE_BYTES)
 #endif
 
 int ___pskb_trim(struct sk_buff *skb, unsigned int len);
@@ -4300,7 +4300,9 @@ void skb_scrub_packet(struct sk_buff *skb, bool xnet);
 struct sk_buff *skb_segment(struct sk_buff *skb, netdev_features_t features);
 struct sk_buff *skb_segment_list(struct sk_buff *skb, netdev_features_t features,
 				 unsigned int offset);
+#ifdef CONFIG_VLAN_CORE
 struct sk_buff *skb_vlan_untag(struct sk_buff *skb);
+#endif
 int skb_ensure_writable(struct sk_buff *skb, unsigned int write_len);
 int skb_ensure_writable_head_tail(struct sk_buff *skb, struct net_device *dev);
 int __skb_vlan_pop(struct sk_buff *skb, u16 *vlan_tci);
@@ -5044,9 +5046,6 @@ enum skb_ext_id {
 #endif
 #if IS_ENABLED(CONFIG_NET_TC_SKB_EXT)
 	TC_SKB_EXT,
-#endif
-#if IS_ENABLED(CONFIG_MPTCP)
-	SKB_EXT_MPTCP,
 #endif
 #if IS_ENABLED(CONFIG_MCTP_FLOWS)
 	SKB_EXT_MCTP,

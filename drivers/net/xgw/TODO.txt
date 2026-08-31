@@ -1,0 +1,74 @@
+INICIALIZAR TODAS AS IKEYS / OKEYS com o secret
+    ou melhor, com um iKeysInitial
+
+AO APRENDER KEYS USAR AS JA CONHECIDAS
+    ou seja, o mesmo que o out faz para criptografar
+     e o in ao receber
+
+#
+
+WARN/DESISTIR AO TENTAR SE CONECTAR USANDO UMA PORTA QUE NAO ESTA ATIVADA
+
+###
+
+TEM QUE SER CAPAZ DE SETAR O IP SRC/DST SE ESTIVER ON
+    E STATUS <= CONNECTING
+
+###
+
+traffic shaping burst rate
+
+paths bandwidth weighting
+
+
+###
+
+status path
+
+    if (& ETH_DST)
+        print(eth dst)
+    if ()
+        print(vlan dst)
+
+###
+
+path -> bitarray de devs dos quais pode aprender
+
+
+###
+
+status node
+    checksum do secret
+
+###
+
+informar o ttl sendo usado ao enviar pings
+informar o ttl que ficou ao receber o ping
+
+######
+
+mostrar alteracoes de pings
+se mudar, seta no ping
+
+mostra no keeper
+
+
+###########
+
+informa MTU no ping
+
+informa MRU no ping
+
+ao mudar, seta todos os pings
+
+########################3
+
+P_NAME, path name
+
+#####################
+
+inicia todos os headers ao criar o path
+
+########
+
+ao deletar o path apenas limpa o statos e o cpaths

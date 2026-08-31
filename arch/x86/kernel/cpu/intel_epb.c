@@ -107,8 +107,8 @@ static void intel_epb_restore(void *data)
 		 */
 		val = epb & EPB_MASK;
 		if (val == ENERGY_PERF_BIAS_PERFORMANCE) {
-			val = energ_perf_values[EPB_INDEX_NORMAL];
-			pr_warn_once("ENERGY_PERF_BIAS: Set to 'normal', was 'performance'\n");
+			val = energ_perf_values[EPB_INDEX_PERFORMANCE]; // TODO: ISSO FUNCIONA MESMO?
+			pr_warn_once("ENERGY_PERF_BIAS: Set to 'performance', was 'performance'\n");
 		}
 	}
 	wrmsrq(MSR_IA32_ENERGY_PERF_BIAS, (epb & ~EPB_MASK) | val);
