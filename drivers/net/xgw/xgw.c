@@ -1862,6 +1862,7 @@ static inline u64 decrypt (const u64 K[K_LEN], u64* restrict pos, u64* restrict 
     u64 A = KEY_7_A, B = KEY_7_B, C = KEY_7_C, D = KEY_7_D, \
         E = KEY_7_E, F = KEY_7_F, G = KEY_7_G, H = KEY_7_H
 
+// TODO: TODOS NO K[*] SAO INICIALIZADOS COM |= (u64)1;
 #define CRYPT_7_ROTATE(x) \
     H += G += F += E += D += C += B += A += (F | (u64)1) * x \
     H *= K[0]; G *= K[1]; \
