@@ -1857,6 +1857,45 @@ static inline u64 decrypt (const u64 K[K_LEN], u64* restrict pos, u64* restrict 
     return CRYPT_HASH;
 }
 
+//
+#define CRYPT_7_INIT \
+    u64 A = KEY_7_A, B = KEY_7_B, C = KEY_7_C, D = KEY_7_D, \
+        E = KEY_7_E, F = KEY_7_F, G = KEY_7_G, H = KEY_7_H
+
+#define CRYPT_7_ROTATE(x) \
+    H += G += F += E += D += C += B += A += F + x \
+    H *= K[0]; G *= K[1]; \
+    F *= K[2]; E *= K[3]; \
+    D *= K[4]; C *= K[5]; \
+    B *= K[6]; A *= K[7]
+
+#define CRYPT_7_ENC(x) \
+    --- TODO: !!!!!!!!!!!!!
+
+static inline u64 encrypt_7 (const u64 K[K_LEN], u64* restrict pos, u64* restrict const end, u64 x) {
+
+    ASSERT((end - pos) >= PKT_ALIGN_WORDS);
+    ASSERT((end - pos) <= XGW_PAYLOAD_MAX/sizeof(u64));
+
+    CRYPT_7_INIT;
+
+    //__prefetch_w_temporal_high(pos + 2);
+    
+    loop { 
+
+        CRYPT_7_ROTATE(x);
+        
+        if (pos == end)
+            return CRYPT_HASH_7;
+        
+        // READ THE ORIGINAL VALUE
+        x = BE64(*pos);
+
+        // WRITE THE ENCRYPTED VALUE
+        *pos++ = BE64(CRYPT_7_ENC(x));
+    }
+}
+
 // USING SECRET S, APPLY RANDOM R, AND DERIVE KEY K
 static void secret_derivate_random_as_key (const u64 S[SECRET_KEYS_N][K_LEN], const u64 R[K_LEN], u64 K[K_LEN]) {
 
