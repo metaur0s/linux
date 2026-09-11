@@ -59,7 +59,6 @@ struct inet_connection_sock_af_ops {
  * @icsk_bind2_hash:	   Bind node in the bhash2 table
  * @icsk_delack_timer:     Delayed ACK timer
  * @icsk_keepalive_timer:  Keepalive timer
- * @mptcp_tout_timer: mptcp timer
  * @icsk_rto:		   Retransmit timeout
  * @icsk_pmtu_cookie	   Last pmtu seen by socket
  * @icsk_ca_ops		   Pluggable congestion control hook
@@ -87,7 +86,6 @@ struct inet_connection_sock {
 	struct timer_list	  icsk_delack_timer;
 	union {
 		struct timer_list icsk_keepalive_timer;
-		struct timer_list mptcp_tout_timer;
 	};
 	__u32			  icsk_rto;
 	__u32                     icsk_rto_min;
@@ -353,7 +351,6 @@ static inline void inet_init_csk_locks(struct sock *sk)
 	struct inet_connection_sock *icsk = inet_csk(sk);
 
 	spin_lock_init(&icsk->icsk_accept_queue.rskq_lock);
-	spin_lock_init(&icsk->icsk_accept_queue.fastopenq.lock);
 }
 
 #endif /* _INET_CONNECTION_SOCK_H */
