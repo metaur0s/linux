@@ -566,7 +566,7 @@ fw_get_filesystem_firmware(struct device *device, struct fw_priv *fw_priv,
 		size = rc;
 		rc = 0;
 
-		dev_dbg(device, "Loading firmware from %s\n", path);
+		printk("Loading firmware from %s\n", path);
 		if (decompress) {
 			dev_dbg(device, "f/w decompressing %s\n",
 				fw_priv->fw_name);
@@ -840,6 +840,7 @@ _request_firmware(const struct firmware **firmware_p, const char *name,
 		goto out;
 	}
 
+	printk("Loading firmware \"%s\"\n", name);
 
 	/*
 	 * Reject firmware file names with ".." path components.

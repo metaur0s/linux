@@ -79,7 +79,11 @@ static inline struct vlan_ethhdr *skb_vlan_eth_hdr(const struct sk_buff *skb)
 /* found in socket.c */
 extern void vlan_ioctl_set(int (*hook)(struct net *, void __user *));
 
+#ifdef CONFIG_VLAN_CORE
 #define skb_vlan_tag_present(__skb)	(!!(__skb)->vlan_all)
+#else
+#define skb_vlan_tag_present(__skb) 0
+#endif
 #define skb_vlan_tag_get(__skb)		((__skb)->vlan_tci)
 #define skb_vlan_tag_get_id(__skb)	((__skb)->vlan_tci & VLAN_VID_MASK)
 #define skb_vlan_tag_get_cfi(__skb)	(!!((__skb)->vlan_tci & VLAN_CFI_MASK))
