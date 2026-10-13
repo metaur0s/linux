@@ -179,7 +179,6 @@ enum {
 	INET_ULP_INFO_UNSPEC,
 	INET_ULP_INFO_NAME,
 	INET_ULP_INFO_TLS,
-	INET_ULP_INFO_MPTCP,
 	__INET_ULP_INFO_MAX,
 };
 #define INET_ULP_INFO_MAX (__INET_ULP_INFO_MAX - 1)
@@ -206,7 +205,7 @@ struct inet_diag_sockopt {
 		nodefrag:1;
 	__u8	bind_address_no_port:1,
 		recverr_rfc4884:1,
-		defer_connect:1,
+		xxxxxxxxxxxxxxx:1,
 		unused:5;
 };
 

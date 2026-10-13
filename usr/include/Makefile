@@ -117,7 +117,6 @@ uses-libc += linux/llc.h
 uses-libc += linux/mctp.h
 uses-libc += linux/mdio.h
 uses-libc += linux/mii.h
-uses-libc += linux/mptcp.h
 uses-libc += linux/netdevice.h
 uses-libc += linux/netfilter/xt_RATEEST.h
 uses-libc += linux/netfilter/xt_hashlimit.h

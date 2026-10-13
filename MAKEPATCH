@@ -1,0 +1,57 @@
+#!/bin/bash
+
+set -u
+set -e
+
+LINUX_OLD=${1}
+LINUX_NEW=${2}
+
+[ ${LINUX_OLD} != ${LINUX_NEW} ]
+
+[ ! -h ${LINUX_OLD} ]
+[ ! -h ${LINUX_NEW} ]
+
+[ -f ${LINUX_OLD}/Makefile ]
+[ -f ${LINUX_NEW}/Makefile ]
+
+[ -f ${LINUX_OLD}/Kbuild ]
+[ -f ${LINUX_NEW}/Kbuild ]
+
+[ -f ${LINUX_OLD}/.mailmap ]
+[ -f ${LINUX_NEW}/.mailmap ]
+
+[ -f ${LINUX_NEW}/MAKEPATCH ]
+[ -f ${LINUX_NEW}/COMPILE.sh ]
+
+REMOVED_DIRS=(
+    $(
+        (
+            (cd ${LINUX_OLD} && find -P . -type d)
+            (cd ${LINUX_NEW} && find -P . -type d)
+        ) | sort --reverse | uniq -u
+    )
+)
+
+( cd ${LINUX_OLD} && rm -fR -- ${REMOVED_DIRS[*]} )
+
+REMOVED_FILES=(
+    $(
+        (
+            (cd ${LINUX_OLD} && find -P .)
+            (cd ${LINUX_NEW} && find -P .)
+        ) | sort | uniq -u
+    )
+)
+
+( cd ${LINUX_OLD} && rm -fR -- ${REMOVED_FILES[*]} )
+
+echo '#!/bin/sh'
+echo 'set -u'
+echo 'rm -fR --' ${REMOVED_DIRS[*]}
+echo 'rm -f  --' ${REMOVED_FILES[*]}
+echo 'patch -p1 < "${0}"'
+echo 'x=$?'
+echo 'rm -f -- $(find . -type f -iname "*.orig")'
+echo 'exit $x'
+
+diff -N --text --unified=4 --recursive ${LINUX_OLD} ${LINUX_NEW}

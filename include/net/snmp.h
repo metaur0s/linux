@@ -193,4 +193,33 @@ struct linux_tls_mib {
 #define __SNMP_UPD_PO_STATS64(mib, basefield, addend) __SNMP_UPD_PO_STATS(mib, basefield, addend)
 #endif
 
+#ifdef CONFIG_NO_SNMP
+
+#undef __SNMP_ADD_STATS64
+#undef __SNMP_ADD_STATS
+#undef __SNMP_INC_STATS
+#undef __SNMP_UPD_PO_STATS64
+#undef __SNMP_UPD_PO_STATS
+#undef SNMP_INC_STATS_ATOMIC_LONG
+#undef SNMP_INC_STATS
+#undef SNMP_DEC_STATS
+#undef SNMP_ADD_STATS
+#undef SNMP_UPD_PO_STATS
+#undef SNMP_ADD_STATS64
+#undef SNMP_UPD_PO_STATS64
+
+#define __SNMP_ADD_STATS64(mib, field, addend) 		((void)((mib)[field]))
+#define __SNMP_ADD_STATS(mib, field, addend)		((void)((mib)[field]))
+#define __SNMP_INC_STATS(mib, field)	        	((void)((mib)[field]))
+#define __SNMP_UPD_PO_STATS64(mib, basefield, addend)	((void)(mib))
+#define __SNMP_UPD_PO_STATS(mib, basefield, addend)	((void)(mib))
+#define SNMP_INC_STATS_ATOMIC_LONG(mib, field)		((void)((mib)[field]))
+#define SNMP_INC_STATS(mib, field)			((void)((mib)[field]))
+#define SNMP_DEC_STATS(mib, field)			((void)((mib)[field]))
+#define SNMP_ADD_STATS(mib, field, addend)		((void)((mib)[field]))
+#define SNMP_UPD_PO_STATS(mib, basefield, addend)	((void)(mib))
+#define SNMP_ADD_STATS64(mib, field, addend) 		((void)((mib)[field]))
+#define SNMP_UPD_PO_STATS64(mib, basefield, addend)	((void)(mib))
+#endif
+
 #endif

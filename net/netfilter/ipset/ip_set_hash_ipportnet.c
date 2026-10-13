@@ -21,7 +21,7 @@
 #include <linux/netfilter/ipset/ip_set_hash.h>
 
 #define IPSET_TYPE_REV_MIN	0
-/*				1    SCTP and UDPLITE support added */
+/*				1    SCTP support added */
 /*				2    Range as input support for IPv4 added */
 /*				3    nomatch flag support added */
 /*				4    Counters support added */

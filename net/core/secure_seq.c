@@ -69,7 +69,7 @@ secure_tcpv6_seq_and_ts_off(const struct net *net, const __be32 *saddr,
 	st.hash64 = siphash(&combined, offsetofend(typeof(combined), dport),
 			    &net_secret);
 
-	if (READ_ONCE(net->ipv4.sysctl_tcp_timestamps) != 1)
+	if (CONFIG_SYSCTL_TCP_TIMESTAMPS != 1)
 		st.ts_off = 0;
 
 	st.seq = seq_scale(st.seq);
@@ -116,7 +116,7 @@ secure_tcp_seq_and_ts_off(const struct net *net, __be32 saddr, __be32 daddr,
 	st.hash64 = siphash_3u32((__force u32)saddr, (__force u32)daddr,
 				 ports, &net_secret);
 
-	if (READ_ONCE(net->ipv4.sysctl_tcp_timestamps) != 1)
+	if (CONFIG_SYSCTL_TCP_TIMESTAMPS != 1)
 		st.ts_off = 0;
 
 	st.seq = seq_scale(st.seq);
