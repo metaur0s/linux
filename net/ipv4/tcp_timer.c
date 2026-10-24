@@ -25,9 +25,6 @@
 #include <net/tcp_ecn.h>
 #include <net/rstreason.h>
 
-#if 1 // TODO: REMOVE struct inet_connection_sock icsk_user_timeout
-#define tcp_clamp_rto_to_user_timeout(sk) icsk->icsk_rto
-#else
 static u32 tcp_clamp_rto_to_user_timeout(const struct sock *sk)
 {
 	const struct inet_connection_sock *icsk = inet_csk(sk);
@@ -69,7 +66,6 @@ u32 tcp_clamp_probe0_to_user_timeout(const struct sock *sk, u32 when)
 
 	return min_t(u32, remaining, when);
 }
-#endif
 
 /**
  *  tcp_write_err() - close socket and save error info
