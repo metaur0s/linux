@@ -786,7 +786,7 @@ static inline void tcp_set_nospace(struct sock *sk)
 
 static inline void tcp_clear_nospace(struct sock *sk)
 {
-	if (sk_is_tcp(sk) && !sk_is_mptcp(sk)) {
+	if (sk_is_tcp(sk) && !0) {
 		WRITE_ONCE(tcp_sk(sk)->tcp_nospace, 0);
 		/* pairs with smp_mb__after_atomic() in tcp_set_nospace() */
 		smp_mb__before_atomic();

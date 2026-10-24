@@ -1057,7 +1057,6 @@ static bool nft_payload_csum_th_write_ok(const struct nft_payload_set *priv,
 	case IPPROTO_TCP:
 		return priv->csum_offset == offsetof(struct tcphdr, check);
 	case IPPROTO_UDP:
-	case IPPROTO_UDPLITE:
 		return priv->csum_offset == offsetof(struct udphdr, check);
 	case IPPROTO_ICMPV6:
 		return priv->csum_offset == offsetof(struct icmp6hdr, icmp6_cksum);
