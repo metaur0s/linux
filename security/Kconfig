@@ -218,16 +218,11 @@ config STATIC_USERMODEHELPER_PATH
 	  If you wish for all usermode helper programs to be disabled,
 	  specify an empty string here (i.e. "").
 
-source "security/selinux/Kconfig"
-source "security/smack/Kconfig"
 source "security/tomoyo/Kconfig"
 source "security/apparmor/Kconfig"
 source "security/loadpin/Kconfig"
-source "security/yama/Kconfig"
-source "security/safesetid/Kconfig"
 source "security/lockdown/Kconfig"
 source "security/landlock/Kconfig"
-source "security/ipe/Kconfig"
 
 source "security/integrity/Kconfig"
 

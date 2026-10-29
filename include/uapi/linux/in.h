@@ -73,8 +73,6 @@ enum {
 #define IPPROTO_L2TP		IPPROTO_L2TP
   IPPROTO_SCTP = 132,		/* Stream Control Transport Protocol	*/
 #define IPPROTO_SCTP		IPPROTO_SCTP
-  IPPROTO_UDPLITE = 136,	/* UDP-Lite (RFC 3828)			*/
-#define IPPROTO_UDPLITE		IPPROTO_UDPLITE
   IPPROTO_MPLS = 137,		/* MPLS in IP (RFC 4023)		*/
 #define IPPROTO_MPLS		IPPROTO_MPLS
   IPPROTO_ETHERNET = 143,	/* Ethernet-within-IPv6 Encapsulation	*/
@@ -85,8 +83,6 @@ enum {
 #define IPPROTO_RAW		IPPROTO_RAW
   IPPROTO_SMC = 256,		/* Shared Memory Communications		*/
 #define IPPROTO_SMC		IPPROTO_SMC
-  IPPROTO_MPTCP = 262,		/* Multipath TCP connection		*/
-#define IPPROTO_MPTCP		IPPROTO_MPTCP
   IPPROTO_MAX
 };
 #endif
@@ -166,7 +162,6 @@ struct in_addr {
 #define MCAST_MSFILTER			48
 #define IP_MULTICAST_ALL		49
 #define IP_UNICAST_IF			50
-#define IP_LOCAL_PORT_RANGE		51
 #define IP_PROTOCOL			52
 
 #define MCAST_EXCLUDE	0
