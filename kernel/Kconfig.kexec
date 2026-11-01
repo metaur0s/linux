@@ -112,9 +112,6 @@ config CRASH_DUMP
 	  (CONFIG_RELOCATABLE=y).
 	  For more details see Documentation/admin-guide/kdump/kdump.rst
 
-	  For s390, this option also enables zfcpdump.
-	  See also <file:Documentation/arch/s390/zfcpdump.rst>
-
 config CRASH_DM_CRYPT
 	bool "Support saving crash dump to dm-crypt encrypted volume"
 	depends on KEXEC_FILE
