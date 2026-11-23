@@ -19,8 +19,7 @@
 /* The protocol traced by inet_sock_set_state */
 #define inet_protocol_names		\
 		EM(IPPROTO_TCP)			\
-		EM(IPPROTO_SCTP)		\
-		EMe(IPPROTO_MPTCP)
+		EM(IPPROTO_SCTP)		
 
 #define tcp_state_names			\
 		EM(TCP_ESTABLISHED)		\

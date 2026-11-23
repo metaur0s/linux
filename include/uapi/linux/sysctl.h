@@ -640,15 +640,6 @@ enum {
 	NET_LLC2_BUSY_TIMEOUT=4,
 };
 
-/* /proc/sys/net/appletalk */
-enum {
-	NET_ATALK_AARP_EXPIRY_TIME=1,
-	NET_ATALK_AARP_TICK_TIME=2,
-	NET_ATALK_AARP_RETRANSMIT_LIMIT=3,
-	NET_ATALK_AARP_RESOLVE_TIME=4
-};
-
-
 /* /proc/sys/net/netrom */
 enum {
 	NET_NETROM_DEFAULT_PATH_QUALITY=1,

@@ -34,9 +34,6 @@
 #include <linux/sockptr.h>
 #include <linux/bpf.h>
 #include <uapi/linux/lsm.h>
-#include <linux/lsm/selinux.h>
-#include <linux/lsm/smack.h>
-#include <linux/lsm/apparmor.h>
 #include <linux/lsm/bpf.h>
 
 struct linux_binprm;
@@ -164,9 +161,6 @@ enum lockdown_reason {
  * Data exported by the security modules
  */
 struct lsm_prop {
-	struct lsm_prop_selinux selinux;
-	struct lsm_prop_smack smack;
-	struct lsm_prop_apparmor apparmor;
 	struct lsm_prop_bpf bpf;
 };
 
@@ -1745,7 +1739,6 @@ void security_sctp_sk_clone(struct sctp_association *asoc, struct sock *sk,
 			    struct sock *newsk);
 int security_sctp_assoc_established(struct sctp_association *asoc,
 				    struct sk_buff *skb);
-int security_mptcp_add_subflow(struct sock *sk, struct sock *ssk);
 
 #else	/* CONFIG_SECURITY_NETWORK */
 static inline int security_netlink_send(struct sock *sk, struct sk_buff *skb)
@@ -1979,10 +1972,6 @@ static inline int security_sctp_assoc_established(struct sctp_association *asoc,
 	return 0;
 }
 
-static inline int security_mptcp_add_subflow(struct sock *sk, struct sock *ssk)
-{
-	return 0;
-}
 #endif	/* CONFIG_SECURITY_NETWORK */
 
 #if defined(CONFIG_SECURITY_NETWORK) && defined(CONFIG_SECURITY_PATH)
