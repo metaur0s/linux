@@ -102,7 +102,7 @@ static bool tcp_bpf_redir_allowed(const struct sock *sk)
 	if (!sk->sk_socket)
 		return false;
 	if ((1 << sk->sk_state) & (TCPF_SYN_SENT | TCPF_SYN_RECV))
-		return tcp_passive_fastopen(sk);
+		return false;
 	return true;
 }
 
